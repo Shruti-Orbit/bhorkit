@@ -1,0 +1,61 @@
+:root {
+  --bhor-primary: #A9164A;
+  --bhor-header: #A91C43;
+  --bhor-primary-dark: #7F1238;
+  --bhor-primary-soft: #F8DCE5;
+
+  --bhor-peach: #FBE7DC;
+
+  --bhor-cream: #FFF9F2;
+  --bhor-surface: #FFFDF9;
+
+  --bhor-gold: #C8922E;
+  --bhor-gold-light: #E8C878;
+
+  --bhor-text: #241A1C;
+  --bhor-text-muted: #6F5A5C;
+
+  --bhor-border: #E9DCD2;
+  --bhor-success: #647A63;
+
+  --font-display: "Red Hat Display", sans-serif;
+  --font-body: "Figtree", sans-serif;
+  --font-accent: "Montserrat", sans-serif;
+  --font-soft: "Quicksand", sans-serif;
+
+  --text-hero: 56px;
+  --text-h1: 48px;
+  --text-h2: 40px;
+  --text-h3: 28px;
+  --text-h4: 22px;
+  --text-product: 18px;
+  --text-body-large: 18px;
+  --text-body: 16px;
+  --text-small: 14px;
+  --text-button: 14px;
+  --text-nav: 14px;
+  --text-caption: 12px;
+  --text-badge: 10px;
+
+  --text-hero-mobile: 34px;
+  --text-h1-mobile: 32px;
+  --text-h2-mobile: 28px;
+  --text-h3-mobile: 22px;
+  --text-product-mobile: 16px;
+  --text-body-mobile: 14px;
+  --text-button-mobile: 13px;
+
+  --leading-tight: 1.1;
+  --leading-heading: 1.2;
+  --leading-body: 1.6;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  --bhor-radius-sm: 6px;
+  --bhor-radius-md: 8px;
+  --bhor-radius-lg: 20px;
+  --bhor-shadow-soft: 0 10px 30px rgb(36 26 28 / 0.08);
+}

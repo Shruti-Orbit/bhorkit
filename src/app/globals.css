@@ -1,0 +1,67 @@
+@import "tailwindcss";
+@import "../styles/theme.css";
+
+:root {
+  --background: var(--bhor-cream);
+  --foreground: var(--bhor-text);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-bhor-primary: var(--bhor-primary);
+  --color-bhor-header: var(--bhor-header);
+  --color-bhor-primary-dark: var(--bhor-primary-dark);
+  --color-bhor-primary-soft: var(--bhor-primary-soft);
+  --color-bhor-peach: var(--bhor-peach);
+  --color-bhor-cream: var(--bhor-cream);
+  --color-bhor-surface: var(--bhor-surface);
+  --color-bhor-gold: var(--bhor-gold);
+  --color-bhor-gold-light: var(--bhor-gold-light);
+  --color-bhor-text: var(--bhor-text);
+  --color-bhor-text-muted: var(--bhor-text-muted);
+  --color-bhor-border: var(--bhor-border);
+  --color-bhor-success: var(--bhor-success);
+  --font-bhor-display: var(--font-display);
+  --font-bhor-body: var(--font-body);
+  --font-bhor-accent: var(--font-accent);
+  --font-bhor-soft: var(--font-soft);
+  --font-sans: var(--font-body);
+  --text-bhor-hero: var(--text-hero);
+  --text-bhor-h1: var(--text-h1);
+  --text-bhor-h2: var(--text-h2);
+  --text-bhor-h3: var(--text-h3);
+  --text-bhor-h4: var(--text-h4);
+  --text-bhor-product: var(--text-product);
+  --text-bhor-body-large: var(--text-body-large);
+  --text-bhor-body: var(--text-body);
+  --text-bhor-small: var(--text-small);
+  --text-bhor-button: var(--text-button);
+  --text-bhor-nav: var(--text-nav);
+  --text-bhor-caption: var(--text-caption);
+  --text-bhor-badge: var(--text-badge);
+  --text-bhor-hero-mobile: var(--text-hero-mobile);
+  --text-bhor-h1-mobile: var(--text-h1-mobile);
+  --text-bhor-h2-mobile: var(--text-h2-mobile);
+  --text-bhor-h3-mobile: var(--text-h3-mobile);
+  --text-bhor-product-mobile: var(--text-product-mobile);
+  --text-bhor-body-mobile: var(--text-body-mobile);
+  --text-bhor-button-mobile: var(--text-button-mobile);
+  --leading-bhor-tight: var(--leading-tight);
+  --leading-bhor-heading: var(--leading-heading);
+  --leading-bhor-body: var(--leading-body);
+  --font-weight-bhor-regular: var(--weight-regular);
+  --font-weight-bhor-medium: var(--weight-medium);
+  --font-weight-bhor-semibold: var(--weight-semibold);
+  --font-weight-bhor-bold: var(--weight-bold);
+  --radius-bhor-sm: var(--bhor-radius-sm);
+  --radius-bhor-md: var(--bhor-radius-md);
+  --radius-bhor-lg: var(--bhor-radius-lg);
+  --shadow-bhor-soft: var(--bhor-shadow-soft);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body);
+}
