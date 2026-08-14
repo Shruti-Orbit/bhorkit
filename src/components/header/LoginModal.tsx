@@ -5,11 +5,14 @@ import { Mail, Phone, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useShop } from "@/src/context/ShopContext";
 import {
-  getAuthIdentifierType,
+  findRegisteredUser,
   isExistingMockUser,
-  isValidAuthIdentifier,
+  isValidEmail,
+  isValidIndianMobile,
   maskAuthIdentifier,
   mockOtp,
+  registerMockUser,
+  type RegisteredUser,
 } from "@/src/utils/auth";
 
 export function LoginModal() {
@@ -27,6 +30,10 @@ export function LoginModal() {
   } = useShop();
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupMobile, setSignupMobile] = useState("");
+  const [pendingUser, setPendingUser] = useState<RegisteredUser | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(0);
 
@@ -60,19 +67,59 @@ export function LoginModal() {
     return () => window.clearTimeout(timer);
   }, [resendSeconds]);
 
-  function submitEmail(event: FormEvent<HTMLFormElement>) {
+  function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
 
-    if (!isValidAuthIdentifier(authEmail)) {
-      setError("Please enter a valid email address or Indian mobile number.");
+    if (authMode === "login") {
+      if (!isValidEmail(authEmail) && !isValidIndianMobile(authEmail)) {
+        setError("Please enter a valid registered email or mobile number.");
+        return;
+      }
+
+      const user = findRegisteredUser(authEmail);
+      if (!user) {
+        setError("No BHORKIT account found. Please create an account first.");
+        return;
+      }
+
+      setIsLoading(true);
+      window.setTimeout(() => {
+        setPendingUser(user);
+        setAuthEmail(user.email);
+        setAuthStep("otp");
+        setOtp("");
+        setResendSeconds(30);
+        setIsLoading(false);
+      }, 450);
+      return;
+    }
+
+    if (signupName.trim().length < 2) {
+      setError("Please enter your full name.");
+      return;
+    }
+
+    if (!isValidEmail(signupEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    if (!isValidIndianMobile(signupMobile)) {
+      setError("Please enter a valid Indian mobile number.");
+      return;
+    }
+
+    if (isExistingMockUser(signupEmail) || isExistingMockUser(signupMobile)) {
+      setError("This account already exists. Please login instead.");
       return;
     }
 
     setIsLoading(true);
     window.setTimeout(() => {
-      const nextMode = isExistingMockUser(authEmail) ? "login" : "signup";
-      setAuthMode(nextMode);
+      const user = registerMockUser({ email: signupEmail, mobile: signupMobile, name: signupName });
+      setPendingUser(user);
+      setAuthEmail(user.email);
       setAuthStep("otp");
       setOtp("");
       setResendSeconds(30);
@@ -91,7 +138,7 @@ export function LoginModal() {
 
     setIsLoading(true);
     window.setTimeout(() => {
-      completeAuth(authEmail, authMode);
+      completeAuth(pendingUser?.email ?? authEmail, authMode, pendingUser ?? undefined);
       setIsLoading(false);
       closeAuthModal();
     }, 450);
@@ -128,9 +175,7 @@ export function LoginModal() {
                 </p>
                 <h2 id={titleId} className="mt-1 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text">
                   {authStep === "otp"
-                    ? getAuthIdentifierType(authEmail) === "email"
-                      ? "Verify your email"
-                      : "Verify your mobile number"
+                    ? "Verify your email"
                     : authMode === "signup"
                       ? "Create your account"
                       : "Login to your account"}
@@ -149,7 +194,7 @@ export function LoginModal() {
             {authStep === "otp" ? (
               <form onSubmit={verifyOtp} className="space-y-4 px-5 py-5">
                 <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
-                  We&apos;ve sent a 6-digit OTP to {maskAuthIdentifier(authEmail)}.
+                  We&apos;ve sent a 6-digit OTP to {maskAuthIdentifier(pendingUser?.email ?? authEmail)}.
                 </p>
                 <label className="block">
                   <span className="text-bhor-small font-bhor-semibold text-bhor-text">OTP</span>
@@ -183,40 +228,93 @@ export function LoginModal() {
                     {resendSeconds > 0 ? `Resend in ${resendSeconds}s` : "Resend OTP"}
                   </button>
                   <button type="button" onClick={() => setAuthStep("email")} className="text-bhor-primary">
-                    Change email
+                    Change details
                   </button>
                 </div>
               </form>
             ) : (
-              <form onSubmit={submitEmail} className="space-y-4 px-5 py-5">
-                <label className="block">
-                  <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email or mobile number</span>
-                  <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
-                    {authEmail.includes("@") ? (
-                      <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-                    ) : (
-                      <Phone className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-                    )}
-                    <input
-                      value={authEmail}
-                      onChange={(event) => {
-                        setAuthEmail(event.target.value);
-                        setError("");
-                      }}
-                      type="text"
-                      autoComplete="username"
-                      placeholder="Enter email or mobile number"
-                      className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none placeholder:text-bhor-text-muted"
-                    />
-                  </span>
-                </label>
+              <form onSubmit={submitAuth} className="space-y-4 px-5 py-5">
+                {authMode === "login" ? (
+                  <label className="block">
+                    <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email or mobile number</span>
+                    <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
+                      {authEmail.includes("@") ? (
+                        <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                      ) : (
+                        <Phone className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                      )}
+                      <input
+                        value={authEmail}
+                        onChange={(event) => {
+                          setAuthEmail(event.target.value);
+                          setError("");
+                        }}
+                        type="text"
+                        autoComplete="username"
+                        placeholder="Enter registered email or mobile"
+                        className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none placeholder:text-bhor-text-muted"
+                      />
+                    </span>
+                  </label>
+                ) : (
+                  <div className="space-y-3">
+                    <label className="block">
+                      <span className="text-bhor-small font-bhor-semibold text-bhor-text">Full name</span>
+                      <input
+                        value={signupName}
+                        onChange={(event) => {
+                          setSignupName(event.target.value);
+                          setError("");
+                        }}
+                        type="text"
+                        autoComplete="name"
+                        placeholder="Enter your full name"
+                        className="mt-2 min-h-12 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-4 text-bhor-small text-bhor-text outline-none placeholder:text-bhor-text-muted focus:border-bhor-primary"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email address</span>
+                      <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
+                        <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                        <input
+                          value={signupEmail}
+                          onChange={(event) => {
+                            setSignupEmail(event.target.value);
+                            setError("");
+                          }}
+                          type="email"
+                          autoComplete="email"
+                          placeholder="Enter email address"
+                          className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none placeholder:text-bhor-text-muted"
+                        />
+                      </span>
+                    </label>
+                    <label className="block">
+                      <span className="text-bhor-small font-bhor-semibold text-bhor-text">Mobile number</span>
+                      <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
+                        <Phone className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                        <input
+                          value={signupMobile}
+                          onChange={(event) => {
+                            setSignupMobile(event.target.value);
+                            setError("");
+                          }}
+                          type="tel"
+                          inputMode="numeric"
+                          placeholder="Enter mobile number"
+                          className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none placeholder:text-bhor-text-muted"
+                        />
+                      </span>
+                    </label>
+                  </div>
+                )}
                 {error ? <p className="text-bhor-small font-bhor-semibold text-bhor-primary">{error}</p> : null}
                 <button
                   type="submit"
                   disabled={isLoading}
                   className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white transition-colors hover:bg-bhor-primary-dark disabled:opacity-70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
                 >
-                  {isLoading ? "Sending OTP..." : "Continue"}
+                  {isLoading ? "Sending OTP..." : authMode === "signup" ? "Create Account" : "Login"}
                 </button>
                 <button
                   type="button"

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { CreditCard } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
@@ -9,11 +10,17 @@ import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddres
 import { useShop } from "@/src/context/ShopContext";
 
 export default function CheckoutPage() {
-  const { cartItems, isLoggedIn } = useShop();
+  const { addresses, cartItems, checkoutMode, createOrder, isLoggedIn, scheduledDeliveryDate, scheduledDeliverySlot } = useShop();
+  const router = useRouter();
+  const canPlaceOrder =
+    isLoggedIn &&
+    cartItems.length > 0 &&
+    addresses.length > 0 &&
+    (checkoutMode !== "scheduled" || (scheduledDeliveryDate && scheduledDeliverySlot));
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid w-full max-w-[1512px] gap-8 lg:grid-cols-[1fr_360px]">
+      <div className="mx-auto grid w-full max-w-[1512px] gap-8 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-5">
           <div>
             <h1 className="font-bhor-display text-bhor-h2-mobile font-bhor-semibold text-bhor-text md:text-bhor-h2">
@@ -52,18 +59,30 @@ export default function CheckoutPage() {
           )}
         </section>
 
-        <div className="space-y-4">
-          <OrderSummary />
-          {cartItems.length > 0 ? (
+        {cartItems.length > 0 ? (
+          <div className="space-y-4">
+            <OrderSummary />
             <button
               type="button"
-              disabled={!isLoggedIn}
+              disabled={!canPlaceOrder}
+              onClick={() => {
+                const order = createOrder();
+                if (order) {
+                  router.push(`/account/orders/${order.id}`);
+                }
+              }}
               className="min-h-12 w-full rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white disabled:bg-bhor-border disabled:text-bhor-text-muted"
             >
-              {isLoggedIn ? "Continue to Payment" : "Login to Continue"}
+              {!isLoggedIn
+                ? "Login to Continue"
+                : addresses.length === 0
+                  ? "Add Address to Continue"
+                  : checkoutMode === "scheduled" && (!scheduledDeliveryDate || !scheduledDeliverySlot)
+                    ? "Select Delivery Slot"
+                    : "Place Order"}
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </main>
   );

@@ -1,7 +1,10 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
+import { useShop } from "@/src/context/ShopContext";
 
 type ProductCardProps = {
   product: CollectionProduct;
@@ -15,6 +18,9 @@ const badgeToneClass: Record<ProductBadgeTone, string> = {
 };
 
 export function ProductCard({ product }: ProductCardProps) {
+  const { isSavedItem, toggleSavedItem } = useShop();
+  const saved = isSavedItem(product.id);
+
   return (
     <article className="group flex h-full min-h-[350px] w-full flex-col overflow-hidden rounded-bhor-md bg-bhor-surface shadow-bhor-soft sm:min-w-0 md:min-h-[445px]">
       <Link
@@ -31,9 +37,16 @@ export function ProductCard({ product }: ProductCardProps) {
         <button
           type="button"
           aria-label={`Save ${product.name}`}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-bhor-surface/90 text-bhor-primary opacity-100 shadow-bhor-soft transition-opacity md:opacity-0 md:group-hover:opacity-100"
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            toggleSavedItem(product);
+          }}
+          className={`absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-bhor-surface/90 shadow-bhor-soft transition-opacity md:opacity-0 md:group-hover:opacity-100 ${
+            saved ? "text-bhor-primary" : "text-bhor-text"
+          }`}
         >
-          <Heart className="h-4 w-4" aria-hidden />
+          <Heart className={`h-4 w-4 ${saved ? "fill-current" : ""}`} aria-hidden />
         </button>
       </Link>
 

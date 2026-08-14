@@ -10,7 +10,12 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import type { CollectionProduct } from "@/src/data/products";
-import { calculateMemberDiscount, parsePrice } from "@/src/utils/discount";
+import {
+  calculateHandlingCharge,
+  calculateLowestItemMemberDiscount,
+  parsePrice,
+} from "@/src/utils/discount";
+import type { RegisteredUser } from "@/src/utils/auth";
 
 export type AuthMode = "login" | "signup";
 export type AuthStep = "email" | "otp" | "success";
@@ -18,11 +23,58 @@ export type CheckoutMode = "buy-now" | "scheduled" | "pre-order";
 
 export type CurrentUser = {
   email: string;
+  id: string;
+  name: string;
+  mobile?: string;
 };
 
 export type CartItem = {
   product: CollectionProduct;
   quantity: number;
+};
+
+export type CustomerAddress = {
+  id: string;
+  fullName: string;
+  mobile: string;
+  house: string;
+  area: string;
+  landmark: string;
+  pincode: string;
+  city: string;
+  state: string;
+  isDefault?: boolean;
+};
+
+export type OrderStatus =
+  | "confirmed"
+  | "processing"
+  | "packed"
+  | "out-for-delivery"
+  | "delivered"
+  | "cancelled"
+  | "pre-order-confirmed"
+  | "preparing"
+  | "scheduled-for-dispatch"
+  | "dispatched";
+
+export type CustomerOrder = {
+  id: string;
+  userId: string;
+  items: CartItem[];
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
+  total: number;
+  address: CustomerAddress | null;
+  checkoutMode: CheckoutMode;
+  orderDate: string;
+  status: OrderStatus;
+  paymentStatus: "pending" | "paid";
+  expectedDelivery?: string;
+  expectedDispatch?: string;
+  deliveryDate?: string;
+  deliverySlot?: string;
 };
 
 type AuthModalOptions = {
@@ -43,20 +95,40 @@ type ShopContextValue = {
   cartCount: number;
   cartSubtotal: number;
   memberDiscount: number;
+  handlingCharge: number;
   cartTotal: number;
   checkoutMode: CheckoutMode;
+  orders: CustomerOrder[];
+  savedItems: CollectionProduct[];
+  savedItemCount: number;
+  addresses: CustomerAddress[];
+  selectedAddressId: string;
+  scheduledDeliveryDate: string;
+  scheduledDeliverySlot: string;
   openAuthModal: (options?: AuthModalOptions) => void;
   closeAuthModal: () => void;
   setAuthMode: (mode: AuthMode) => void;
   setAuthStep: (step: AuthStep) => void;
   setAuthEmail: (email: string) => void;
-  completeAuth: (email: string, mode: AuthMode) => void;
+  completeAuth: (email: string, mode: AuthMode, profile?: RegisteredUser) => void;
   logout: () => void;
   addToCart: (product: CollectionProduct, quantity?: number) => void;
   buyNow: (product: CollectionProduct, mode?: CheckoutMode) => void;
   setCheckoutMode: (mode: CheckoutMode) => void;
   updateCartItem: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
+  toggleSavedItem: (product: CollectionProduct) => void;
+  isSavedItem: (productId: string) => boolean;
+  addAddress: (address: Omit<CustomerAddress, "id">) => void;
+  updateAddress: (address: CustomerAddress) => void;
+  deleteAddress: (addressId: string) => void;
+  setDefaultAddress: (addressId: string) => void;
+  setSelectedAddressId: (addressId: string) => void;
+  setScheduledDeliveryDate: (date: string) => void;
+  setScheduledDeliverySlot: (slot: string) => void;
+  createOrder: () => CustomerOrder | null;
+  getOrderById: (orderId: string) => CustomerOrder | undefined;
+  findOrders: (query: string) => CustomerOrder[];
   clearSuccessMessage: () => void;
 };
 
@@ -64,6 +136,7 @@ const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const authStorageKey = "bhorkit_mock_auth";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
+const customerDataStorageKey = "bhorkit_customer_data";
 
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => getInitialAuth());
@@ -76,6 +149,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
+  const [customerData, setCustomerData] = useState<CustomerDataStore>(() => getInitialCustomerData());
+  const [selectedAddressId, setSelectedAddressIdState] = useState("");
+  const [scheduledDeliveryDate, setScheduledDeliveryDate] = useState("");
+  const [scheduledDeliverySlot, setScheduledDeliverySlot] = useState("");
+
+  const userId = currentUser?.id ?? "";
+  const userData = userId ? getUserData(customerData, userId) : emptyUserData;
+  const orders = userData.orders;
+  const savedItems = userData.savedItems;
+  const addresses = userData.addresses;
 
   useEffect(() => {
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
@@ -84,6 +167,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem(checkoutModeStorageKey, checkoutMode);
   }, [checkoutMode]);
+
+  useEffect(() => {
+    window.localStorage.setItem(customerDataStorageKey, JSON.stringify(customerData));
+  }, [customerData]);
+
+  const effectiveSelectedAddressId =
+    selectedAddressId || addresses.find((address) => address.isDefault)?.id || addresses[0]?.id || "";
 
   const openAuthModal = useCallback((options?: AuthModalOptions) => {
     setAuthMode(options?.mode ?? "login");
@@ -97,8 +187,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setAuthStep("email");
   }, []);
 
-  const completeAuth = useCallback((email: string, mode: AuthMode) => {
-    const user = { email: email.trim().toLowerCase() };
+  const completeAuth = useCallback((email: string, mode: AuthMode, profile?: RegisteredUser) => {
+    const identifier = (profile?.email || email).trim().toLowerCase();
+    const isMobile = /^[6-9]\d{9}$/.test(identifier);
+    const user = {
+      email: profile?.email ?? (isMobile ? "" : identifier),
+      id: profile?.id ?? identifier,
+      name: profile?.name ?? "BHORKIT Devotee",
+      mobile: profile?.mobile ?? (isMobile ? identifier : undefined),
+    };
     setIsLoggedIn(true);
     setCurrentUser(user);
     setDiscountUnlocked(true);
@@ -163,9 +260,170 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       ),
     [cartItems],
   );
-  const memberDiscount = discountUnlocked ? calculateMemberDiscount(cartSubtotal) : 0;
-  const cartTotal = cartSubtotal - memberDiscount;
+  const memberDiscount = calculateLowestItemMemberDiscount(
+    cartItems.map((item) => ({ price: item.product.price, quantity: item.quantity })),
+    discountUnlocked,
+  );
+  const handlingCharge = calculateHandlingCharge(cartSubtotal);
+  const cartTotal = cartSubtotal - memberDiscount + handlingCharge;
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+
+  const updateCurrentUserData = useCallback((updater: (data: UserCustomerData) => UserCustomerData) => {
+    if (!userId) {
+      return;
+    }
+
+    setCustomerData((data) => ({
+      ...data,
+      [userId]: updater(getUserData(data, userId)),
+    }));
+  }, [userId]);
+
+  const toggleSavedItem = useCallback((product: CollectionProduct) => {
+    if (!userId) {
+      openAuthModal({ mode: "login" });
+      return;
+    }
+
+    updateCurrentUserData((data) => {
+      const exists = data.savedItems.some((item) => item.id === product.id);
+      setSuccessMessage(exists ? "Removed from Saved Items" : "Added to Saved Items");
+      return {
+        ...data,
+        savedItems: exists
+          ? data.savedItems.filter((item) => item.id !== product.id)
+          : [...data.savedItems, product],
+      };
+    });
+  }, [openAuthModal, updateCurrentUserData, userId]);
+
+  const isSavedItem = useCallback(
+    (productId: string) => savedItems.some((product) => product.id === productId),
+    [savedItems],
+  );
+
+  const addAddress = useCallback((address: Omit<CustomerAddress, "id">) => {
+    updateCurrentUserData((data) => {
+      const newAddress = {
+        ...address,
+        id: createClientId("addr"),
+        isDefault: address.isDefault ?? data.addresses.length === 0,
+      };
+      setSelectedAddressIdState(newAddress.id);
+      return {
+        ...data,
+        addresses: newAddress.isDefault
+          ? [newAddress, ...data.addresses.map((item) => ({ ...item, isDefault: false }))]
+          : [...data.addresses, newAddress],
+      };
+    });
+    setSuccessMessage("Address saved");
+  }, [updateCurrentUserData]);
+
+  const updateAddress = useCallback((address: CustomerAddress) => {
+    updateCurrentUserData((data) => ({
+      ...data,
+      addresses: data.addresses.map((item) =>
+        item.id === address.id ? address : address.isDefault ? { ...item, isDefault: false } : item,
+      ),
+    }));
+    setSuccessMessage("Address updated");
+  }, [updateCurrentUserData]);
+
+  const deleteAddress = useCallback((addressId: string) => {
+    updateCurrentUserData((data) => ({
+      ...data,
+      addresses: data.addresses.filter((address) => address.id !== addressId),
+    }));
+    if (selectedAddressId === addressId) {
+      setSelectedAddressIdState("");
+    }
+    setSuccessMessage("Address deleted");
+  }, [selectedAddressId, updateCurrentUserData]);
+
+  const setDefaultAddress = useCallback((addressId: string) => {
+    updateCurrentUserData((data) => ({
+      ...data,
+      addresses: data.addresses.map((address) => ({
+        ...address,
+        isDefault: address.id === addressId,
+      })),
+    }));
+    setSelectedAddressIdState(addressId);
+  }, [updateCurrentUserData]);
+
+  const createOrder = useCallback(() => {
+    if (!userId || cartItems.length === 0) {
+      return null;
+    }
+
+    const address = addresses.find((item) => item.id === effectiveSelectedAddressId) ?? addresses[0] ?? null;
+    const order: CustomerOrder = {
+      id: generateOrderId(),
+      userId,
+      items: cartItems,
+      subtotal: cartSubtotal,
+      discount: memberDiscount,
+      deliveryFee: handlingCharge,
+      total: cartTotal,
+      address,
+      checkoutMode,
+      orderDate: new Date().toISOString(),
+      status: checkoutMode === "pre-order" ? "pre-order-confirmed" : "confirmed",
+      paymentStatus: "paid",
+      expectedDelivery:
+        checkoutMode === "buy-now"
+          ? "Earliest available delivery"
+          : checkoutMode === "scheduled"
+            ? scheduledDeliveryDate
+            : cartItems[0]?.product.preorder?.expectedDelivery,
+      expectedDispatch: checkoutMode === "pre-order" ? cartItems[0]?.product.preorder?.expectedDelivery : undefined,
+      deliveryDate: checkoutMode === "scheduled" ? scheduledDeliveryDate : undefined,
+      deliverySlot: checkoutMode === "scheduled" ? scheduledDeliverySlot : undefined,
+    };
+
+    updateCurrentUserData((data) => ({
+      ...data,
+      orders: [order, ...data.orders],
+    }));
+    setCartItems([]);
+    setCheckoutModeState("buy-now");
+    setSuccessMessage(`Order ${order.id} created`);
+    return order;
+  }, [
+    addresses,
+    cartItems,
+    cartSubtotal,
+    cartTotal,
+    checkoutMode,
+    memberDiscount,
+    handlingCharge,
+    scheduledDeliveryDate,
+    scheduledDeliverySlot,
+    effectiveSelectedAddressId,
+    updateCurrentUserData,
+    userId,
+  ]);
+
+  const getOrderById = useCallback(
+    (orderId: string) => orders.find((order) => order.id.toLowerCase() === orderId.toLowerCase()),
+    [orders],
+  );
+
+  const findOrders = useCallback(
+    (query: string) => {
+      const normalized = query.trim().toLowerCase();
+      if (!normalized) {
+        return [];
+      }
+
+      return orders.filter((order) => {
+        const addressMobile = order.address?.mobile.replace(/\s/g, "") ?? "";
+        return order.id.toLowerCase() === normalized || addressMobile === normalized.replace(/\s/g, "");
+      });
+    },
+    [orders],
+  );
 
   const value = useMemo<ShopContextValue>(
     () => ({
@@ -181,8 +439,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       cartCount,
       cartSubtotal,
       memberDiscount,
+      handlingCharge,
       cartTotal,
       checkoutMode,
+      orders,
+      savedItems,
+      savedItemCount: savedItems.length,
+      addresses,
+      selectedAddressId: effectiveSelectedAddressId,
+      scheduledDeliveryDate,
+      scheduledDeliverySlot,
       openAuthModal,
       closeAuthModal,
       setAuthMode,
@@ -195,6 +461,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setCheckoutMode,
       updateCartItem,
       removeFromCart,
+      toggleSavedItem,
+      isSavedItem,
+      addAddress,
+      updateAddress,
+      deleteAddress,
+      setDefaultAddress,
+      setSelectedAddressId: setSelectedAddressIdState,
+      setScheduledDeliveryDate,
+      setScheduledDeliverySlot,
+      createOrder,
+      getOrderById,
+      findOrders,
       clearSuccessMessage: () => setSuccessMessage(""),
     }),
     [
@@ -212,14 +490,32 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       closeAuthModal,
       completeAuth,
       currentUser,
+      createOrder,
+      findOrders,
+      getOrderById,
       discountUnlocked,
+      handlingCharge,
       isLoggedIn,
+      isSavedItem,
       logout,
       memberDiscount,
       openAuthModal,
       removeFromCart,
+      addresses,
+      addAddress,
+      deleteAddress,
+      orders,
+      savedItems,
+      scheduledDeliveryDate,
+      scheduledDeliverySlot,
+      effectiveSelectedAddressId,
       setCheckoutMode,
+      setDefaultAddress,
+      setScheduledDeliveryDate,
+      setScheduledDeliverySlot,
       updateCartItem,
+      toggleSavedItem,
+      updateAddress,
       successMessage,
     ],
   );
@@ -248,10 +544,66 @@ function safelyParseCart(value: string): CartItem[] {
 function safelyParseAuth(value: string): CurrentUser | null {
   try {
     const parsed = JSON.parse(value);
-    return typeof parsed?.email === "string" ? { email: parsed.email } : null;
+    if (typeof parsed?.id === "string") {
+      return {
+        id: parsed.id,
+        email: typeof parsed.email === "string" ? parsed.email : "",
+        name: typeof parsed.name === "string" ? parsed.name : "BHORKIT Devotee",
+        mobile: typeof parsed.mobile === "string" ? parsed.mobile : undefined,
+      };
+    }
+    return typeof parsed?.email === "string"
+      ? { id: parsed.email, email: parsed.email, name: "BHORKIT Devotee" }
+      : null;
   } catch {
     return null;
   }
+}
+
+type UserCustomerData = {
+  orders: CustomerOrder[];
+  savedItems: CollectionProduct[];
+  addresses: CustomerAddress[];
+};
+
+type CustomerDataStore = Record<string, UserCustomerData>;
+
+const emptyUserData: UserCustomerData = {
+  orders: [],
+  savedItems: [],
+  addresses: [],
+};
+
+function getUserData(data: CustomerDataStore, userId: string): UserCustomerData {
+  return data[userId] ?? emptyUserData;
+}
+
+function getInitialCustomerData(): CustomerDataStore {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const stored = window.localStorage.getItem(customerDataStorageKey);
+    return stored ? JSON.parse(stored) : {};
+  } catch {
+    return {};
+  }
+}
+
+function createClientId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function generateOrderId() {
+  const date = new Date();
+  const stamp = [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("");
+  const suffix = `${date.getHours()}${date.getMinutes()}${date.getSeconds()}${Math.floor(Math.random() * 90 + 10)}`;
+  return `BHK${stamp}${suffix}`;
 }
 
 function getInitialCart() {

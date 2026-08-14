@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { LogOut, UserRound } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
@@ -8,11 +8,39 @@ import { useShop } from "@/src/context/ShopContext";
 export function AccountButton() {
   const { currentUser, isLoggedIn, logout, openAuthModal } = useShop();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const initial = currentUser?.email.charAt(0).toUpperCase();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const displayIdentifier = currentUser?.email || currentUser?.mobile || currentUser?.id;
+  const initial = displayIdentifier?.charAt(0).toUpperCase();
+
+  useEffect(() => {
+    if (!isDropdownOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (!dropdownRef.current?.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsDropdownOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isDropdownOpen]);
 
   if (isLoggedIn && currentUser) {
     return (
-      <div className="relative">
+      <div ref={dropdownRef} className="relative">
         <button
           type="button"
           aria-label="Account menu"
@@ -26,16 +54,18 @@ export function AccountButton() {
         {isDropdownOpen ? (
           <div className="absolute right-0 top-12 z-50 w-56 rounded-bhor-md border border-bhor-border bg-bhor-surface p-2 shadow-bhor-soft">
             <p className="border-b border-bhor-border px-3 py-2 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
-              {currentUser.email}
+              {displayIdentifier}
             </p>
             {[
               { label: "My Account", href: "/account" },
-              { label: "My Orders", href: "/orders" },
-              { label: "Saved Items", href: "/wishlist" },
+              { label: "My Orders", href: "/account/orders" },
+              { label: "Saved Items", href: "/account/saved-items" },
+              { label: "Track Order", href: "/track-order" },
             ].map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setIsDropdownOpen(false)}
                 className="block rounded-bhor-sm px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-text hover:bg-bhor-cream hover:text-bhor-primary"
               >
                 {item.label}

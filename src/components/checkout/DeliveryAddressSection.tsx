@@ -2,21 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import { MapPin } from "lucide-react";
-import { useShop } from "@/src/context/ShopContext";
+import { useShop, type CustomerAddress } from "@/src/context/ShopContext";
 
-type Address = {
-  fullName: string;
-  mobile: string;
-  house: string;
-  area: string;
-  landmark: string;
-  pincode: string;
-  city: string;
-  state: string;
-};
-
-const addressStorageKey = "bhorkit_checkout_address";
-const emptyAddress: Address = {
+const emptyAddress = {
   fullName: "",
   mobile: "",
   house: "",
@@ -25,13 +13,19 @@ const emptyAddress: Address = {
   pincode: "",
   city: "Patna",
   state: "Bihar",
+  isDefault: false,
 };
 
 export function DeliveryAddressSection() {
-  const { isLoggedIn } = useShop();
-  const [address, setAddress] = useState<Address | null>(() => getInitialAddress());
-  const [draft, setDraft] = useState<Address>(() => getInitialAddress() ?? emptyAddress);
-  const [isEditing, setIsEditing] = useState(() => !getInitialAddress());
+  const {
+    addAddress,
+    addresses,
+    isLoggedIn,
+    selectedAddressId,
+    setSelectedAddressId,
+  } = useShop();
+  const [draft, setDraft] = useState(emptyAddress);
+  const [isAdding, setIsAdding] = useState(false);
 
   return (
     <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
@@ -44,24 +38,47 @@ export function DeliveryAddressSection() {
         <p className="mt-2 text-bhor-small text-bhor-text-muted">
           Login or create an account to add your delivery address.
         </p>
-      ) : address && !isEditing ? (
-        <div className="mt-4 rounded-bhor-md border border-bhor-border bg-bhor-cream p-4">
-          <p className="font-bhor-semibold text-bhor-text">{address.fullName}</p>
-          <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted">
-            {address.house}, {address.area}
-            {address.landmark ? `, ${address.landmark}` : ""}
-            <br />
-            {address.city}, {address.state} - {address.pincode}
-            <br />
-            Mobile: {address.mobile}
+      ) : addresses.length > 0 && !isAdding ? (
+        <div className="mt-4 space-y-3">
+          <p className="text-bhor-small font-bhor-semibold text-bhor-text">
+            Select Delivery Address
           </p>
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="mt-3 text-bhor-small font-bhor-bold text-bhor-primary"
-          >
-            Change
-          </button>
+          <div className="grid gap-3">
+            {addresses.map((address) => (
+              <label
+                key={address.id}
+                className={`flex cursor-pointer gap-3 rounded-bhor-md border p-4 ${
+                  selectedAddressId === address.id
+                    ? "border-bhor-primary bg-bhor-primary-soft"
+                    : "border-bhor-border bg-bhor-cream"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="delivery-address"
+                  checked={selectedAddressId === address.id}
+                  onChange={() => setSelectedAddressId(address.id)}
+                  className="mt-1 h-4 w-4 accent-bhor-primary"
+                />
+                <AddressText address={address} />
+              </label>
+            ))}
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setIsAdding(true)}
+              className="min-h-11 rounded-bhor-sm border border-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-bhor-primary"
+            >
+              Add New Address
+            </button>
+            <button
+              type="button"
+              className="min-h-11 rounded-bhor-sm bg-bhor-gold-light px-5 text-bhor-button font-bhor-bold uppercase text-bhor-primary-dark"
+            >
+              Continue
+            </button>
+          </div>
         </div>
       ) : (
         <form onSubmit={saveAddress} className="mt-4 space-y-4">
@@ -79,13 +96,15 @@ export function DeliveryAddressSection() {
             <AddressInput label="State" value={draft.state} onChange={(value) => setDraft({ ...draft, state: value })} />
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="button"
-              onClick={() => setIsEditing(true)}
-              className="min-h-11 rounded-bhor-sm border border-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-bhor-primary"
-            >
-              Add New Address
-            </button>
+            {addresses.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setIsAdding(false)}
+                className="min-h-11 rounded-bhor-sm border border-bhor-border px-5 text-bhor-button font-bhor-bold uppercase text-bhor-text"
+              >
+                Cancel
+              </button>
+            ) : null}
             <button
               type="submit"
               className="min-h-11 rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
@@ -106,10 +125,33 @@ export function DeliveryAddressSection() {
 
   function saveAddress(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setAddress(draft);
-    setIsEditing(false);
-    window.localStorage.setItem(addressStorageKey, JSON.stringify(draft));
+    addAddress(draft);
+    setDraft(emptyAddress);
+    setIsAdding(false);
   }
+}
+
+export function AddressText({ address }: { address: CustomerAddress }) {
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="font-bhor-semibold text-bhor-text">{address.fullName}</p>
+        {address.isDefault ? (
+          <span className="rounded-bhor-sm bg-bhor-gold-light px-2 py-0.5 text-bhor-badge font-bhor-bold uppercase text-bhor-primary-dark">
+            Default
+          </span>
+        ) : null}
+      </div>
+      <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted">
+        {address.house}, {address.area}
+        {address.landmark ? `, ${address.landmark}` : ""}
+        <br />
+        {address.city}, {address.state} - {address.pincode}
+        <br />
+        Mobile: {address.mobile}
+      </p>
+    </div>
+  );
 }
 
 function AddressInput({
@@ -136,17 +178,4 @@ function AddressInput({
       />
     </label>
   );
-}
-
-function getInitialAddress(): Address | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const storedAddress = window.localStorage.getItem(addressStorageKey);
-    return storedAddress ? JSON.parse(storedAddress) : null;
-  } catch {
-    return null;
-  }
 }

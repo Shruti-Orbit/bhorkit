@@ -6,7 +6,15 @@ import { useShop } from "@/src/context/ShopContext";
 const slots = ["9 AM - 12 PM", "12 PM - 3 PM", "3 PM - 6 PM", "6 PM - 9 PM"];
 
 export function CheckoutDeliveryMode() {
-  const { cartItems, checkoutMode, isLoggedIn } = useShop();
+  const {
+    cartItems,
+    checkoutMode,
+    isLoggedIn,
+    scheduledDeliveryDate,
+    scheduledDeliverySlot,
+    setScheduledDeliveryDate,
+    setScheduledDeliverySlot,
+  } = useShop();
   const preorder = cartItems[0]?.product.preorder;
 
   if (!isLoggedIn) {
@@ -54,6 +62,8 @@ export function CheckoutDeliveryMode() {
           </span>
           <input
             type="date"
+            value={scheduledDeliveryDate}
+            onChange={(event) => setScheduledDeliveryDate(event.target.value)}
             className="mt-2 min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary"
           />
         </label>
@@ -61,7 +71,11 @@ export function CheckoutDeliveryMode() {
           <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
             Delivery Time
           </span>
-          <select className="mt-2 min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary">
+          <select
+            value={scheduledDeliverySlot}
+            onChange={(event) => setScheduledDeliverySlot(event.target.value)}
+            className="mt-2 min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary"
+          >
             <option value="">Select Time Slot</option>
             {slots.map((slot) => (
               <option key={slot} value={slot}>

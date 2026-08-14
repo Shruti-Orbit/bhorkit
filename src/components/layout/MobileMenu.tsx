@@ -15,7 +15,7 @@ type MobileMenuProps = {
 
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const pathname = usePathname();
-  const { openAuthModal } = useShop();
+  const { isLoggedIn, openAuthModal } = useShop();
 
   return (
     <AnimatePresence>
@@ -103,7 +103,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
             <div className="mt-5 px-3">
               <Link
-                href="/wishlist"
+                href="/account/saved-items"
                 onClick={onClose}
                 className="flex min-h-12 items-center justify-between border-b border-bhor-border/70 px-2 text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
               >
@@ -113,20 +113,34 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 </span>
                 <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
               </Link>
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  openAuthModal({ mode: "login" });
-                }}
-                className="flex min-h-12 w-full items-center justify-between border-b border-bhor-border/70 px-2 text-left text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
-              >
-                <span className="flex items-center gap-2">
-                  <UserRound className="h-4 w-4 text-bhor-gold" aria-hidden />
-                  Account
-                </span>
-                <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-              </button>
+              {isLoggedIn ? (
+                <Link
+                  href="/account"
+                  onClick={onClose}
+                  className="flex min-h-12 w-full items-center justify-between border-b border-bhor-border/70 px-2 text-left text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
+                >
+                  <span className="flex items-center gap-2">
+                    <UserRound className="h-4 w-4 text-bhor-gold" aria-hidden />
+                    Account
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    openAuthModal({ mode: "login" });
+                  }}
+                  className="flex min-h-12 w-full items-center justify-between border-b border-bhor-border/70 px-2 text-left text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
+                >
+                  <span className="flex items-center gap-2">
+                    <UserRound className="h-4 w-4 text-bhor-gold" aria-hidden />
+                    Account
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                </button>
+              )}
             </div>
 
             <div className="mt-auto border-t border-bhor-border bg-bhor-cream px-5 py-5">
