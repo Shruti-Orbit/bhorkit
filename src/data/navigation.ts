@@ -7,13 +7,17 @@ export type NavigationItem = {
 
 export const navigation: NavigationItem[] = [
   {
-    label: "Home",
-    href: "/",
-  },
-  {
     label: "Shop",
     href: "/shop",
     dropdown: true,
+  },
+  {
+    label: "Puja Kits",
+    href: "/shop?category=puja-kits",
+  },
+  {
+    label: "Festival Collections",
+    href: "/collections/festivals",
   },
   {
     label: "Pre-Order",
@@ -21,15 +25,7 @@ export const navigation: NavigationItem[] = [
     badge: "New",
   },
   {
-    label: "About Us",
-    href: "/about",
-  },
-  {
-    label: "Blog",
-    href: "/blog",
-  },
-  {
-    label: "Contact",
-    href: "/contact",
+    label: "Track Order",
+    href: "/track-order",
   },
 ];

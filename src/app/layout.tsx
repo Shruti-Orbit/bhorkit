@@ -8,6 +8,7 @@ import {
 import { Header } from "@/src/components/layout/Header";
 import { EcommerceTrustStrip } from "@/src/components/layout/EcommerceTrustStrip";
 import { Footer } from "@/src/components/layout/Footer";
+import { ShopProviders } from "@/src/components/providers/ShopProviders";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -47,10 +48,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${figtree.variable} ${redHatDisplay.variable} ${montserrat.variable} ${quicksand.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
-        <Header />
-        {children}
-        <EcommerceTrustStrip />
-        <Footer />
+        <ShopProviders>
+          <Header />
+          {children}
+          <EcommerceTrustStrip />
+          <Footer />
+        </ShopProviders>
       </body>
     </html>
   );

@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift, X } from "lucide-react";
+import { Gift, Mail, Phone, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useShop } from "@/src/context/ShopContext";
+import { isValidAuthIdentifier } from "@/src/utils/auth";
 
 const offerSessionKey = "bhorkit_signup_offer_shown";
 const offerDelayMs = 180000;
@@ -11,8 +12,16 @@ const offerDelayMs = 180000;
 export function SignupOfferPopup() {
   const pathname = usePathname();
   const { isLoggedIn, discountUnlocked, authModalOpen, openAuthModal } = useShop();
-  const [isVisible, setIsVisible] = useState(false);
+  const [identifier, setIdentifier] = useState("");
+  const [error, setError] = useState("");
   const [isEligible, setIsEligible] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(() => {
+    if (typeof window === "undefined") {
+      return true;
+    }
+
+    return window.sessionStorage.getItem(offerSessionKey) === "true";
+  });
 
   const isCheckoutFlow =
     pathname.startsWith("/checkout") || pathname.startsWith("/payment") || pathname.startsWith("/orders");
@@ -29,18 +38,13 @@ export function SignupOfferPopup() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  useEffect(() => {
-    if (
-      isEligible &&
-      !isCheckoutFlow &&
-      !isLoggedIn &&
-      !discountUnlocked &&
-      !authModalOpen &&
-      !window.sessionStorage.getItem(offerSessionKey)
-    ) {
-      setIsVisible(true);
-    }
-  }, [authModalOpen, discountUnlocked, isCheckoutFlow, isEligible, isLoggedIn]);
+  const isVisible =
+    isEligible &&
+    !isCheckoutFlow &&
+    !isLoggedIn &&
+    !discountUnlocked &&
+    !authModalOpen &&
+    !isDismissed;
 
   if (!isVisible) {
     return null;
@@ -48,7 +52,7 @@ export function SignupOfferPopup() {
 
   function closeOffer() {
     window.sessionStorage.setItem(offerSessionKey, "true");
-    setIsVisible(false);
+    setIsDismissed(true);
   }
 
   return (
@@ -76,11 +80,36 @@ export function SignupOfferPopup() {
           <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
             Create your BHORKIT account and get 10% OFF on your first purchase.
           </p>
+          <label className="mt-4 block">
+            <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email or mobile number</span>
+            <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
+              {identifier.includes("@") ? (
+                <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+              ) : (
+                <Phone className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+              )}
+              <input
+                value={identifier}
+                onChange={(event) => {
+                  setIdentifier(event.target.value);
+                  setError("");
+                }}
+                type="text"
+                placeholder="Enter email or mobile number"
+                className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none"
+              />
+            </span>
+          </label>
+          {error ? <p className="mt-2 text-bhor-small font-bhor-semibold text-bhor-primary">{error}</p> : null}
           <button
             type="button"
             onClick={() => {
+              if (!isValidAuthIdentifier(identifier)) {
+                setError("Please enter a valid email address or Indian mobile number.");
+                return;
+              }
               closeOffer();
-              openAuthModal({ mode: "signup" });
+              openAuthModal({ mode: "signup", email: identifier });
             }}
             className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
           >

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Clock, Flame, MapPin } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { useShop } from "@/src/context/ShopContext";
 
 type DeliveryStatus = "idle" | "two-hour" | "standard" | "unavailable";
 type PurchaseMode = "now" | "later";
@@ -13,6 +14,7 @@ type ProductPurchasePanelProps = {
 };
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
+  const { addToCart, buyNow } = useShop();
   const [pincode, setPincode] = useState("");
   const [deliveryStatus, setDeliveryStatus] = useState<DeliveryStatus>("idle");
   const [selectedMode, setSelectedMode] = useState<PurchaseMode>("now");
@@ -88,7 +90,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
             setSelectedMode("now");
             if (deliveryStatus === "unavailable" || !product.stock.readyStock) {
               event.preventDefault();
+              return;
             }
+            buyNow(product);
           }}
           className={`group rounded-bhor-md border p-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary ${
             selectedMode === "now"
@@ -111,8 +115,11 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         </Link>
 
         <Link
-          href="/pre-order"
-          onClick={() => setSelectedMode("later")}
+          href="/checkout"
+          onClick={() => {
+            setSelectedMode("later");
+            buyNow(product, "scheduled");
+          }}
           className={`rounded-bhor-md border p-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary ${
             selectedMode === "later"
               ? "border-bhor-primary bg-bhor-primary-soft"
@@ -129,6 +136,14 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           </span>
         </Link>
       </div>
+
+      <button
+        type="button"
+        onClick={() => addToCart(product)}
+        className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-bhor-sm border border-bhor-border bg-bhor-surface px-5 text-bhor-button font-bhor-semibold text-bhor-text hover:border-bhor-primary hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+      >
+        Add to Cart
+      </button>
 
       {selectedMode === "later" ? (
         <div className="mt-4 rounded-bhor-sm bg-bhor-primary-soft p-3">
