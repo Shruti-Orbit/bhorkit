@@ -3,10 +3,15 @@ import Link from "next/link";
 import { ArrowRight, Sparkle } from "lucide-react";
 import { ProductCard } from "@/src/components/home/product-collection/ProductCard";
 import { featuredFestival, festivalCollections } from "@/src/data/editorialCollections";
+import { getProductsByCollection } from "@/src/server/catalog/productService";
 
 const upcomingPanels = festivalCollections.filter((festival) => festival.status !== "available").slice(0, 2);
 
-export default function FestivalCollectionsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function FestivalCollectionsPage() {
+  const ganeshChaturthiProducts = await getProductsByCollection("ganesh-chaturthi");
+
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream">
       <section className="px-4 py-8 sm:px-6 lg:px-8">
@@ -152,7 +157,7 @@ export default function FestivalCollectionsPage() {
             </Link>
           </div>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredFestival.products.map((product) => (
+            {ganeshChaturthiProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))}
           </div>

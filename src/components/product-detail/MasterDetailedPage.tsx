@@ -8,10 +8,14 @@ import { MobileStickyCta } from "./MobileStickyCta";
 
 type MasterDetailedPageProps = {
   product: CollectionProduct;
+  ganeshChaturthiProducts: CollectionProduct[];
+  navratriUpcomingProducts: CollectionProduct[];
   relatedProducts: CollectionProduct[];
 };
 
 export function MasterDetailedPage({
+  ganeshChaturthiProducts,
+  navratriUpcomingProducts,
   product,
   relatedProducts,
 }: MasterDetailedPageProps) {
@@ -19,7 +23,12 @@ export function MasterDetailedPage({
     <main className="flex flex-1 flex-col bg-bhor-cream pb-20 md:pb-0">
       <ProductBreadcrumb product={product} />
       <ProductHero product={product} />
-      <ProductSections product={product} relatedProducts={relatedProducts} />
+      <ProductSections
+        product={product}
+        relatedProducts={relatedProducts}
+        ganeshChaturthiProducts={ganeshChaturthiProducts}
+        navratriUpcomingProducts={navratriUpcomingProducts}
+      />
       <ProductReviews reviews={product.reviews} />
       <FinalProductCta product={product} />
       <MobileStickyCta product={product} />

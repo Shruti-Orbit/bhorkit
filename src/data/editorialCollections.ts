@@ -1,5 +1,3 @@
-import { ganeshChaturthiProducts, navratriUpcomingProducts } from "./products";
-
 export type FestivalCollection = {
   slug: string;
   name: string;
@@ -81,7 +79,6 @@ export const featuredFestival = {
     "A thoughtfully curated collection for a beautiful, complete and meaningful Ganesh Chaturthi.",
   href: "/shop/ganesh-chaturthi",
   image: "/images/slider/slider-1.png",
-  products: ganeshChaturthiProducts,
 };
 
 export const preOrderFeature = {
@@ -92,17 +89,4 @@ export const preOrderFeature = {
     "Thoughtfully curated essentials for the beginning, middle and everyday moments of Navratri.",
   expectedDispatch: "To be announced",
   image: "/images/festivals/navratri.png",
-  products: navratriUpcomingProducts,
 };
-
-export const preOrderDrops: PreOrderDrop[] = navratriUpcomingProducts.slice(0, 3).map((product, index) => ({
-  id: product.id,
-  title: product.name,
-  description: product.description,
-  image: product.image,
-  price: product.price,
-  status: index < 2 ? "pre-order" : "coming-soon",
-  expectedDispatch: "To be announced",
-  expectedDelivery: product.preorder?.expectedDelivery ?? "To be announced",
-  href: "/checkout",
-}));

@@ -1,11 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
-import {
-  ganeshChaturthiProducts,
-  getProductBySlug,
-  getRelatedProducts,
-} from "@/src/data/products";
+import { getProductDetail } from "@/src/server/catalog/productService";
 
 type ProductPageProps = {
   params: Promise<{
@@ -13,17 +9,15 @@ type ProductPageProps = {
   }>;
 };
 
-export function generateStaticParams() {
-  return ganeshChaturthiProducts.map((product) => ({
-    slug: product.slug,
-  }));
-}
+export const dynamic = "force-dynamic";
+export const dynamicParams = true;
 
 export async function generateMetadata({
   params,
 }: ProductPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const detail = await getProductDetail(slug);
+  const product = detail?.product;
 
   if (!product) {
     return {
@@ -49,13 +43,14 @@ export async function generateMetadata({
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const detail = await getProductDetail(slug);
 
-  if (!product) {
+  if (!detail) {
     notFound();
   }
 
-  const relatedProducts = getRelatedProducts(slug);
+  const product = detail.product;
+
   const productSchema = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -105,7 +100,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
-      <MasterDetailedPage product={product} relatedProducts={relatedProducts} />
+      <MasterDetailedPage
+        product={product}
+        relatedProducts={detail.relatedProducts}
+        ganeshChaturthiProducts={detail.ganeshChaturthiProducts}
+        navratriUpcomingProducts={detail.navratriUpcomingProducts}
+      />
     </>
   );
 }

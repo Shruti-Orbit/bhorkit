@@ -4,14 +4,15 @@ import { CategoryStrip } from "@/src/components/home/category-strip/CategoryStri
 import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
-import {
-  ganeshChaturthiProducts,
-  navratriUpcomingProducts,
-  regularPoojaKits,
-} from "@/src/data/products";
 import { navratriPromotion } from "@/src/data/promotions";
+import { getHomeCatalog } from "@/src/server/catalog/productService";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const { ganeshChaturthiProducts, navratriUpcomingProducts, regularPoojaKits } =
+    await getHomeCatalog();
+
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream font-sans">
       <Hero />

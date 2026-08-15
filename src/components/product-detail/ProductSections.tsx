@@ -1,17 +1,20 @@
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
-import {
-  ganeshChaturthiProducts,
-  navratriUpcomingProducts,
-  type CollectionProduct,
-} from "@/src/data/products";
+import type { CollectionProduct } from "@/src/data/products";
 import { RecentlyViewedProducts } from "./RecentlyViewedProducts";
 
 type ProductSectionsProps = {
   product: CollectionProduct;
+  ganeshChaturthiProducts: CollectionProduct[];
+  navratriUpcomingProducts: CollectionProduct[];
   relatedProducts: CollectionProduct[];
 };
 
-export function ProductSections({ product, relatedProducts }: ProductSectionsProps) {
+export function ProductSections({
+  ganeshChaturthiProducts,
+  navratriUpcomingProducts,
+  product,
+  relatedProducts,
+}: ProductSectionsProps) {
   return (
     <>
       <section className="mx-auto max-w-[1512px] px-4 py-10 sm:px-6 lg:px-8">
