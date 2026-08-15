@@ -377,6 +377,73 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
   },
 ];
 
+export const regularPoojaKits: CollectionProduct[] = [
+  {
+    ...createProduct({
+      id: "daily-puja-essentials-kit",
+      sku: "BHOR-RP-01",
+      slug: "daily-puja-essentials-kit",
+      name: "BHOR Daily Puja Essentials Kit",
+      subtitle: "Everyday puja essentials thoughtfully packed for your home mandir.",
+      description: "Daily samagri for a calm and complete home ritual.",
+      price: "₹399",
+      image: "/images/banner/banner-3.png",
+      badge: { label: "Daily Kit", tone: "success" },
+      contents: sharedEssentials,
+    }),
+    category: "Regular Puja",
+    href: "/shop",
+  },
+  {
+    ...createProduct({
+      id: "incense-dhoop-kit",
+      sku: "BHOR-RP-02",
+      slug: "incense-dhoop-kit",
+      name: "BHOR Incense & Dhoop Kit",
+      subtitle: "Aromatic essentials for peaceful morning and evening worship.",
+      description: "Incense, dhoop and diya essentials for everyday devotion.",
+      price: "₹299",
+      image: "/images/banner/banner-2.png",
+      badge: { label: "Popular", tone: "gold" },
+      contents: sharedEssentials,
+    }),
+    category: "Regular Puja",
+    href: "/shop",
+  },
+  {
+    ...createProduct({
+      id: "pooja-samagri-refill-kit",
+      sku: "BHOR-RP-03",
+      slug: "pooja-samagri-refill-kit",
+      name: "BHOR Pooja Samagri Refill Kit",
+      subtitle: "A handy refill of essential ingredients for regular rituals.",
+      description: "Haldi, kumkum, akshat and everyday puja ingredients.",
+      price: "₹349",
+      image: "/images/slider/slider-1.png",
+      badge: { label: "Refill", tone: "soft" },
+      contents: sharedEssentials,
+    }),
+    category: "Regular Puja",
+    href: "/shop",
+  },
+  {
+    ...createProduct({
+      id: "kalash-decor-kit",
+      sku: "BHOR-RP-04",
+      slug: "kalash-decor-kit",
+      name: "BHOR Kalash & Decor Kit",
+      subtitle: "Simple festive decor essentials for your home puja setup.",
+      description: "Kalash and decor touches for a graceful mandir setup.",
+      price: "₹449",
+      image: "/images/banner/banner-1.png",
+      badge: { label: "Decor", tone: "primary" },
+      contents: sharedEssentials,
+    }),
+    category: "Regular Puja",
+    href: "/shop",
+  },
+];
+
 export function getProductBySlug(slug: string) {
   return ganeshChaturthiProducts.find((product) => product.slug === slug);
 }

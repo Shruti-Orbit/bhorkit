@@ -109,8 +109,6 @@ export function Hero() {
         <HeroControls
           currentSlide={currentSlide}
           slideCount={heroSlides.length}
-          onPrevious={goToPrevious}
-          onNext={goToNext}
           onSelect={goToSlide}
         />
       </div>

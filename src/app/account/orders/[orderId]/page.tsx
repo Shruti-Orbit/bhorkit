@@ -25,9 +25,9 @@ export default function OrderDetailPage() {
           </p>
         </AccountSectionCard>
       ) : (
-        <div className="space-y-5">
-          <div>
-            <h1 className="font-bhor-display text-bhor-h2-mobile font-bhor-semibold text-bhor-text md:text-bhor-h2">
+        <div className="min-w-0 space-y-5">
+          <div className="min-w-0">
+            <h1 className="break-words font-bhor-display text-bhor-h3-mobile font-bhor-semibold leading-bhor-heading text-bhor-text md:text-bhor-h2">
               Order #{order.id}
             </h1>
             <p className="mt-2 text-bhor-small text-bhor-text-muted">
@@ -54,17 +54,17 @@ export default function OrderDetailPage() {
             </div>
           </AccountSectionCard>
 
-          <div className="grid gap-5 lg:grid-cols-[1fr_360px]">
+          <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_360px]">
             <AccountSectionCard>
               <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Items</h2>
               <div className="mt-4 divide-y divide-bhor-border">
                 {order.items.map((item) => (
-                  <div key={item.product.id} className="flex justify-between gap-4 py-3 text-bhor-small">
-                    <div>
+                  <div key={item.product.id} className="flex min-w-0 flex-wrap justify-between gap-x-4 gap-y-2 py-3 text-bhor-small">
+                    <div className="min-w-0 flex-1">
                       <p className="font-bhor-semibold text-bhor-text">{item.product.name}</p>
                       <p className="text-bhor-text-muted">Qty {item.quantity}</p>
                     </div>
-                    <p className="font-bhor-bold text-bhor-text">{item.product.price}</p>
+                    <p className="shrink-0 font-bhor-bold text-bhor-text">{item.product.price}</p>
                   </div>
                 ))}
               </div>

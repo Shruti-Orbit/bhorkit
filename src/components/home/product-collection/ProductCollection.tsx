@@ -7,23 +7,34 @@ type ProductCollectionProps = {
   title: string;
   href: string;
   products: CollectionProduct[];
+  description?: string;
   tone?: "default" | "muted";
+  variant?: "primary" | "regular" | "upcoming";
 };
 
 export function ProductCollection({
+  description,
   title,
   href,
   products,
   tone = "default",
+  variant = "primary",
 }: ProductCollectionProps) {
   return (
-    <section className={`${tone === "muted" ? "bg-bhor-surface" : "bg-bhor-cream"} px-4 py-6 sm:px-6 lg:px-8`}>
+    <section className={`${tone === "muted" ? "bg-bhor-surface" : "bg-bhor-cream"} px-4 py-7 sm:px-6 lg:px-8`}>
       <div className="mx-auto max-w-[1512px]">
-        <div className="mb-5 flex items-center justify-between gap-4">
-          <h2 className="font-bhor-display text-bhor-h3-mobile font-bhor-semibold leading-bhor-heading text-bhor-text md:text-bhor-h3">
-            {title}
-            <Sparkle className="ml-2 inline h-4 w-4 text-bhor-gold md:h-5 md:w-5" aria-hidden />
-          </h2>
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <h2 className="font-bhor-display text-bhor-h3-mobile font-bhor-semibold leading-bhor-heading text-bhor-text md:text-bhor-h3">
+              {title}
+              <Sparkle className="ml-2 inline h-4 w-4 text-bhor-gold md:h-5 md:w-5" aria-hidden />
+            </h2>
+            {description ? (
+              <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted md:text-bhor-body-mobile">
+                {description}
+              </p>
+            ) : null}
+          </div>
           <Link
             href={href}
             className="inline-flex shrink-0 items-center gap-2 text-bhor-button-mobile font-bhor-bold text-bhor-primary transition-colors hover:text-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:text-bhor-button"
@@ -34,8 +45,13 @@ export function ProductCollection({
         </div>
 
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-7">
-          {products.map((product) => (
-            <div key={product.id} className="w-full basis-full shrink-0 snap-start sm:w-auto sm:basis-auto">
+          {products.map((product, index) => (
+            <div
+              key={product.id}
+              className={`w-full basis-full shrink-0 snap-start sm:w-auto sm:basis-auto ${
+                variant === "upcoming" ? "opacity-90" : ""
+              } ${variant === "regular" && index === 0 ? "lg:-translate-y-1" : ""}`}
+            >
               <ProductCard product={product} />
             </div>
           ))}

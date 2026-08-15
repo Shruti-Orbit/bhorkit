@@ -1,8 +1,14 @@
 import { Hero } from "@/src/components/home/hero/Hero";
+import { HomeBannerStrip } from "@/src/components/home/banner-strip/HomeBannerStrip";
+import { CategoryStrip } from "@/src/components/home/category-strip/CategoryStrip";
 import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
-import { ganeshChaturthiProducts, navratriUpcomingProducts } from "@/src/data/products";
+import {
+  ganeshChaturthiProducts,
+  navratriUpcomingProducts,
+  regularPoojaKits,
+} from "@/src/data/products";
 import { navratriPromotion } from "@/src/data/promotions";
 
 export default function Home() {
@@ -10,16 +16,32 @@ export default function Home() {
     <main className="flex flex-1 flex-col bg-bhor-cream font-sans">
       <Hero />
       <PreOrderBanner {...navratriPromotion} />
+      <CategoryStrip />
       <ProductCollection
         title="Ganesh Chaturthi Collection"
+        description="Everything you need to welcome Bappa."
         href="/shop/ganesh-chaturthi"
         products={ganeshChaturthiProducts}
+        variant="primary"
       />
-      <RitualSeparator />
+       <RitualSeparator />
+      <HomeBannerStrip />
+
+
+     
       <ProductCollection
-        title="Upcoming Navratri Products"
+        title="Regular Pooja Kits"
+        description="Everyday puja essentials for your home rituals."
+        href="/shop"
+        products={regularPoojaKits}
+        variant="regular"
+      />
+      <ProductCollection
+        title="Coming Soon for Navratri"
         href="/pre-order"
         products={navratriUpcomingProducts}
+        tone="muted"
+        variant="upcoming"
       />
     </main>
   );

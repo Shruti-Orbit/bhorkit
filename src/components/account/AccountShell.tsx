@@ -42,8 +42,8 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto grid w-full max-w-[1512px] gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
+    <main className="flex min-w-0 flex-1 flex-col overflow-x-hidden bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto grid w-full min-w-0 max-w-[1512px] gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
         <aside className="hidden lg:block">
           <nav className="sticky top-6 rounded-bhor-lg border border-bhor-border bg-bhor-surface p-3 shadow-bhor-soft">
             {accountLinks.map((item) => {
@@ -76,8 +76,8 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        <div>
-          <nav className="-mx-4 mb-5 flex gap-2 overflow-x-auto px-4 pb-1 lg:hidden">
+        <div className="min-w-0">
+          <nav className="mb-5 flex max-w-full gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] lg:hidden [&::-webkit-scrollbar]:hidden">
             {accountLinks.map((item) => {
               const active = item.href === "/account" ? pathname === item.href : pathname.startsWith(item.href);
               return (
@@ -102,7 +102,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
 
 export function AccountSectionCard({ children }: { children: React.ReactNode }) {
   return (
-    <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft md:p-6">
+    <section className="min-w-0 overflow-hidden rounded-bhor-lg border border-bhor-border bg-bhor-surface p-4 shadow-bhor-soft md:p-6">
       {children}
     </section>
   );
