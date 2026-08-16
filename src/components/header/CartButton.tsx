@@ -9,21 +9,33 @@ type CartButtonProps = {
 };
 
 export function CartButton({ count }: CartButtonProps) {
-  const { cartCount } = useShop();
+  const { cartCount, openCartDrawer } = useShop();
   const visibleCount = count ?? cartCount;
+  const badge = visibleCount > 0 ? (
+    <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-bhor-primary px-1 text-bhor-caption font-bhor-bold leading-none text-white">
+      {visibleCount}
+    </span>
+  ) : null;
 
   return (
-    <Link
-      href="/cart"
-      aria-label={`Cart${visibleCount ? `, ${visibleCount} items` : ""}`}
-      className="relative flex h-11 w-11 items-center justify-center text-bhor-text transition-colors hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
-    >
-      <ShoppingCart className="h-6 w-6" aria-hidden />
-      {visibleCount > 0 ? (
-        <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-bhor-primary px-1 text-bhor-caption font-bhor-bold leading-none text-white">
-          {visibleCount}
-        </span>
-      ) : null}
-    </Link>
+    <>
+      <Link
+        href="/cart"
+        aria-label={`Cart${visibleCount ? `, ${visibleCount} items` : ""}`}
+        className="relative flex h-11 w-11 items-center justify-center text-bhor-text transition-colors hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:hidden"
+      >
+        <ShoppingCart className="h-6 w-6" aria-hidden />
+        {badge}
+      </Link>
+      <button
+        type="button"
+        onClick={openCartDrawer}
+        aria-label={`Cart${visibleCount ? `, ${visibleCount} items` : ""}`}
+        className="relative hidden h-11 w-11 items-center justify-center text-bhor-text transition-colors hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:flex"
+      >
+        <ShoppingCart className="h-6 w-6" aria-hidden />
+        {badge}
+      </button>
+    </>
   );
 }

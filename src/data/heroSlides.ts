@@ -23,9 +23,9 @@ export const heroSlides: HeroSlide[] = [
     highlightedTitle: "Bappa's Blessings",
     description:
       "Premium puja kits, thoughtfully curated with devotion and delivered across Patna.",
-    primaryCta: "SHOP GANESH KITS",
+    primaryCta: "PRE-ORDER GANESH KITS →",
     primaryHref: "/shop/ganesh-kits",
-    secondaryCta: "EXPLORE MORE",
+    secondaryCta: "EXPLORE COLLECTION",
     secondaryHref: "/shop",
   },
   {
@@ -38,7 +38,7 @@ export const heroSlides: HeroSlide[] = [
     highlightedTitle: "Puja More Divine",
     description:
       "Thoughtfully curated puja essentials, made for meaningful celebrations.",
-    primaryCta: "SHOP PUJA KITS",
+    primaryCta: "PRE-ORDER GANESH KITS →",
     primaryHref: "/shop/puja-kits",
     secondaryCta: "EXPLORE COLLECTION",
     secondaryHref: "/shop",

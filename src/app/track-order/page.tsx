@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { useShop, type CustomerOrder } from "@/src/context/ShopContext";
 import { formatCurrency } from "@/src/utils/discount";
+import { isGaneshPreOrder } from "@/src/utils/preorder";
 
 const standardSteps = ["confirmed", "processing", "packed", "out-for-delivery", "delivered"];
 const preOrderSteps = ["pre-order-confirmed", "preparing", "scheduled-for-dispatch", "dispatched", "delivered"];
@@ -82,7 +83,8 @@ function TrackOrderContent() {
                         {order.items[0]?.product.name}
                       </p>
                       <p className="mt-1 text-bhor-small text-bhor-text-muted">
-                        Expected Delivery: {order.expectedDelivery ?? order.expectedDispatch ?? "To be confirmed"}
+                        {isGaneshPreOrder(order) ? "Pre-Order Delivery" : "Expected Delivery"}:{" "}
+                        {order.deliveryDate ?? order.expectedDelivery ?? order.expectedDispatch ?? "To be confirmed"}
                       </p>
                     </div>
                     <p className="text-bhor-product font-bhor-bold text-bhor-text">
@@ -117,7 +119,7 @@ function TrackOrderContent() {
 }
 
 function TrackingTimeline({ order }: { order: CustomerOrder }) {
-  const steps = order.checkoutMode === "pre-order" ? preOrderSteps : standardSteps;
+  const steps = isGaneshPreOrder(order) ? preOrderSteps : standardSteps;
   const activeIndex = steps.indexOf(order.status);
 
   return (

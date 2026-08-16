@@ -10,6 +10,8 @@ type ProductCollectionProps = {
   description?: string;
   tone?: "default" | "muted";
   variant?: "primary" | "regular" | "upcoming";
+  showProductActions?: boolean;
+  productActionMode?: "default" | "add-to-cart";
 };
 
 export function ProductCollection({
@@ -17,6 +19,8 @@ export function ProductCollection({
   title,
   href,
   products,
+  productActionMode = "default",
+  showProductActions = true,
   tone = "default",
   variant = "primary",
 }: ProductCollectionProps) {
@@ -52,7 +56,11 @@ export function ProductCollection({
                 variant === "upcoming" ? "opacity-90" : ""
               } ${variant === "regular" && index === 0 ? "lg:-translate-y-1" : ""}`}
             >
-              <ProductCard product={product} />
+              <ProductCard
+                product={product}
+                actionMode={productActionMode}
+                showActions={showProductActions}
+              />
             </div>
           ))}
         </div>

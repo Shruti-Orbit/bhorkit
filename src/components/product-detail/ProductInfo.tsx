@@ -15,7 +15,7 @@ export function ProductInfo({ product }: ProductInfoProps) {
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="w-fit rounded-bhor-sm bg-bhor-primary-soft px-3 py-1 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-            {product.category}
+            Ganesh Chaturthi · Pre-Order
           </p>
           {product.badge ? (
             <p className="text-bhor-small font-bhor-bold text-bhor-gold">{product.badge.label}</p>
@@ -27,7 +27,7 @@ export function ProductInfo({ product }: ProductInfoProps) {
         </h1>
         <p className="mt-3 text-bhor-body leading-bhor-body text-bhor-text-muted">{product.subtitle}</p>
         <p className="mt-3 text-bhor-small font-bhor-semibold text-bhor-success">
-          GANESH CHATURTHI PRE-ORDER
+          Reserve your kit in advance and receive it before Ganesh Chaturthi.
         </p>
       </div>
 

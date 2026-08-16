@@ -1,10 +1,11 @@
 "use client";
 
-import { formatCurrency } from "@/src/utils/discount";
+import { calculateMemberDiscount, formatCurrency } from "@/src/utils/discount";
 import { useShop } from "@/src/context/ShopContext";
 
 export function OrderSummary() {
-  const { cartSubtotal, cartTotal, discountUnlocked, handlingCharge, memberDiscount } = useShop();
+  const { cartSubtotal, cartTotal, handlingCharge, memberDiscount, paymentMethod } = useShop();
+  const conditionalDiscount = calculateMemberDiscount(cartSubtotal);
 
   return (
     <aside className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
@@ -14,16 +15,15 @@ export function OrderSummary() {
           <span>Subtotal</span>
           <span>{formatCurrency(cartSubtotal)}</span>
         </div>
-        {discountUnlocked ? (
-          <div className="flex justify-between gap-4 text-bhor-success">
-            <span>BHORKIT Member Discount (10% on lowest item)</span>
-            <span>-{formatCurrency(memberDiscount)}</span>
-          </div>
-        ) : (
-          <p className="rounded-bhor-sm bg-bhor-primary-soft px-3 py-2 font-bhor-semibold text-bhor-primary">
-            Login or create an account to unlock 10% OFF.
+        <div className="flex justify-between gap-4 text-bhor-success">
+          <span>Online Payment Discount (10%)</span>
+          <span>-{formatCurrency(paymentMethod === "online" ? memberDiscount : conditionalDiscount)}</span>
+        </div>
+        {paymentMethod !== "online" ? (
+          <p className="text-bhor-caption font-bhor-medium text-bhor-text-muted">
+            Applied when you select Online Payment at checkout.
           </p>
-        )}
+        ) : null}
         <div className="flex justify-between gap-4 text-bhor-text-muted">
           <span>Handling Charge</span>
           <span>{handlingCharge === 0 ? "Free" : formatCurrency(handlingCharge)}</span>

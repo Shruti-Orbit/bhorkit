@@ -18,10 +18,10 @@ export type Promotion = {
 };
 
 export const navratriPromotion: Promotion = {
-  eyebrow: "NAVRATRI 2025",
-  title: "Pre-Orders Open!",
-  description: "Be the first to prepare for Navratri.",
-  ctaLabel: "EXPLORE PRE-ORDER",
+  eyebrow: "NAVRATRI 2026",
+  title: "Coming Soon",
+  description: "We'll let you know when Navratri pre-orders open.",
+  ctaLabel: "NOTIFY ME",
   ctaHref: "/pre-order",
   image: "/images/durga-maa.png",
   imageAlt: "Durga Maa celebration artwork for Navratri",

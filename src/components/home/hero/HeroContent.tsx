@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Box, HandHeart, Truck } from "lucide-react";
+import { Box, HandHeart, Truck } from "lucide-react";
 import type { HeroSlide } from "@/src/data/heroSlides";
 
 type HeroContentProps = {
@@ -56,7 +56,6 @@ export function HeroContent({ slide }: HeroContentProps) {
           className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-bhor-sm bg-bhor-primary px-3 text-bhor-badge font-bhor-semibold uppercase text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary min-[390px]:min-h-11 min-[390px]:px-4 min-[390px]:text-bhor-button-mobile md:gap-2 md:px-6 md:text-bhor-button"
         >
           {slide.primaryCta}
-          <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
         <Link
           href={slide.secondaryHref}

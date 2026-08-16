@@ -39,7 +39,7 @@ export function CheckoutAuth() {
     return (
       <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
         <p className="text-bhor-small font-bhor-semibold text-bhor-success">
-          Logged in as {currentUser.email || currentUser.mobile}. Your 10% member discount is unlocked.
+          Logged in as {currentUser.email || currentUser.mobile}. Select online payment below to get 10% OFF.
         </p>
       </section>
     );
@@ -116,7 +116,7 @@ export function CheckoutAuth() {
           <div>
             <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Login or create an account</h2>
             <p className="mt-1 text-bhor-small text-bhor-text-muted">
-              Login or create an account to unlock 10% OFF.
+              Login or create an account to continue checkout.
             </p>
           </div>
           {mode === "login" ? (
