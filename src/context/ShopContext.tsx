@@ -10,7 +10,7 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import type { CollectionProduct } from "@/src/data/products";
-import { logout as logoutFromBackend } from "@/src/lib/api/auth.api";
+import { getCurrentUser, logout as logoutFromBackend } from "@/src/lib/api/auth.api";
 import {
   calculateHandlingCharge,
   calculateMemberDiscount,
@@ -25,7 +25,6 @@ export type CurrentUser = {
   email: string;
   id: string;
   image?: string | null;
-  mobile?: string;
   name: string;
 };
 
@@ -80,7 +79,7 @@ export type CustomerOrder = {
 };
 
 type AuthModalOptions = {
-  email?: string;
+  redirectTo?: string;
 };
 
 type ShopContextValue = {
@@ -88,7 +87,7 @@ type ShopContextValue = {
   currentUser: CurrentUser | null;
   discountUnlocked: boolean;
   authModalOpen: boolean;
-  authEmail: string;
+  authRedirectTo: string;
   successMessage: string;
   cartDrawerOpen: boolean;
   cartItems: CartItem[];
@@ -108,7 +107,6 @@ type ShopContextValue = {
   scheduledDeliverySlot: string;
   openAuthModal: (options?: AuthModalOptions) => void;
   closeAuthModal: () => void;
-  setAuthEmail: (email: string) => void;
   completeAuth: (user: CurrentUser) => void;
   logout: () => void;
   openCartDrawer: () => void;
@@ -142,7 +140,7 @@ const authSessionStorageKey = "bhorkit_auth_session";
 
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authEmail, setAuthEmail] = useState("");
+  const [authRedirectTo, setAuthRedirectTo] = useState("/");
   const [successMessage, setSuccessMessage] = useState("");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
@@ -184,6 +182,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [currentUser]);
 
   useEffect(() => {
+    let isActive = true;
+
+    getCurrentUser()
+      .then((user) => {
+        if (!isActive) return;
+        setCurrentUser({
+          email: user.email,
+          id: user.id,
+          image: user.image,
+          name: user.name,
+        });
+      })
+      .catch(() => {
+        if (!isActive) return;
+        setCurrentUser(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (isLoggedIn) {
       const timer = window.setTimeout(() => setAuthModalOpen(false), 0);
       return () => window.clearTimeout(timer);
@@ -194,7 +215,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     selectedAddressId || addresses.find((address) => address.isDefault)?.id || addresses[0]?.id || "";
 
   const openAuthModal = useCallback((options?: AuthModalOptions) => {
-    setAuthEmail(options?.email ?? "");
+    setAuthRedirectTo(options?.redirectTo ?? window.location.pathname);
     setAuthModalOpen(true);
   }, []);
 
@@ -453,7 +474,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       currentUser,
       discountUnlocked,
       authModalOpen,
-      authEmail,
+      authRedirectTo,
       successMessage,
       cartDrawerOpen,
       cartItems,
@@ -473,7 +494,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       scheduledDeliverySlot,
       openAuthModal,
       closeAuthModal,
-      setAuthEmail,
       completeAuth,
       logout,
       openCartDrawer,
@@ -502,7 +522,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       addAddress,
       addToCart,
       addresses,
-      authEmail,
+      authRedirectTo,
       authModalOpen,
       buyNow,
       cartCount,
@@ -645,7 +665,6 @@ function getInitialAuthSession(): CurrentUser | null {
           email: parsed.email,
           id: parsed.id,
           image: parsed.image,
-          mobile: parsed.mobile,
           name: parsed.name,
         }
       : null;

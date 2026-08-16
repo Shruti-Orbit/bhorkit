@@ -29,7 +29,16 @@ export default function AccountPage() {
 
         <AccountSectionCard>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
+            <div className="flex items-center gap-4">
+              {currentUser?.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={currentUser.image}
+                  alt={currentUser.name}
+                  className="h-16 w-16 rounded-full object-cover shadow-bhor-soft"
+                />
+              ) : null}
+              <div>
               <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-gold">
                 Profile
               </p>
@@ -39,6 +48,7 @@ export default function AccountPage() {
               <p className="mt-1 text-bhor-small text-bhor-text-muted">
                 {currentUser?.email || "Email not added"}
               </p>
+              </div>
             </div>
             <button
               type="button"

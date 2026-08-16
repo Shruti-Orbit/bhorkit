@@ -48,14 +48,26 @@ export function AccountButton() {
           onClick={() => setIsDropdownOpen((open) => !open)}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-bhor-primary-soft text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
         >
-          <span className="text-bhor-small font-bhor-bold">{initial}</span>
+          {currentUser.image ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={currentUser.image}
+              alt={currentUser.name}
+              className="h-full w-full rounded-full object-cover"
+            />
+          ) : (
+            <span className="text-bhor-small font-bhor-bold">{initial}</span>
+          )}
         </button>
 
         {isDropdownOpen ? (
           <div className="absolute right-0 top-12 z-50 w-56 rounded-bhor-md border border-bhor-border bg-bhor-surface p-2 shadow-bhor-soft">
-            <p className="border-b border-bhor-border px-3 py-2 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
-              {displayIdentifier}
-            </p>
+            <div className="border-b border-bhor-border px-3 py-2">
+              <p className="truncate text-bhor-small font-bhor-bold text-bhor-text">{currentUser.name}</p>
+              <p className="truncate text-bhor-caption font-bhor-semibold text-bhor-text-muted">
+                {displayIdentifier}
+              </p>
+            </div>
             {[
               { label: "My Account", href: "/account" },
               { label: "My Orders", href: "/account/orders" },

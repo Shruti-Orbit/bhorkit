@@ -1,19 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift, Mail, X } from "lucide-react";
+import { Gift, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useShop } from "@/src/context/ShopContext";
-import { isValidEmail, normalizeEmail } from "@/src/utils/auth";
+import { getGoogleLoginUrl } from "@/src/lib/api/auth.api";
 
 const offerSessionKey = "bhorkit_signup_offer_shown";
 const offerDelayMs = 180000;
 
 export function SignupOfferPopup() {
   const pathname = usePathname();
-  const { isLoggedIn, openAuthModal, setAuthEmail } = useShop();
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState("");
+  const { isLoggedIn } = useShop();
   const [isEligible, setIsEligible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(() => {
     if (typeof window === "undefined") {
@@ -50,16 +48,8 @@ export function SignupOfferPopup() {
   }
 
   function continueToSignup() {
-    if (email.trim().length > 0 && !isValidEmail(email)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-
-    if (email.trim()) {
-      setAuthEmail(normalizeEmail(email));
-    }
     closeOffer();
-    openAuthModal();
+    window.location.href = getGoogleLoginUrl();
   }
 
   return (
@@ -87,23 +77,6 @@ export function SignupOfferPopup() {
           <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
             Save your details, track orders, and keep your puja essentials in one place.
           </p>
-          <label className="mt-4 block">
-            <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email address</span>
-            <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
-              <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-              <input
-                value={email}
-                onChange={(event) => {
-                  setEmail(event.target.value);
-                  setError("");
-                }}
-                type="email"
-                placeholder="Enter your email"
-                className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none"
-              />
-            </span>
-          </label>
-          {error ? <p className="mt-2 text-bhor-small font-bhor-semibold text-bhor-primary">{error}</p> : null}
           <button
             type="button"
             onClick={continueToSignup}
@@ -112,7 +85,7 @@ export function SignupOfferPopup() {
             Create Account
           </button>
           <p className="mt-3 text-center text-bhor-caption text-bhor-text-muted">
-            OTP verification is handled securely by BHORKIT.
+            Authentication is handled securely with Google SSO.
           </p>
         </div>
       </section>

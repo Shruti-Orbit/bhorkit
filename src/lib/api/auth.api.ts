@@ -1,48 +1,21 @@
-import { apiPost } from "@/src/lib/api/client";
-
-export type AuthMode = "login" | "signup";
+import { apiGet, apiPost, getApiUrl } from "@/src/lib/api/client";
 
 export type BackendUser = {
   id: string;
   email: string;
   emailVerified: boolean;
   image: string | null;
-  mobile?: string;
   name: string;
-  provider: string;
-  role: string;
+  provider: "google";
+  role: "customer" | "admin";
 };
 
-export type AuthResult = {
-  token: string;
-  user: BackendUser;
-};
-
-export async function startOtp(input: {
-  email?: string;
-  mobile?: string;
-  mode: AuthMode;
-  name?: string;
-}) {
-  const response = await apiPost<{
-    delivery: "email" | "mobile";
-    devOtp?: string;
-    identifier: string;
-    mode: AuthMode;
-  }>("/auth/otp/start", input);
-
-  return response.data;
+export function getGoogleLoginUrl() {
+  return getApiUrl("/auth/google");
 }
 
-export async function verifyOtp(input: {
-  email?: string;
-  identifier: string;
-  mobile?: string;
-  mode: AuthMode;
-  name?: string;
-  otp: string;
-}) {
-  const response = await apiPost<AuthResult>("/auth/otp/verify", input);
+export async function getCurrentUser() {
+  const response = await apiGet<BackendUser>("/auth/me");
   return response.data;
 }
 
