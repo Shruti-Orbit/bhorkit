@@ -31,10 +31,10 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
           </p>
           <button
             type="button"
-            onClick={() => openAuthModal({ mode: "login" })}
+            onClick={() => openAuthModal()}
             className="mt-6 min-h-12 rounded-bhor-sm bg-bhor-primary px-6 text-bhor-button font-bhor-bold uppercase text-white"
           >
-            Login or Create Account
+            Continue with Google
           </button>
         </section>
       </main>

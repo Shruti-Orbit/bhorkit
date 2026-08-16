@@ -130,7 +130,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                   type="button"
                   onClick={() => {
                     onClose();
-                    openAuthModal({ mode: "login" });
+                    openAuthModal();
                   }}
                   className="flex min-h-12 w-full items-center justify-between border-b border-bhor-border/70 px-2 text-left text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
                 >

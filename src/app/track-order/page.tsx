@@ -63,8 +63,8 @@ function TrackOrderContent() {
             <p className="text-bhor-small font-bhor-semibold text-bhor-primary">
               Login to view your saved BHORKIT order history across sessions.
             </p>
-            <button type="button" onClick={() => openAuthModal({ mode: "login" })} className="mt-3 text-bhor-small font-bhor-bold uppercase text-bhor-primary">
-              Login or Create Account
+            <button type="button" onClick={() => openAuthModal()} className="mt-3 text-bhor-small font-bhor-bold uppercase text-bhor-primary">
+              Continue with Google
             </button>
           </div>
         ) : null}

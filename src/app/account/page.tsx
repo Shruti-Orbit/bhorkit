@@ -39,9 +39,6 @@ export default function AccountPage() {
               <p className="mt-1 text-bhor-small text-bhor-text-muted">
                 {currentUser?.email || "Email not added"}
               </p>
-              <p className="mt-1 text-bhor-small text-bhor-text-muted">
-                {currentUser?.mobile ? `+91 ${currentUser.mobile}` : "Mobile not added"}
-              </p>
             </div>
             <button
               type="button"

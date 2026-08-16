@@ -1,18 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Gift, Mail, Phone, X } from "lucide-react";
+import { signIn } from "next-auth/react";
+import { Gift, Mail, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useShop } from "@/src/context/ShopContext";
-import { isValidAuthIdentifier } from "@/src/utils/auth";
+import { isValidEmail, normalizeEmail } from "@/src/utils/auth";
 
 const offerSessionKey = "bhorkit_signup_offer_shown";
 const offerDelayMs = 180000;
 
 export function SignupOfferPopup() {
   const pathname = usePathname();
-  const { isLoggedIn, authModalOpen, openAuthModal } = useShop();
-  const [identifier, setIdentifier] = useState("");
+  const { isLoggedIn } = useShop();
+  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isEligible, setIsEligible] = useState(false);
   const [isDismissed, setIsDismissed] = useState(() => {
@@ -38,12 +39,7 @@ export function SignupOfferPopup() {
     return () => window.clearTimeout(timer);
   }, []);
 
-  const isVisible =
-    isEligible &&
-    !isCheckoutFlow &&
-    !isLoggedIn &&
-    !authModalOpen &&
-    !isDismissed;
+  const isVisible = isEligible && !isCheckoutFlow && !isLoggedIn && !isDismissed;
 
   if (!isVisible) {
     return null;
@@ -52,6 +48,24 @@ export function SignupOfferPopup() {
   function closeOffer() {
     window.sessionStorage.setItem(offerSessionKey, "true");
     setIsDismissed(true);
+  }
+
+  async function continueWithGoogle() {
+    if (email.trim().length > 0 && !isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    closeOffer();
+    await signIn(
+      "google",
+      { callbackUrl: "/account" },
+      email.trim()
+        ? {
+            login_hint: normalizeEmail(email),
+          }
+        : undefined,
+    );
   }
 
   return (
@@ -69,32 +83,28 @@ export function SignupOfferPopup() {
           </button>
           <Gift className="h-8 w-8 text-bhor-gold-light" aria-hidden />
           <p className="mt-3 text-bhor-small font-bhor-bold uppercase tracking-wide text-bhor-gold-light">
-            Create your BHORKIT account
+            Google SSO Only
           </p>
           <h2 className="mt-1 font-bhor-display text-bhor-h2-mobile font-bhor-semibold">
-            Checkout faster
+            Save your details faster
           </h2>
         </div>
         <div className="p-5">
           <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
-            Save your details, track orders and keep your puja essentials in one place.
+            Use your Google account to save your details, track orders, and keep your puja essentials in one place.
           </p>
           <label className="mt-4 block">
-            <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email or mobile number</span>
+            <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email address</span>
             <span className="mt-2 flex min-h-12 items-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 focus-within:border-bhor-primary">
-              {identifier.includes("@") ? (
-                <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-              ) : (
-                <Phone className="h-4 w-4 text-bhor-text-muted" aria-hidden />
-              )}
+              <Mail className="h-4 w-4 text-bhor-text-muted" aria-hidden />
               <input
-                value={identifier}
+                value={email}
                 onChange={(event) => {
-                  setIdentifier(event.target.value);
+                  setEmail(event.target.value);
                   setError("");
                 }}
-                type="text"
-                placeholder="Enter email or mobile number"
+                type="email"
+                placeholder="Enter your Google email"
                 className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none"
               />
             </span>
@@ -103,30 +113,18 @@ export function SignupOfferPopup() {
           <button
             type="button"
             onClick={() => {
-              if (!isValidAuthIdentifier(identifier)) {
-                setError("Please enter a valid email address or Indian mobile number.");
-                return;
-              }
-              closeOffer();
-              openAuthModal({ mode: "signup", email: identifier });
+              void continueWithGoogle();
             }}
-            className="mt-5 inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+            className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
           >
-            Continue
+            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-sm font-bhor-bold text-white">
+              G
+            </span>
+            Continue with Google
           </button>
           <p className="mt-3 text-center text-bhor-caption text-bhor-text-muted">
-            We&apos;ll send you a verification code.
+            No phone login or OTP is enabled.
           </p>
-          <button
-            type="button"
-            onClick={() => {
-              closeOffer();
-              openAuthModal({ mode: "login" });
-            }}
-            className="mt-4 w-full text-center text-bhor-small font-bhor-semibold text-bhor-primary hover:text-bhor-primary-dark"
-          >
-            Already have an account? Login
-          </button>
         </div>
       </section>
     </div>

@@ -14,7 +14,7 @@ export function WishlistButton() {
       aria-label="Wishlist"
       onClick={() => {
         if (!isLoggedIn) {
-          openAuthModal({ mode: "login" });
+          openAuthModal();
           return;
         }
         router.push("/account/saved-items");

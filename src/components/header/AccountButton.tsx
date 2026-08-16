@@ -9,7 +9,7 @@ export function AccountButton() {
   const { currentUser, isLoggedIn, logout, openAuthModal } = useShop();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const displayIdentifier = currentUser?.email || currentUser?.mobile || currentUser?.id;
+  const displayIdentifier = currentUser?.email || currentUser?.id;
   const initial = displayIdentifier?.charAt(0).toUpperCase();
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export function AccountButton() {
     <button
       type="button"
       aria-label="Account login"
-      onClick={() => openAuthModal({ mode: "login" })}
+      onClick={() => openAuthModal()}
       className="flex h-11 w-11 items-center justify-center text-bhor-text transition-colors hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
     >
       <UserRound className="h-6 w-6" aria-hidden />
