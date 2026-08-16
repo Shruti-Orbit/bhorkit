@@ -9,8 +9,8 @@ import {
   useState,
 } from "react";
 import type { ReactNode } from "react";
-import { signOut, useSession } from "next-auth/react";
 import type { CollectionProduct } from "@/src/data/products";
+import { logout as logoutFromBackend } from "@/src/lib/api/auth.api";
 import {
   calculateHandlingCharge,
   calculateMemberDiscount,
@@ -25,6 +25,7 @@ export type CurrentUser = {
   email: string;
   id: string;
   image?: string | null;
+  mobile?: string;
   name: string;
 };
 
@@ -108,6 +109,7 @@ type ShopContextValue = {
   openAuthModal: (options?: AuthModalOptions) => void;
   closeAuthModal: () => void;
   setAuthEmail: (email: string) => void;
+  completeAuth: (user: CurrentUser) => void;
   logout: () => void;
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
@@ -136,9 +138,9 @@ const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
 const customerDataStorageKey = "bhorkit_customer_data";
+const authSessionStorageKey = "bhorkit_auth_session";
 
 export function ShopProvider({ children }: { children: ReactNode }) {
-  const { data: session, status } = useSession();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authEmail, setAuthEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -146,23 +148,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unselected");
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => getInitialAuthSession());
   const [customerData, setCustomerData] = useState<CustomerDataStore>(() => getInitialCustomerData());
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [scheduledDeliveryDate, setScheduledDeliveryDate] = useState("");
   const [scheduledDeliverySlot, setScheduledDeliverySlot] = useState("");
-
-  const currentUser = useMemo<CurrentUser | null>(() => {
-    if (status !== "authenticated" || !session?.user?.id || !session.user.email) {
-      return null;
-    }
-
-    return {
-      email: session.user.email,
-      id: session.user.id,
-      image: session.user.image,
-      name: session.user.name || "BHORKIT Devotee",
-    };
-  }, [session, status]);
 
   const isLoggedIn = Boolean(currentUser);
   const discountUnlocked = isLoggedIn;
@@ -185,8 +175,18 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [customerData]);
 
   useEffect(() => {
+    if (currentUser) {
+      window.localStorage.setItem(authSessionStorageKey, JSON.stringify(currentUser));
+      return;
+    }
+
+    window.localStorage.removeItem(authSessionStorageKey);
+  }, [currentUser]);
+
+  useEffect(() => {
     if (isLoggedIn) {
-      setAuthModalOpen(false);
+      const timer = window.setTimeout(() => setAuthModalOpen(false), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [isLoggedIn]);
 
@@ -202,8 +202,17 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setAuthModalOpen(false);
   }, []);
 
+  const completeAuth = useCallback((user: CurrentUser) => {
+    setCurrentUser(user);
+    setAuthModalOpen(false);
+    setSuccessMessage("Logged in successfully");
+  }, []);
+
   const logout = useCallback(() => {
-    void signOut({ redirect: false });
+    setCurrentUser(null);
+    setAuthModalOpen(false);
+    setSuccessMessage("Logged out");
+    void logoutFromBackend().catch(() => undefined);
   }, []);
 
   const openCartDrawer = useCallback(() => {
@@ -465,6 +474,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       openAuthModal,
       closeAuthModal,
       setAuthEmail,
+      completeAuth,
       logout,
       openCartDrawer,
       closeCartDrawer,
@@ -502,6 +512,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       cartTotal,
       checkoutMode,
       closeAuthModal,
+      completeAuth,
       closeCartDrawer,
       createOrder,
       currentUser,
@@ -615,4 +626,30 @@ function getInitialCheckoutMode(): CheckoutMode {
 
   const storedMode = window.localStorage.getItem(checkoutModeStorageKey);
   return storedMode === "scheduled" || storedMode === "pre-order" ? storedMode : "buy-now";
+}
+
+function getInitialAuthSession(): CurrentUser | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(authSessionStorageKey);
+    if (!stored) {
+      return null;
+    }
+
+    const parsed = JSON.parse(stored) as Partial<CurrentUser>;
+    return parsed.id && parsed.email && parsed.name
+      ? {
+          email: parsed.email,
+          id: parsed.id,
+          image: parsed.image,
+          mobile: parsed.mobile,
+          name: parsed.name,
+        }
+      : null;
+  } catch {
+    return null;
+  }
 }

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getServerSession } from "next-auth/next";
 import {
   Figtree,
   Montserrat,
@@ -10,7 +9,6 @@ import { Header } from "@/src/components/layout/Header";
 import { EcommerceTrustStrip } from "@/src/components/layout/EcommerceTrustStrip";
 import { Footer } from "@/src/components/layout/Footer";
 import { ShopProviders } from "@/src/components/providers/ShopProviders";
-import { authOptions } from "@/src/server/auth/options";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -43,16 +41,14 @@ export const metadata: Metadata = {
   description: "Begin Your Day Divine",
 };
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const session = await getServerSession(authOptions);
-
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${figtree.variable} ${redHatDisplay.variable} ${montserrat.variable} ${quicksand.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col overflow-x-hidden">
-        <ShopProviders session={session}>
+        <ShopProviders>
           <Header />
           {children}
           <EcommerceTrustStrip />

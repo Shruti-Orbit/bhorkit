@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { signIn } from "next-auth/react";
 import { Gift, Mail, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useShop } from "@/src/context/ShopContext";
@@ -12,7 +11,7 @@ const offerDelayMs = 180000;
 
 export function SignupOfferPopup() {
   const pathname = usePathname();
-  const { isLoggedIn } = useShop();
+  const { isLoggedIn, openAuthModal, setAuthEmail } = useShop();
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isEligible, setIsEligible] = useState(false);
@@ -50,22 +49,17 @@ export function SignupOfferPopup() {
     setIsDismissed(true);
   }
 
-  async function continueWithGoogle() {
+  function continueToSignup() {
     if (email.trim().length > 0 && !isValidEmail(email)) {
       setError("Please enter a valid email address.");
       return;
     }
 
+    if (email.trim()) {
+      setAuthEmail(normalizeEmail(email));
+    }
     closeOffer();
-    await signIn(
-      "google",
-      { callbackUrl: "/account" },
-      email.trim()
-        ? {
-            login_hint: normalizeEmail(email),
-          }
-        : undefined,
-    );
+    openAuthModal();
   }
 
   return (
@@ -83,15 +77,15 @@ export function SignupOfferPopup() {
           </button>
           <Gift className="h-8 w-8 text-bhor-gold-light" aria-hidden />
           <p className="mt-3 text-bhor-small font-bhor-bold uppercase tracking-wide text-bhor-gold-light">
-            Google SSO Only
+            Create your BHORKIT account
           </p>
           <h2 className="mt-1 font-bhor-display text-bhor-h2-mobile font-bhor-semibold">
-            Save your details faster
+            Get 10% OFF on online payment
           </h2>
         </div>
         <div className="p-5">
           <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
-            Use your Google account to save your details, track orders, and keep your puja essentials in one place.
+            Save your details, track orders, and keep your puja essentials in one place.
           </p>
           <label className="mt-4 block">
             <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email address</span>
@@ -104,7 +98,7 @@ export function SignupOfferPopup() {
                   setError("");
                 }}
                 type="email"
-                placeholder="Enter your Google email"
+                placeholder="Enter your email"
                 className="min-w-0 flex-1 bg-transparent text-bhor-small text-bhor-text outline-none"
               />
             </span>
@@ -112,18 +106,13 @@ export function SignupOfferPopup() {
           {error ? <p className="mt-2 text-bhor-small font-bhor-semibold text-bhor-primary">{error}</p> : null}
           <button
             type="button"
-            onClick={() => {
-              void continueWithGoogle();
-            }}
+            onClick={continueToSignup}
             className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
           >
-            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white/15 text-sm font-bhor-bold text-white">
-              G
-            </span>
-            Continue with Google
+            Create Account
           </button>
           <p className="mt-3 text-center text-bhor-caption text-bhor-text-muted">
-            No phone login or OTP is enabled.
+            OTP verification is handled securely by BHORKIT.
           </p>
         </div>
       </section>

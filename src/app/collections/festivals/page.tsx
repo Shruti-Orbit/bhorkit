@@ -2,8 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkle } from "lucide-react";
 import { ProductCard } from "@/src/components/home/product-collection/ProductCard";
-import { featuredFestival, festivalCollections } from "@/src/data/editorialCollections";
-import { getProductsByCollection } from "@/src/server/catalog/productService";
+import { festivalCollections } from "@/src/data/editorialCollections";
+import { getProductsByCollection } from "@/src/lib/api/product.api";
 
 const upcomingPanels = festivalCollections.filter((festival) => festival.status !== "available").slice(0, 2);
 

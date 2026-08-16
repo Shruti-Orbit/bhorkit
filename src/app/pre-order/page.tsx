@@ -1,5 +1,5 @@
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
-import { getProductsByCollection } from "@/src/server/catalog/productService";
+import { getProductsByCollection } from "@/src/lib/api/product.api";
 
 export const dynamic = "force-dynamic";
 

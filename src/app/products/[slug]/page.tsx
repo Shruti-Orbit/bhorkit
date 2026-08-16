@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
-import { getProductDetail } from "@/src/server/catalog/productService";
+import { getProductDetail } from "@/src/lib/api/product.api";
 
 type ProductPageProps = {
   params: Promise<{

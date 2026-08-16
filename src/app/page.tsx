@@ -4,7 +4,7 @@ import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
 import { navratriPromotion } from "@/src/data/promotions";
-import { getHomeCatalog } from "@/src/server/catalog/productService";
+import { getHomeCatalog } from "@/src/lib/api/product.api";
 
 export const dynamic = "force-dynamic";
 
