@@ -11,7 +11,7 @@ const offerDelayMs = 180000;
 
 export function SignupOfferPopup() {
   const pathname = usePathname();
-  const { isLoggedIn, discountUnlocked, authModalOpen, openAuthModal } = useShop();
+  const { isLoggedIn, authModalOpen, openAuthModal } = useShop();
   const [identifier, setIdentifier] = useState("");
   const [error, setError] = useState("");
   const [isEligible, setIsEligible] = useState(false);
@@ -42,7 +42,6 @@ export function SignupOfferPopup() {
     isEligible &&
     !isCheckoutFlow &&
     !isLoggedIn &&
-    !discountUnlocked &&
     !authModalOpen &&
     !isDismissed;
 
@@ -70,15 +69,15 @@ export function SignupOfferPopup() {
           </button>
           <Gift className="h-8 w-8 text-bhor-gold-light" aria-hidden />
           <p className="mt-3 text-bhor-small font-bhor-bold uppercase tracking-wide text-bhor-gold-light">
-            A little blessing for your first order
+            Create your BHORKIT account
           </p>
           <h2 className="mt-1 font-bhor-display text-bhor-h2-mobile font-bhor-semibold">
-            Get 10% OFF
+            Checkout faster
           </h2>
         </div>
         <div className="p-5">
           <p className="text-bhor-small leading-bhor-body text-bhor-text-muted">
-            Create your BHORKIT account and get 10% OFF on your first purchase.
+            Save your details, track orders and keep your puja essentials in one place.
           </p>
           <label className="mt-4 block">
             <span className="text-bhor-small font-bhor-semibold text-bhor-text">Email or mobile number</span>

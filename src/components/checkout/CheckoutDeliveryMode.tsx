@@ -1,7 +1,12 @@
 "use client";
 
-import { CalendarDays, Clock, Truck } from "lucide-react";
+import { CalendarDays, Truck } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
+import {
+  ganeshPreOrderMinDate,
+  ganeshPreOrderMinDateLabel,
+  isValidGaneshPreOrderDate,
+} from "@/src/utils/preorder";
 
 const slots = ["9 AM - 12 PM", "12 PM - 3 PM", "3 PM - 6 PM", "6 PM - 9 PM"];
 
@@ -52,24 +57,37 @@ export function CheckoutDeliveryMode() {
   return (
     <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
       <h2 className="flex items-center gap-2 text-bhor-product font-bhor-bold text-bhor-text">
-        <Clock className="h-5 w-5 text-bhor-gold" aria-hidden />
-        Delivery Slot
+        <CalendarDays className="h-5 w-5 text-bhor-gold" aria-hidden />
+        Pre-Order Item
       </h2>
+      <p className="mt-2 text-bhor-small text-bhor-text-muted">
+        Your BHORKIT will be prepared and delivered before Ganesh Chaturthi. Select {ganeshPreOrderMinDateLabel} or any later date.
+      </p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         <label className="block">
           <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
-            Delivery Date
+            Pre-Order Delivery Date
           </span>
           <input
             type="date"
+            min={ganeshPreOrderMinDate}
             value={scheduledDeliveryDate}
             onChange={(event) => setScheduledDeliveryDate(event.target.value)}
-            className="mt-2 min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary"
+            className={`mt-2 min-h-11 w-full rounded-bhor-sm border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary ${
+              scheduledDeliveryDate && !isValidGaneshPreOrderDate(scheduledDeliveryDate)
+                ? "border-bhor-primary"
+                : "border-bhor-border"
+            }`}
           />
+          {scheduledDeliveryDate && !isValidGaneshPreOrderDate(scheduledDeliveryDate) ? (
+            <span className="mt-2 block text-bhor-caption font-bhor-semibold text-bhor-primary">
+              Please select {ganeshPreOrderMinDateLabel} or a later date.
+            </span>
+          ) : null}
         </label>
         <label className="block">
           <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
-            Delivery Time
+            Pre-Order Delivery Time
           </span>
           <select
             value={scheduledDeliverySlot}

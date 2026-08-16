@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AccountSectionCard, AccountShell } from "@/src/components/account/AccountShell";
 import { useShop, type CustomerOrder } from "@/src/context/ShopContext";
 import { formatCurrency } from "@/src/utils/discount";
+import { isGaneshPreOrder } from "@/src/utils/preorder";
 
 export default function AccountOrdersPage() {
   const { orders } = useShop();
@@ -45,7 +46,7 @@ export default function AccountOrdersPage() {
                       <h2 className="text-bhor-product font-bhor-bold text-bhor-text">
                         ORDER #{order.id}
                       </h2>
-                      {order.checkoutMode === "pre-order" ? (
+                      {isGaneshPreOrder(order) ? (
                         <span className="rounded-bhor-sm bg-bhor-primary-soft px-2 py-1 text-bhor-badge font-bhor-bold uppercase text-bhor-primary">
                           Pre-Order
                         </span>
@@ -110,7 +111,7 @@ export function getDeliveryLabel(order: CustomerOrder) {
     return `Expected Dispatch: ${order.expectedDispatch ?? "To be confirmed"}`;
   }
   if (order.checkoutMode === "scheduled") {
-    return `Scheduled Delivery: ${order.deliveryDate ?? "Date pending"} ${order.deliverySlot ?? ""}`;
+    return `Pre-Order Delivery: ${order.deliveryDate ?? "Date pending"} ${order.deliverySlot ?? ""}`;
   }
   return order.expectedDelivery ?? "Earliest Available Delivery";
 }

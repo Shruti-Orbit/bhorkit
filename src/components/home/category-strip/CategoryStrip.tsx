@@ -23,6 +23,7 @@ export function CategoryStrip() {
       return;
     }
 
+    const activeScroller = scroller;
     let frameId = 0;
     let lastTimestamp = 0;
     const speed = 26;
@@ -41,13 +42,13 @@ export function CategoryStrip() {
       lastTimestamp = timestamp;
 
       if (!isPausedRef.current) {
-        const maxScroll = scroller.scrollWidth - scroller.clientWidth;
+        const maxScroll = activeScroller.scrollWidth - activeScroller.clientWidth;
 
         if (maxScroll > 0) {
-          scroller.scrollLeft =
-            scroller.scrollLeft >= maxScroll - 1
+          activeScroller.scrollLeft =
+            activeScroller.scrollLeft >= maxScroll - 1
               ? 0
-              : scroller.scrollLeft + (speed * delta) / 1000;
+              : activeScroller.scrollLeft + (speed * delta) / 1000;
         }
       }
 

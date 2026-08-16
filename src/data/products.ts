@@ -1,4 +1,5 @@
 export type ProductBadgeTone = "gold" | "success" | "primary" | "soft";
+export type ProductPurchaseState = "PRE_ORDER" | "READY_STOCK" | "COMING_SOON";
 
 export type ProductBadge = {
   label: string;
@@ -42,6 +43,7 @@ export type CollectionProduct = {
   image: string;
   imageAlt: string;
   badge?: ProductBadge;
+  purchaseState: ProductPurchaseState;
   images: ProductImage[];
   rating?: {
     value: number;
@@ -206,10 +208,14 @@ function createProduct(input: {
   price: string;
   image: string;
   badge?: ProductBadge;
+  purchaseState?: ProductPurchaseState;
   contents: ProductContentItem[];
 }): CollectionProduct {
+  const purchaseState = input.purchaseState ?? "PRE_ORDER";
+
   return {
     ...input,
+    purchaseState,
     category: "Ganesh Puja",
     href: `/products/${input.slug}`,
     imageAlt: `${input.name} by BHORKIT`,
@@ -221,19 +227,19 @@ function createProduct(input: {
     ],
     availability: "preorder",
     stock: {
-      readyStock: true,
+      readyStock: purchaseState === "READY_STOCK",
     },
     preorder: {
       title: "Pre-Order Now",
-      description: "Reserve your Ganesh Puja Kit for Ganesh Chaturthi.",
+      description: "Reserve your kit in advance and receive it before Ganesh Chaturthi.",
       expectedDelivery: "Before Ganesh Chaturthi",
     },
     delivery: {
-      location: "Patna only",
-      description: "Doorstep delivery across Patna.",
+      location: "Patna Delivery",
+      description: "Pre-order delivery before Ganesh Chaturthi.",
       availablePincodes: ["800001", "800002", "800003", "800004", "800013", "800014"],
       twoHourEligiblePincodes: ["800001", "800003", "800013"],
-      supportsTwoHourDelivery: true,
+      supportsTwoHourDelivery: purchaseState === "READY_STOCK",
     },
     highlights: commonHighlights,
     contents: input.contents,
@@ -273,7 +279,7 @@ export const ganeshChaturthiProducts: CollectionProduct[] = [
     description: "All essential items for a complete puja.",
     price: "₹699",
     image: "/images/slider/slider-1.png",
-    badge: { label: "Bestseller", tone: "gold" },
+    badge: { label: "Pre-Order", tone: "gold" },
     contents: sharedEssentials,
   }),
   createProduct({
@@ -285,7 +291,7 @@ export const ganeshChaturthiProducts: CollectionProduct[] = [
     description: "Includes durva, modak ingredients & more.",
     price: "₹799",
     image: "/images/slider/slider-1.png",
-    badge: { label: "New", tone: "success" },
+    badge: { label: "Pre-Order", tone: "success" },
     contents: [...sharedEssentials, ...durvaAddons],
   }),
   createProduct({
@@ -297,7 +303,7 @@ export const ganeshChaturthiProducts: CollectionProduct[] = [
     description: "Shadu mitti, tools & guide to create your own Bappa.",
     price: "₹499",
     image: "/images/slider/slider-2.png",
-    badge: { label: "Handmade", tone: "soft" },
+    badge: { label: "Pre-Order", tone: "soft" },
     contents: [...sharedEssentials, ...durvaAddons, ...clayAddons],
   }),
   createProduct({
@@ -309,7 +315,7 @@ export const ganeshChaturthiProducts: CollectionProduct[] = [
     description: "Decorate, celebrate & welcome Bappa home.",
     price: "₹899",
     image: "/images/slider/slider-1.png",
-    badge: { label: "DIY Kit", tone: "primary" },
+    badge: { label: "Pre-Order", tone: "primary" },
     contents: [...sharedEssentials, ...durvaAddons, ...clayAddons, ...decorationAddons],
   }),
 ];
@@ -326,6 +332,7 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       price: "Coming Soon",
       image: "/images/durga-maa.png",
       badge: { label: "Coming Soon", tone: "gold" },
+      purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
     href: "/pre-order",
@@ -340,7 +347,8 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       description: "Curated essentials for Shubh Aarambh of Navratri.",
       price: "Coming Soon",
       image: "/images/durga-maa.png",
-      badge: { label: "Navratri", tone: "primary" },
+      badge: { label: "Coming Soon", tone: "primary" },
+      purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
     href: "/pre-order",
@@ -355,7 +363,8 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       description: "Thoughtfully arranged daily puja essentials.",
       price: "Coming Soon",
       image: "/images/durga-maa.png",
-      badge: { label: "Festival Kit", tone: "soft" },
+      badge: { label: "Coming Soon", tone: "soft" },
+      purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
     href: "/pre-order",
@@ -370,7 +379,8 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       description: "Nine-day puja essentials planned for your celebration.",
       price: "Coming Soon",
       image: "/images/durga-maa.png",
-      badge: { label: "Subscription", tone: "success" },
+      badge: { label: "Coming Soon", tone: "success" },
+      purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
     href: "/pre-order",
@@ -389,6 +399,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       price: "₹399",
       image: "/images/banner/banner-3.png",
       badge: { label: "Daily Kit", tone: "success" },
+      purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
     category: "Regular Puja",
@@ -405,6 +416,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       price: "₹299",
       image: "/images/banner/banner-2.png",
       badge: { label: "Popular", tone: "gold" },
+      purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
     category: "Regular Puja",
@@ -421,6 +433,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       price: "₹349",
       image: "/images/slider/slider-1.png",
       badge: { label: "Refill", tone: "soft" },
+      purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
     category: "Regular Puja",
@@ -437,6 +450,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       price: "₹449",
       image: "/images/banner/banner-1.png",
       badge: { label: "Decor", tone: "primary" },
+      purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
     category: "Regular Puja",

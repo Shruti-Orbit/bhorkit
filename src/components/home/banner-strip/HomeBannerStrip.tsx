@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight } from "lucide-react";
 import { homeBanners } from "@/src/data/homeBanners";
 
 const loopOffset = homeBanners.length;
@@ -11,7 +10,7 @@ const carouselBanners = [...homeBanners, ...homeBanners, ...homeBanners];
 
 export function HomeBannerStrip() {
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [activeIndex, setActiveIndex] = useState(0);
+  const [, setActiveIndex] = useState(0);
 
   const scrollToIndex = useCallback((index: number, behavior: ScrollBehavior = "smooth") => {
     const carousel = carouselRef.current;
@@ -32,14 +31,6 @@ export function HomeBannerStrip() {
 
     setActiveIndex(safeIndex);
   }, []);
-
-  const goToNext = () => {
-    scrollToIndex(activeIndex + 1);
-  };
-
-  const goToPrevious = () => {
-    scrollToIndex(activeIndex - 1);
-  };
 
   useEffect(() => {
     scrollToIndex(0, "auto");
@@ -95,22 +86,6 @@ export function HomeBannerStrip() {
           ))}
         </div>
 
-        <button
-          type="button"
-          aria-label="Previous banner"
-          onClick={goToPrevious}
-          className="absolute left-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-bhor-surface text-bhor-text shadow-bhor-soft transition hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:flex lg:left-8"
-        >
-          <ChevronLeft className="h-5 w-5" aria-hidden />
-        </button>
-        <button
-          type="button"
-          aria-label="Next banner"
-          onClick={goToNext}
-          className="absolute right-3 top-1/2 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-bhor-primary text-white shadow-bhor-soft transition hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:flex lg:right-8"
-        >
-          <ChevronRight className="h-5 w-5" aria-hidden />
-        </button>
       </div>
     </section>
   );

@@ -44,33 +44,6 @@ export const festivalCollections: FestivalCollection[] = [
     href: "/pre-order",
     visualTone: "navratri",
   },
-  {
-    slug: "diwali",
-    name: "Diwali",
-    title: "Light your celebrations.",
-    description: "A warm festive edit for homes, gifts and rituals.",
-    status: "coming-soon",
-    href: "/pre-order",
-    visualTone: "diwali",
-  },
-  {
-    slug: "raksha-bandhan",
-    name: "Raksha Bandhan",
-    title: "Celebrate the bond.",
-    description: "Thoughtful gifting and sacred celebration details.",
-    status: "coming-soon",
-    href: "/pre-order",
-    visualTone: "rakhi",
-  },
-  {
-    slug: "karwa-chauth",
-    name: "Karwa Chauth",
-    title: "Tradition, thoughtfully curated.",
-    description: "Elegant ritual essentials for meaningful festive moments.",
-    status: "coming-soon",
-    href: "/pre-order",
-    visualTone: "karwa",
-  },
 ];
 
 export const featuredFestival = {

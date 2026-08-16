@@ -6,9 +6,11 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { useShop } from "@/src/context/ShopContext";
 import { formatCurrency, parsePrice } from "@/src/utils/discount";
+import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, updateCartItem } = useShop();
+  const { cartItems, removeFromCart, setCheckoutMode, updateCartItem } = useShop();
+  const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
@@ -40,6 +42,11 @@ export default function CartPage() {
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <h2 className="text-bhor-product font-bhor-semibold text-bhor-text">{item.product.name}</h2>
+                      {isPreOrderProduct(item.product) ? (
+                        <span className="mt-2 inline-flex rounded-bhor-sm bg-bhor-primary-soft px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase text-bhor-primary">
+                          Pre-Order
+                        </span>
+                      ) : null}
                       <p className="mt-1 text-bhor-small font-bhor-bold text-bhor-text">
                         {formatCurrency(parsePrice(item.product.price))}
                       </p>
@@ -85,9 +92,10 @@ export default function CartPage() {
           {cartItems.length > 0 ? (
             <Link
               href="/checkout"
+              onClick={() => setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now")}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
             >
-              Checkout
+              {hasPreOrderItems ? "Confirm Pre-Order" : "Checkout"}
             </Link>
           ) : null}
         </div>

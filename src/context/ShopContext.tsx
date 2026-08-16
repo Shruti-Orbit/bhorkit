@@ -12,14 +12,16 @@ import type { ReactNode } from "react";
 import type { CollectionProduct } from "@/src/data/products";
 import {
   calculateHandlingCharge,
-  calculateLowestItemMemberDiscount,
+  calculateMemberDiscount,
   parsePrice,
 } from "@/src/utils/discount";
+import { isValidGaneshPreOrderDate } from "@/src/utils/preorder";
 import type { RegisteredUser } from "@/src/utils/auth";
 
 export type AuthMode = "login" | "signup";
 export type AuthStep = "email" | "otp" | "success";
 export type CheckoutMode = "buy-now" | "scheduled" | "pre-order";
+export type PaymentMethod = "unselected" | "online";
 
 export type CurrentUser = {
   email: string;
@@ -71,6 +73,7 @@ export type CustomerOrder = {
   orderDate: string;
   status: OrderStatus;
   paymentStatus: "pending" | "paid";
+  paymentMethod: PaymentMethod;
   expectedDelivery?: string;
   expectedDispatch?: string;
   deliveryDate?: string;
@@ -91,12 +94,14 @@ type ShopContextValue = {
   authStep: AuthStep;
   authEmail: string;
   successMessage: string;
+  cartDrawerOpen: boolean;
   cartItems: CartItem[];
   cartCount: number;
   cartSubtotal: number;
   memberDiscount: number;
   handlingCharge: number;
   cartTotal: number;
+  paymentMethod: PaymentMethod;
   checkoutMode: CheckoutMode;
   orders: CustomerOrder[];
   savedItems: CollectionProduct[];
@@ -112,6 +117,8 @@ type ShopContextValue = {
   setAuthEmail: (email: string) => void;
   completeAuth: (email: string, mode: AuthMode, profile?: RegisteredUser) => void;
   logout: () => void;
+  openCartDrawer: () => void;
+  closeCartDrawer: () => void;
   addToCart: (product: CollectionProduct, quantity?: number) => void;
   buyNow: (product: CollectionProduct, mode?: CheckoutMode) => void;
   setCheckoutMode: (mode: CheckoutMode) => void;
@@ -126,6 +133,7 @@ type ShopContextValue = {
   setSelectedAddressId: (addressId: string) => void;
   setScheduledDeliveryDate: (date: string) => void;
   setScheduledDeliverySlot: (slot: string) => void;
+  setPaymentMethod: (method: PaymentMethod) => void;
   createOrder: () => CustomerOrder | null;
   getOrderById: (orderId: string) => CustomerOrder | undefined;
   findOrders: (query: string) => CustomerOrder[];
@@ -147,8 +155,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [authStep, setAuthStep] = useState<AuthStep>("email");
   const [authEmail, setAuthEmail] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unselected");
   const [customerData, setCustomerData] = useState<CustomerDataStore>(() => getInitialCustomerData());
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [scheduledDeliveryDate, setScheduledDeliveryDate] = useState("");
@@ -202,8 +212,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setAuthStep("success");
     setSuccessMessage(
       mode === "signup"
-        ? "Welcome to BHORKIT! Your account is ready and you've unlocked 10% OFF."
-        : "Welcome to BHORKIT! You've unlocked 10% OFF on your order.",
+        ? "Welcome to BHORKIT! Your account is ready."
+        : "Welcome back to BHORKIT.",
     );
     window.localStorage.setItem(authStorageKey, JSON.stringify(user));
   }, []);
@@ -213,6 +223,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     setDiscountUnlocked(false);
     window.localStorage.removeItem(authStorageKey);
+  }, []);
+
+  const openCartDrawer = useCallback(() => {
+    setCartDrawerOpen(true);
+  }, []);
+
+  const closeCartDrawer = useCallback(() => {
+    setCartDrawerOpen(false);
   }, []);
 
   const addToCart = useCallback((product: CollectionProduct, quantity = 1) => {
@@ -229,6 +247,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       return [...items, { product, quantity }];
     });
     setSuccessMessage("Added to your cart");
+    setCartDrawerOpen(true);
   }, []);
 
   const setCheckoutMode = useCallback((mode: CheckoutMode) => {
@@ -260,10 +279,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       ),
     [cartItems],
   );
-  const memberDiscount = calculateLowestItemMemberDiscount(
-    cartItems.map((item) => ({ price: item.product.price, quantity: item.quantity })),
-    discountUnlocked,
-  );
+  const memberDiscount = paymentMethod === "online" ? calculateMemberDiscount(cartSubtotal) : 0;
   const handlingCharge = calculateHandlingCharge(cartSubtotal);
   const cartTotal = cartSubtotal - memberDiscount + handlingCharge;
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
@@ -357,6 +373,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       return null;
     }
 
+    if (
+      checkoutMode === "scheduled" &&
+      (!isValidGaneshPreOrderDate(scheduledDeliveryDate) || !scheduledDeliverySlot)
+    ) {
+      setSuccessMessage("Please select a valid pre-order date and delivery slot.");
+      return null;
+    }
+
     const address = addresses.find((item) => item.id === effectiveSelectedAddressId) ?? addresses[0] ?? null;
     const order: CustomerOrder = {
       id: generateOrderId(),
@@ -369,15 +393,22 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       address,
       checkoutMode,
       orderDate: new Date().toISOString(),
-      status: checkoutMode === "pre-order" ? "pre-order-confirmed" : "confirmed",
+      status:
+        checkoutMode === "pre-order" || checkoutMode === "scheduled"
+          ? "pre-order-confirmed"
+          : "confirmed",
       paymentStatus: "paid",
+      paymentMethod,
       expectedDelivery:
         checkoutMode === "buy-now"
           ? "Earliest available delivery"
           : checkoutMode === "scheduled"
-            ? scheduledDeliveryDate
+            ? "Pre-order delivery before Ganesh Chaturthi"
             : cartItems[0]?.product.preorder?.expectedDelivery,
-      expectedDispatch: checkoutMode === "pre-order" ? cartItems[0]?.product.preorder?.expectedDelivery : undefined,
+      expectedDispatch:
+        checkoutMode === "pre-order" || checkoutMode === "scheduled"
+          ? cartItems[0]?.product.preorder?.expectedDelivery
+          : undefined,
       deliveryDate: checkoutMode === "scheduled" ? scheduledDeliveryDate : undefined,
       deliverySlot: checkoutMode === "scheduled" ? scheduledDeliverySlot : undefined,
     };
@@ -398,6 +429,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     checkoutMode,
     memberDiscount,
     handlingCharge,
+    paymentMethod,
     scheduledDeliveryDate,
     scheduledDeliverySlot,
     effectiveSelectedAddressId,
@@ -435,12 +467,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       authStep,
       authEmail,
       successMessage,
+      cartDrawerOpen,
       cartItems,
       cartCount,
       cartSubtotal,
       memberDiscount,
       handlingCharge,
       cartTotal,
+      paymentMethod,
       checkoutMode,
       orders,
       savedItems,
@@ -456,6 +490,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setAuthEmail,
       completeAuth,
       logout,
+      openCartDrawer,
+      closeCartDrawer,
       addToCart,
       buyNow,
       setCheckoutMode,
@@ -470,6 +506,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setSelectedAddressId: setSelectedAddressIdState,
       setScheduledDeliveryDate,
       setScheduledDeliverySlot,
+      setPaymentMethod,
       createOrder,
       getOrderById,
       findOrders,
@@ -482,12 +519,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       authMode,
       authStep,
       buyNow,
+      cartDrawerOpen,
       cartCount,
       cartItems,
       cartSubtotal,
       cartTotal,
       checkoutMode,
       closeAuthModal,
+      closeCartDrawer,
       completeAuth,
       currentUser,
       createOrder,
@@ -500,6 +539,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       logout,
       memberDiscount,
       openAuthModal,
+      openCartDrawer,
       removeFromCart,
       addresses,
       addAddress,
@@ -508,6 +548,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       savedItems,
       scheduledDeliveryDate,
       scheduledDeliverySlot,
+      paymentMethod,
       effectiveSelectedAddressId,
       setCheckoutMode,
       setDefaultAddress,

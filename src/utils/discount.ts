@@ -1,5 +1,5 @@
 export const memberDiscountRate = 0.1;
-export const handlingCharge = 2;
+export const handlingCharge = 30;
 export const freeHandlingThreshold = 999;
 
 export function calculateMemberDiscount(subtotal: number) {
@@ -8,9 +8,9 @@ export function calculateMemberDiscount(subtotal: number) {
 
 export function calculateLowestItemMemberDiscount(
   items: { price: string; quantity: number }[],
-  discountUnlocked: boolean,
+  discountEligible: boolean,
 ) {
-  if (!discountUnlocked || items.length === 0) {
+  if (!discountEligible || items.length === 0) {
     return 0;
   }
 
