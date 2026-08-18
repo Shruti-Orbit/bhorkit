@@ -11,6 +11,28 @@ import {
 import type { ReactNode } from "react";
 import type { CollectionProduct } from "@/src/data/products";
 import { getCurrentUser, logout as logoutFromBackend } from "@/src/lib/api/auth.api";
+import { ApiClientError } from "@/src/lib/api/client";
+import {
+  addToWishlist as addToWishlistApi,
+  getWishlist as getWishlistApi,
+  removeFromWishlist as removeFromWishlistApi,
+} from "@/src/lib/api/wishlist.api";
+import {
+  addCartItem as addCartItemApi,
+  clearCart as clearCartApi,
+  getCart as getCartApi,
+  mergeCart as mergeCartApi,
+  removeCartItem as removeCartItemApi,
+  setCartItemQuantity as setCartItemQuantityApi,
+  type BackendCart,
+} from "@/src/lib/api/cart.api";
+import {
+  createAddress as createAddressApi,
+  deleteAddress as deleteAddressApi,
+  getAddresses as getAddressesApi,
+  setDefaultAddress as setDefaultAddressApi,
+  updateAddress as updateAddressApi,
+} from "@/src/lib/api/address.api";
 import {
   calculateHandlingCharge,
   calculateMemberDiscount,
@@ -137,8 +159,32 @@ type ShopContextValue = {
 const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
-const customerDataStorageKey = "bhorkit_customer_data";
+const customerOrdersStorageKey = "bhorkit_customer_orders";
 const authSessionStorageKey = "bhorkit_auth_session";
+
+function toCartItems(cart: BackendCart): CartItem[] {
+  return cart.items.map((item) => ({ product: item.product, quantity: item.quantity }));
+}
+
+function applyCartAdd(items: CartItem[], product: CollectionProduct, quantity: number): CartItem[] {
+  const existingItem = items.find((item) => item.product.id === product.id);
+  if (existingItem) {
+    return items.map((item) =>
+      item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item,
+    );
+  }
+  return [...items, { product, quantity }];
+}
+
+function applyCartSet(items: CartItem[], productId: string, quantity: number): CartItem[] {
+  return items
+    .map((item) => (item.product.id === productId ? { ...item, quantity } : item))
+    .filter((item) => item.quantity > 0);
+}
+
+function errorMessageFrom(error: unknown, fallback: string) {
+  return error instanceof ApiClientError ? error.message : fallback;
+}
 
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -150,7 +196,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unselected");
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => getInitialAuthSession());
-  const [customerData, setCustomerData] = useState<CustomerDataStore>(() => getInitialCustomerData());
+  const [customerOrders, setCustomerOrders] = useState<UserOrdersStore>(() => getInitialCustomerOrders());
+  const [savedItems, setSavedItems] = useState<CollectionProduct[]>([]);
+  const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [scheduledDeliveryDate, setScheduledDeliveryDate] = useState("");
   const [scheduledDeliverySlot, setScheduledDeliverySlot] = useState("");
@@ -158,22 +206,25 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const isLoggedIn = Boolean(currentUser);
   const discountUnlocked = isLoggedIn;
   const userId = currentUser?.id ?? "";
-  const userData = userId ? getUserData(customerData, userId) : emptyUserData;
-  const orders = userData.orders;
-  const savedItems = userData.savedItems;
-  const addresses = userData.addresses;
+  const orders = useMemo(
+    () => (userId ? customerOrders[userId] ?? [] : []),
+    [customerOrders, userId],
+  );
 
   useEffect(() => {
+    // Once logged in, the cart lives in the DB, not localStorage — writing it
+    // here would resurrect a stale guest cart every time the DB cart changes.
+    if (isLoggedIn) return;
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
-  }, [cartItems]);
+  }, [cartItems, isLoggedIn]);
 
   useEffect(() => {
     window.localStorage.setItem(checkoutModeStorageKey, checkoutMode);
   }, [checkoutMode]);
 
   useEffect(() => {
-    window.localStorage.setItem(customerDataStorageKey, JSON.stringify(customerData));
-  }, [customerData]);
+    window.localStorage.setItem(customerOrdersStorageKey, JSON.stringify(customerOrders));
+  }, [customerOrders]);
 
   useEffect(() => {
     if (currentUser) {
@@ -191,10 +242,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       return;
     }
 
+    // Deferred a tick so this doesn't set state synchronously within the
+    // effect body (react-hooks/set-state-in-effect).
     if (authStatus === "success") {
-      setSuccessMessage("Logged in successfully");
+      queueMicrotask(() => setSuccessMessage("Logged in successfully"));
     } else if (authStatus === "failed") {
-      setErrorMessage("Google sign-in failed. Please try again.");
+      queueMicrotask(() => setErrorMessage("Google sign-in failed. Please try again."));
     }
 
     params.delete("auth");
@@ -229,6 +282,45 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Fires whenever a user session becomes active — both right after a fresh
+  // login and after a page reload restores a session from the auth cookie.
+  // Any items added to the guest cart before login are merged into the DB
+  // cart here; wishlist/cart/addresses then become fully server-sourced.
+  useEffect(() => {
+    if (!currentUser) {
+      return;
+    }
+
+    let isActive = true;
+    const guestCartItems = getInitialCart();
+
+    (async () => {
+      try {
+        const [cart, wishlist, userAddresses] = await Promise.all([
+          guestCartItems.length > 0
+            ? mergeCartApi(guestCartItems.map((item) => ({ productId: item.product.id, quantity: item.quantity })))
+            : getCartApi(),
+          getWishlistApi(),
+          getAddressesApi(),
+        ]);
+
+        if (!isActive) return;
+
+        window.localStorage.removeItem(cartStorageKey);
+        setCartItems(toCartItems(cart));
+        setSavedItems(wishlist);
+        setAddresses(userAddresses);
+      } catch {
+        if (!isActive) return;
+        setErrorMessage("Couldn't load your saved cart, wishlist and addresses. Please refresh.");
+      }
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [currentUser]);
+
   useEffect(() => {
     if (isLoggedIn) {
       const timer = window.setTimeout(() => setAuthModalOpen(false), 0);
@@ -256,6 +348,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     setCurrentUser(null);
+    setSavedItems([]);
+    setAddresses([]);
+    setSelectedAddressIdState("");
+    // Start the next session with a clean guest cart rather than resurrecting
+    // one that was already merged into the account we're signing out of.
+    setCartItems([]);
+    window.localStorage.removeItem(cartStorageKey);
     setAuthModalOpen(false);
     setSuccessMessage("Logged out");
     void logoutFromBackend().catch(() => undefined);
@@ -270,21 +369,19 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToCart = useCallback((product: CollectionProduct, quantity = 1) => {
-    setCartItems((items) => {
-      const existingItem = items.find((item) => item.product.id === product.id);
-      if (existingItem) {
-        return items.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item,
-        );
-      }
-
-      return [...items, { product, quantity }];
-    });
+    setCartItems((items) => applyCartAdd(items, product, quantity));
     setSuccessMessage("Added to your cart");
     setCartDrawerOpen(true);
-  }, []);
+
+    if (!userId) return;
+
+    addCartItemApi(product.id, quantity)
+      .then((cart) => setCartItems(toCartItems(cart)))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't add this item to your cart. Please try again."));
+        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+      });
+  }, [userId]);
 
   const setCheckoutMode = useCallback((mode: CheckoutMode) => {
     setCheckoutModeState(mode);
@@ -296,16 +393,30 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCartItem = useCallback((productId: string, quantity: number) => {
-    setCartItems((items) =>
-      items
-        .map((item) => (item.product.id === productId ? { ...item, quantity } : item))
-        .filter((item) => item.quantity > 0),
-    );
-  }, []);
+    setCartItems((items) => applyCartSet(items, productId, quantity));
+
+    if (!userId) return;
+
+    setCartItemQuantityApi(productId, quantity)
+      .then((cart) => setCartItems(toCartItems(cart)))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't update your cart. Please try again."));
+        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+      });
+  }, [userId]);
 
   const removeFromCart = useCallback((productId: string) => {
     setCartItems((items) => items.filter((item) => item.product.id !== productId));
-  }, []);
+
+    if (!userId) return;
+
+    removeCartItemApi(productId)
+      .then((cart) => setCartItems(toCartItems(cart)))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't remove this item from your cart. Please try again."));
+        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+      });
+  }, [userId]);
 
   const cartSubtotal = useMemo(
     () =>
@@ -320,34 +431,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const cartTotal = cartSubtotal - memberDiscount + handlingCharge;
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
-  const updateCurrentUserData = useCallback((updater: (data: UserCustomerData) => UserCustomerData) => {
-    if (!userId) {
-      return;
-    }
-
-    setCustomerData((data) => ({
-      ...data,
-      [userId]: updater(getUserData(data, userId)),
-    }));
-  }, [userId]);
-
   const toggleSavedItem = useCallback((product: CollectionProduct) => {
     if (!userId) {
       openAuthModal();
       return;
     }
 
-    updateCurrentUserData((data) => {
-      const exists = data.savedItems.some((item) => item.id === product.id);
-      setSuccessMessage(exists ? "Removed from Saved Items" : "Added to Saved Items");
-      return {
-        ...data,
-        savedItems: exists
-          ? data.savedItems.filter((item) => item.id !== product.id)
-          : [...data.savedItems, product],
-      };
+    const alreadySaved = savedItems.some((item) => item.id === product.id);
+    setSavedItems((items) =>
+      alreadySaved ? items.filter((item) => item.id !== product.id) : [product, ...items],
+    );
+    setSuccessMessage(alreadySaved ? "Removed from Saved Items" : "Added to Saved Items");
+
+    const request = alreadySaved ? removeFromWishlistApi(product.id) : addToWishlistApi(product.id);
+    request.catch((error) => {
+      setSavedItems((items) => {
+        const stillHasIt = items.some((item) => item.id === product.id);
+        if (alreadySaved && !stillHasIt) return [product, ...items];
+        if (!alreadySaved && stillHasIt) return items.filter((item) => item.id !== product.id);
+        return items;
+      });
+      setErrorMessage(errorMessageFrom(error, "Couldn't update your wishlist. Please try again."));
     });
-  }, [openAuthModal, updateCurrentUserData, userId]);
+  }, [openAuthModal, savedItems, userId]);
 
   const isSavedItem = useCallback(
     (productId: string) => savedItems.some((product) => product.id === productId),
@@ -355,54 +461,73 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   );
 
   const addAddress = useCallback((address: Omit<CustomerAddress, "id">) => {
-    updateCurrentUserData((data) => {
-      const newAddress = {
-        ...address,
-        id: createClientId("addr"),
-        isDefault: address.isDefault ?? data.addresses.length === 0,
-      };
-      setSelectedAddressIdState(newAddress.id);
-      return {
-        ...data,
-        addresses: newAddress.isDefault
-          ? [newAddress, ...data.addresses.map((item) => ({ ...item, isDefault: false }))]
-          : [...data.addresses, newAddress],
-      };
-    });
-    setSuccessMessage("Address saved");
-  }, [updateCurrentUserData]);
+    if (!userId) {
+      openAuthModal();
+      return;
+    }
+
+    createAddressApi(address)
+      .then((created) => {
+        setAddresses((current) => {
+          const withoutOldDefault = created.isDefault
+            ? current.map((item) => ({ ...item, isDefault: false }))
+            : current;
+          return [...withoutOldDefault, created];
+        });
+        setSelectedAddressIdState(created.id);
+        setSuccessMessage("Address saved");
+      })
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't save this address. Please try again."));
+      });
+  }, [openAuthModal, userId]);
 
   const updateAddress = useCallback((address: CustomerAddress) => {
-    updateCurrentUserData((data) => ({
-      ...data,
-      addresses: data.addresses.map((item) =>
-        item.id === address.id ? address : address.isDefault ? { ...item, isDefault: false } : item,
-      ),
-    }));
-    setSuccessMessage("Address updated");
-  }, [updateCurrentUserData]);
+    if (!userId) return;
+    const { id, ...fields } = address;
+
+    updateAddressApi(id, fields)
+      .then((updated) => {
+        setAddresses((current) => current.map((item) => (item.id === id ? updated : item)));
+        setSuccessMessage("Address updated");
+      })
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't update this address. Please try again."));
+      });
+  }, [userId]);
 
   const deleteAddress = useCallback((addressId: string) => {
-    updateCurrentUserData((data) => ({
-      ...data,
-      addresses: data.addresses.filter((address) => address.id !== addressId),
-    }));
+    if (!userId) return;
+
+    setAddresses((current) => current.filter((address) => address.id !== addressId));
     if (selectedAddressId === addressId) {
       setSelectedAddressIdState("");
     }
-    setSuccessMessage("Address deleted");
-  }, [selectedAddressId, updateCurrentUserData]);
+
+    deleteAddressApi(addressId)
+      .then(() => {
+        setSuccessMessage("Address deleted");
+        // The server may have promoted a new default when the deleted
+        // address was the default one — re-sync to reflect that.
+        void getAddressesApi().then(setAddresses).catch(() => undefined);
+      })
+      .catch((error) => {
+        void getAddressesApi().then(setAddresses).catch(() => undefined);
+        setErrorMessage(errorMessageFrom(error, "Couldn't delete this address. Please try again."));
+      });
+  }, [selectedAddressId, userId]);
 
   const setDefaultAddress = useCallback((addressId: string) => {
-    updateCurrentUserData((data) => ({
-      ...data,
-      addresses: data.addresses.map((address) => ({
-        ...address,
-        isDefault: address.id === addressId,
-      })),
-    }));
+    if (!userId) return;
+
+    setAddresses((current) => current.map((item) => ({ ...item, isDefault: item.id === addressId })));
     setSelectedAddressIdState(addressId);
-  }, [updateCurrentUserData]);
+
+    setDefaultAddressApi(addressId).catch((error) => {
+      void getAddressesApi().then(setAddresses).catch(() => undefined);
+      setErrorMessage(errorMessageFrom(error, "Couldn't update your default address. Please try again."));
+    });
+  }, [userId]);
 
   const createOrder = useCallback(() => {
     if (!userId || cartItems.length === 0) {
@@ -449,13 +574,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       deliverySlot: checkoutMode === "scheduled" ? scheduledDeliverySlot : undefined,
     };
 
-    updateCurrentUserData((data) => ({
-      ...data,
-      orders: [order, ...data.orders],
-    }));
+    setCustomerOrders((data) => ({ ...data, [userId]: [order, ...(data[userId] ?? [])] }));
     setCartItems([]);
     setCheckoutModeState("buy-now");
     setSuccessMessage(`Order ${order.id} created`);
+    void clearCartApi().catch(() => undefined);
     return order;
   }, [
     addresses,
@@ -469,7 +592,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     paymentMethod,
     scheduledDeliveryDate,
     scheduledDeliverySlot,
-    updateCurrentUserData,
     userId,
   ]);
 
@@ -612,39 +734,19 @@ function safelyParseCart(value: string): CartItem[] {
   }
 }
 
-type UserCustomerData = {
-  orders: CustomerOrder[];
-  savedItems: CollectionProduct[];
-  addresses: CustomerAddress[];
-};
+type UserOrdersStore = Record<string, CustomerOrder[]>;
 
-type CustomerDataStore = Record<string, UserCustomerData>;
-
-const emptyUserData: UserCustomerData = {
-  orders: [],
-  savedItems: [],
-  addresses: [],
-};
-
-function getUserData(data: CustomerDataStore, userId: string): UserCustomerData {
-  return data[userId] ?? emptyUserData;
-}
-
-function getInitialCustomerData(): CustomerDataStore {
+function getInitialCustomerOrders(): UserOrdersStore {
   if (typeof window === "undefined") {
     return {};
   }
 
   try {
-    const stored = window.localStorage.getItem(customerDataStorageKey);
+    const stored = window.localStorage.getItem(customerOrdersStorageKey);
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
   }
-}
-
-function createClientId(prefix: string) {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function generateOrderId() {

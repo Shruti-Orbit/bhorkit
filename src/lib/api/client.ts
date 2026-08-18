@@ -49,6 +49,40 @@ export async function apiPost<TData, TBody = unknown, TMeta = unknown>(
   });
 }
 
+export async function apiPut<TData, TBody = unknown, TMeta = unknown>(
+  path: string,
+  body?: TBody,
+  init?: RequestInit,
+) {
+  return apiRequest<TData, TMeta>(path, {
+    ...init,
+    method: "PUT",
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+export async function apiPatch<TData, TBody = unknown, TMeta = unknown>(
+  path: string,
+  body: TBody,
+  init?: RequestInit,
+) {
+  return apiRequest<TData, TMeta>(path, {
+    ...init,
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function apiDelete<TData, TMeta = unknown>(
+  path: string,
+  init?: RequestInit,
+) {
+  return apiRequest<TData, TMeta>(path, {
+    ...init,
+    method: "DELETE",
+  });
+}
+
 async function apiRequest<TData, TMeta = unknown>(
   path: string,
   init?: RequestInit,
