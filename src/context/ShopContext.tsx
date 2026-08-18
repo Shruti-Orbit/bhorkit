@@ -89,6 +89,7 @@ type ShopContextValue = {
   authModalOpen: boolean;
   authRedirectTo: string;
   successMessage: string;
+  errorMessage: string;
   cartDrawerOpen: boolean;
   cartItems: CartItem[];
   cartCount: number;
@@ -130,6 +131,7 @@ type ShopContextValue = {
   getOrderById: (orderId: string) => CustomerOrder | undefined;
   findOrders: (query: string) => CustomerOrder[];
   clearSuccessMessage: () => void;
+  clearErrorMessage: () => void;
 };
 
 const ShopContext = createContext<ShopContextValue | null>(null);
@@ -142,6 +144,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authRedirectTo, setAuthRedirectTo] = useState("/");
   const [successMessage, setSuccessMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
@@ -180,6 +183,28 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     window.localStorage.removeItem(authSessionStorageKey);
   }, [currentUser]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const authStatus = params.get("auth");
+    if (!authStatus) {
+      return;
+    }
+
+    if (authStatus === "success") {
+      setSuccessMessage("Logged in successfully");
+    } else if (authStatus === "failed") {
+      setErrorMessage("Google sign-in failed. Please try again.");
+    }
+
+    params.delete("auth");
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+    );
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -476,6 +501,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       authModalOpen,
       authRedirectTo,
       successMessage,
+      errorMessage,
       cartDrawerOpen,
       cartItems,
       cartCount,
@@ -517,6 +543,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       getOrderById,
       findOrders,
       clearSuccessMessage: () => setSuccessMessage(""),
+      clearErrorMessage: () => setErrorMessage(""),
     }),
     [
       addAddress,
@@ -539,6 +566,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       deleteAddress,
       discountUnlocked,
       effectiveSelectedAddressId,
+      errorMessage,
       findOrders,
       getOrderById,
       handlingCharge,

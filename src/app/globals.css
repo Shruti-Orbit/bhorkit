@@ -22,6 +22,7 @@
   --color-bhor-text-muted: var(--bhor-text-muted);
   --color-bhor-border: var(--bhor-border);
   --color-bhor-success: var(--bhor-success);
+  --color-bhor-error: var(--bhor-error);
   --font-bhor-display: var(--font-display);
   --font-bhor-body: var(--font-body);
   --font-bhor-accent: var(--font-accent);
