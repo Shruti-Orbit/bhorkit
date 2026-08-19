@@ -141,7 +141,7 @@ type ShopContextValue = {
   removeFromCart: (productId: string) => void;
   toggleSavedItem: (product: CollectionProduct) => void;
   isSavedItem: (productId: string) => boolean;
-  addAddress: (address: Omit<CustomerAddress, "id">) => void;
+  addAddress: (address: Omit<CustomerAddress, "id">) => Promise<boolean>;
   updateAddress: (address: CustomerAddress) => void;
   deleteAddress: (addressId: string) => void;
   setDefaultAddress: (addressId: string) => void;
@@ -463,10 +463,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const addAddress = useCallback((address: Omit<CustomerAddress, "id">) => {
     if (!userId) {
       openAuthModal();
-      return;
+      return Promise.resolve(false);
     }
 
-    createAddressApi(address)
+    return createAddressApi(address)
       .then((created) => {
         setAddresses((current) => {
           const withoutOldDefault = created.isDefault
@@ -476,9 +476,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         });
         setSelectedAddressIdState(created.id);
         setSuccessMessage("Address saved");
+        return true;
       })
       .catch((error) => {
         setErrorMessage(errorMessageFrom(error, "Couldn't save this address. Please try again."));
+        return false;
       });
   }, [openAuthModal, userId]);
 
