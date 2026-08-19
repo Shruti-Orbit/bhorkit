@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
 import { CartButton } from "../header/CartButton";
+import { SearchBox } from "../header/SearchBox";
 import { MobileMenu } from "./MobileMenu";
 
 export function MobileHeader() {
@@ -29,7 +30,7 @@ export function MobileHeader() {
 
   return (
     <div className="border-b border-bhor-border bg-bhor-surface lg:hidden">
-      <div className="grid h-16 grid-cols-[44px_1fr_44px] items-center px-4 sm:h-[72px]">
+      <div className="grid h-16 grid-cols-[44px_1fr_92px] items-center px-4 sm:h-[72px]">
         <button
           type="button"
           aria-label="Open menu"
@@ -56,6 +57,7 @@ export function MobileHeader() {
         </Link>
 
         <div className="flex items-center justify-end">
+          <SearchBox />
           <CartButton />
         </div>
       </div>

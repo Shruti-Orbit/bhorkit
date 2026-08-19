@@ -44,6 +44,11 @@ export async function getProductsByCollection(collection: ProductCollectionKey) 
   return response.data;
 }
 
+export async function getAllProducts() {
+  const response = await apiGet<CollectionProduct[], ProductListMeta>("/products");
+  return response.data;
+}
+
 export async function getProductDetail(slug: string): Promise<ProductDetail | null> {
   try {
     const response = await apiGet<CollectionProduct, ProductDetailMeta>(
