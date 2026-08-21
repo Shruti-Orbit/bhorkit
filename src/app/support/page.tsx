@@ -34,7 +34,13 @@ export default function SupportPage() {
 }
 
 function SupportContent() {
-  const { isLoggedIn } = useShop();
+  const { isAuthReady, isLoggedIn } = useShop();
+
+  // Avoids flashing the "log in or email us" fallback in front of an
+  // already-logged-in user while the initial session check resolves.
+  if (!isAuthReady) {
+    return <div className="h-[168px] animate-pulse rounded-bhor-md bg-bhor-cream" />;
+  }
 
   if (!isLoggedIn) {
     return (

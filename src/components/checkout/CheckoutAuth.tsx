@@ -5,18 +5,29 @@ import { useShop } from "@/src/context/ShopContext";
 import { getGoogleLoginUrl } from "@/src/lib/api/auth.api";
 
 export function CheckoutAuth() {
-  const { currentUser, isLoggedIn } = useShop();
+  const { currentUser, isAuthReady, isLoggedIn } = useShop();
   const [isLoading, setIsLoading] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  // Avoids flashing the "Continue with Google" button in front of an
+  // already-logged-in user while the initial session check is still
+  // resolving.
+  if (!isAuthReady) {
+    return (
+      <section className="h-[92px] animate-pulse rounded-bhor-lg border border-bhor-border bg-bhor-surface shadow-bhor-soft" />
+    );
+  }
 
   if (isLoggedIn && currentUser) {
     return (
       <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
         <div className="flex items-center gap-3">
-          {currentUser.image ? (
+          {currentUser.image && !imageFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={currentUser.image}
               alt={currentUser.name}
+              onError={() => setImageFailed(true)}
               className="h-11 w-11 rounded-full object-cover"
             />
           ) : null}

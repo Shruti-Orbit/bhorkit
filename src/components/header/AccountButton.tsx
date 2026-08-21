@@ -8,6 +8,7 @@ import { useShop } from "@/src/context/ShopContext";
 export function AccountButton() {
   const { currentUser, isLoggedIn, logout, openAuthModal } = useShop();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayIdentifier = currentUser?.email || currentUser?.id;
   const initial = displayIdentifier?.charAt(0).toUpperCase();
@@ -48,11 +49,12 @@ export function AccountButton() {
           onClick={() => setIsDropdownOpen((open) => !open)}
           className="flex h-11 w-11 items-center justify-center rounded-full bg-bhor-primary-soft text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
         >
-          {currentUser.image ? (
+          {currentUser.image && !imageFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={currentUser.image}
               alt={currentUser.name}
+              onError={() => setImageFailed(true)}
               className="h-full w-full rounded-full object-cover"
             />
           ) : (

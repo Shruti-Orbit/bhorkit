@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Heart, MapPin, Package, Search } from "lucide-react";
 import { AccountSectionCard, AccountShell } from "@/src/components/account/AccountShell";
@@ -14,6 +15,7 @@ const quickLinks = [
 
 export default function AccountPage() {
   const { currentUser } = useShop();
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <AccountShell>
@@ -30,11 +32,12 @@ export default function AccountPage() {
         <AccountSectionCard>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
-              {currentUser?.image ? (
+              {currentUser?.image && !imageFailed ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={currentUser.image}
                   alt={currentUser.name}
+                  onError={() => setImageFailed(true)}
                   className="h-16 w-16 rounded-full object-cover shadow-bhor-soft"
                 />
               ) : null}

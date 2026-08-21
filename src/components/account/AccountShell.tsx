@@ -16,7 +16,20 @@ const accountLinks = [
 export function AccountShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isLoggedIn, logout, openAuthModal } = useShop();
+  const { isAuthReady, isLoggedIn, logout, openAuthModal } = useShop();
+
+  // Until the initial session check resolves, we don't yet know whether this
+  // is a logged-in user or a guest — showing the "please log in" screen
+  // here would flash it in front of an already-authenticated user on every
+  // page load, which is exactly the "state looks inconsistent" symptom this
+  // is fixing.
+  if (!isAuthReady) {
+    return (
+      <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-10 sm:px-6 lg:px-8">
+        <div className="mx-auto h-40 w-full max-w-xl animate-pulse rounded-bhor-lg border border-bhor-border bg-bhor-surface shadow-bhor-soft" />
+      </main>
+    );
+  }
 
   if (!isLoggedIn) {
     return (

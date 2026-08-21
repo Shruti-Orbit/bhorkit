@@ -106,6 +106,7 @@ type AuthModalOptions = {
 
 type ShopContextValue = {
   isLoggedIn: boolean;
+  isAuthReady: boolean;
   currentUser: CurrentUser | null;
   discountUnlocked: boolean;
   authModalOpen: boolean;
@@ -160,7 +161,6 @@ const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
 const customerOrdersStorageKey = "bhorkit_customer_orders";
-const authSessionStorageKey = "bhorkit_auth_session";
 
 function toCartItems(cart: BackendCart): CartItem[] {
   return cart.items.map((item) => ({ product: item.product, quantity: item.quantity }));
@@ -195,7 +195,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unselected");
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => getInitialAuthSession());
+  // Always starts null (never read from localStorage here): the server
+  // never sees the session cookie during SSR — it's scoped to the backend's
+  // own origin — so SSR can only ever render "logged out". Seeding this from
+  // localStorage on the client's first render would make that first render
+  // disagree with the server-rendered HTML (a hydration mismatch), which
+  // forces React to throw away and re-render the mismatched subtree — a
+  // real, visible flash, not just a dev-mode console warning. The bootstrap
+  // effect below is the only source of truth, confirmed against the server.
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
   const [customerOrders, setCustomerOrders] = useState<UserOrdersStore>(() => getInitialCustomerOrders());
   const [savedItems, setSavedItems] = useState<CollectionProduct[]>([]);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
@@ -227,15 +236,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, [customerOrders]);
 
   useEffect(() => {
-    if (currentUser) {
-      window.localStorage.setItem(authSessionStorageKey, JSON.stringify(currentUser));
-      return;
-    }
-
-    window.localStorage.removeItem(authSessionStorageKey);
-  }, [currentUser]);
-
-  useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const authStatus = params.get("auth");
     if (!authStatus) {
@@ -261,21 +261,45 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let isActive = true;
+    let hasRetried = false;
 
-    getCurrentUser()
-      .then((user) => {
-        if (!isActive) return;
-        setCurrentUser({
-          email: user.email,
-          id: user.id,
-          image: user.image,
-          name: user.name,
+    function checkSession() {
+      getCurrentUser()
+        .then((user) => {
+          if (!isActive) return;
+          setCurrentUser({
+            email: user.email,
+            id: user.id,
+            image: user.image,
+            name: user.name,
+          });
+          setIsAuthReady(true);
+        })
+        .catch((error) => {
+          if (!isActive) return;
+
+          // A definitive 401 (no/invalid session) or 404 (token verifies
+          // but the account it points to no longer exists) both mean
+          // retrying is pointless — the outcome won't change. Any other
+          // failure (a network blip, the backend momentarily unreachable)
+          // gets one retry before we conclude the user is logged out.
+          // Without this, a single transient failure right after login
+          // would leave someone who really is authenticated stuck looking
+          // logged out until they manually refresh.
+          const isDefinitelyLoggedOut =
+            error instanceof ApiClientError && (error.status === 401 || error.status === 404);
+          if (isDefinitelyLoggedOut || hasRetried) {
+            setCurrentUser(null);
+            setIsAuthReady(true);
+            return;
+          }
+
+          hasRetried = true;
+          window.setTimeout(checkSession, 800);
         });
-      })
-      .catch(() => {
-        if (!isActive) return;
-        setCurrentUser(null);
-      });
+    }
+
+    checkSession();
 
     return () => {
       isActive = false;
@@ -342,6 +366,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const completeAuth = useCallback((user: CurrentUser) => {
     setCurrentUser(user);
+    setIsAuthReady(true);
     setAuthModalOpen(false);
     setSuccessMessage("Logged in successfully");
   }, []);
@@ -620,6 +645,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ShopContextValue>(
     () => ({
       isLoggedIn,
+      isAuthReady,
       currentUser,
       discountUnlocked,
       authModalOpen,
@@ -694,6 +720,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       findOrders,
       getOrderById,
       handlingCharge,
+      isAuthReady,
       isLoggedIn,
       isSavedItem,
       logout,
@@ -780,27 +807,3 @@ function getInitialCheckoutMode(): CheckoutMode {
   return storedMode === "scheduled" || storedMode === "pre-order" ? storedMode : "buy-now";
 }
 
-function getInitialAuthSession(): CurrentUser | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const stored = window.localStorage.getItem(authSessionStorageKey);
-    if (!stored) {
-      return null;
-    }
-
-    const parsed = JSON.parse(stored) as Partial<CurrentUser>;
-    return parsed.id && parsed.email && parsed.name
-      ? {
-          email: parsed.email,
-          id: parsed.id,
-          image: parsed.image,
-          name: parsed.name,
-        }
-      : null;
-  } catch {
-    return null;
-  }
-}
