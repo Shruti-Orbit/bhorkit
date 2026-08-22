@@ -73,6 +73,19 @@ export type CustomerAddress = {
 // and was only ever a placeholder for this.
 export type CustomerOrder = BackendOrder;
 
+/**
+ * A Buy Now selection made on a product page, kept outside the cart. Only
+ * identifiers and a quantity are stored — never a price — so a tampered value
+ * can't affect what the customer is charged; the server prices the product
+ * from the catalogue at checkout, and the checkout page re-fetches it for
+ * display.
+ */
+export type DirectCheckoutItem = {
+  productId: string;
+  slug: string;
+  quantity: number;
+};
+
 type AuthModalOptions = {
   redirectTo?: string;
 };
@@ -109,7 +122,9 @@ type ShopContextValue = {
   openCartDrawer: () => void;
   closeCartDrawer: () => void;
   addToCart: (product: CollectionProduct, quantity?: number) => void;
-  buyNow: (product: CollectionProduct, mode?: CheckoutMode) => void;
+  buyNow: (product: CollectionProduct, mode?: CheckoutMode, quantity?: number) => void;
+  directCheckoutItem: DirectCheckoutItem | null;
+  clearDirectCheckout: () => void;
   setCheckoutMode: (mode: CheckoutMode) => void;
   updateCartItem: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
@@ -132,6 +147,39 @@ type ShopContextValue = {
 const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
+// sessionStorage, not localStorage: a Buy Now belongs to the tab and journey
+// the customer is in the middle of. It has to survive a refresh or a
+// back-navigation on /checkout (the payment flow depends on that), but it
+// should not still be waiting days later in a new session.
+const directCheckoutStorageKey = "bhorkit_direct_checkout";
+
+function readDirectCheckout(): DirectCheckoutItem | null {
+  try {
+    const stored = window.sessionStorage.getItem(directCheckoutStorageKey);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as Partial<DirectCheckoutItem>;
+    if (typeof parsed?.productId !== "string" || typeof parsed?.slug !== "string") return null;
+    return {
+      productId: parsed.productId,
+      slug: parsed.slug,
+      quantity: Number.isInteger(parsed.quantity) && parsed.quantity! > 0 ? parsed.quantity! : 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeDirectCheckout(item: DirectCheckoutItem | null) {
+  try {
+    if (item) {
+      window.sessionStorage.setItem(directCheckoutStorageKey, JSON.stringify(item));
+    } else {
+      window.sessionStorage.removeItem(directCheckoutStorageKey);
+    }
+  } catch {
+    // Private-mode storage failures only cost the refresh-resume convenience.
+  }
+}
 
 function toCartItems(cart: BackendCart): CartItem[] {
   return cart.items.map((item) => ({ product: item.product, quantity: item.quantity }));
@@ -165,6 +213,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
+  // Always starts null and is hydrated from sessionStorage in an effect, for
+  // the same reason currentUser is: seeding it in the initialiser would make
+  // the client's first render disagree with the server-rendered HTML.
+  const [directCheckoutItem, setDirectCheckoutItem] = useState<DirectCheckoutItem | null>(null);
   // Always starts null (never read from localStorage here): the server
   // never sees the session cookie during SSR — it's scoped to the backend's
   // own origin — so SSR can only ever render "logged out". Seeding this from
@@ -202,6 +254,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem(checkoutModeStorageKey, checkoutMode);
   }, [checkoutMode]);
+
+  // Restores a Buy Now selection after a refresh or back-navigation on the
+  // checkout page. Deferred a tick so it isn't a synchronous setState in an
+  // effect body (react-hooks/set-state-in-effect).
+  useEffect(() => {
+    const restored = readDirectCheckout();
+    if (!restored) return;
+    queueMicrotask(() => setDirectCheckoutItem(restored));
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -400,9 +461,29 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setCheckoutModeState(mode);
   }, []);
 
-  const buyNow = useCallback((product: CollectionProduct, mode: CheckoutMode = "buy-now") => {
-    setCartItems([{ product, quantity: 1 }]);
+  // Buy Now / Pre-Order Now from a product page. This deliberately does NOT
+  // touch cartItems: overwriting them made the header badge and cart drawer
+  // show a cart the customer never had, and — because the server cart was
+  // untouched — checkout then failed with "Your cart is empty". The selection
+  // is recorded separately and sent to the server as `directItem`, which
+  // prices it from the catalogue without involving the cart at all.
+  const buyNow = useCallback((product: CollectionProduct, mode: CheckoutMode = "buy-now", quantity = 1) => {
+    const selection: DirectCheckoutItem = {
+      productId: product.id,
+      slug: product.slug,
+      quantity: Math.max(1, Math.trunc(quantity)),
+    };
+    setDirectCheckoutItem(selection);
+    writeDirectCheckout(selection);
     setCheckoutModeState(mode);
+  }, []);
+
+  // Called when the customer chooses cart checkout instead, and once a direct
+  // order is confirmed — otherwise a stale selection would hijack the next
+  // visit to /checkout.
+  const clearDirectCheckout = useCallback(() => {
+    setDirectCheckoutItem(null);
+    writeDirectCheckout(null);
   }, []);
 
   const updateCartItem = useCallback((productId: string, quantity: number) => {
@@ -631,6 +712,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       closeCartDrawer,
       addToCart,
       buyNow,
+      directCheckoutItem,
+      clearDirectCheckout,
       setCheckoutMode,
       updateCartItem,
       removeFromCart,
@@ -664,9 +747,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       checkoutMode,
       closeAuthModal,
       completeAuth,
+      clearDirectCheckout,
       closeCartDrawer,
       currentUser,
       deleteAddress,
+      directCheckoutItem,
       discountUnlocked,
       effectiveSelectedAddressId,
       errorMessage,

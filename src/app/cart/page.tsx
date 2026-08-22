@@ -9,7 +9,7 @@ import { formatCurrency, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, setCheckoutMode, updateCartItem } = useShop();
+  const { cartItems, clearDirectCheckout, removeFromCart, setCheckoutMode, updateCartItem } = useShop();
   const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
 
   return (
@@ -92,7 +92,11 @@ export default function CartPage() {
           {cartItems.length > 0 ? (
             <Link
               href="/checkout"
-              onClick={() => setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now")}
+              onClick={() => {
+                // Checking out the cart supersedes any earlier Buy Now.
+                clearDirectCheckout();
+                setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now");
+              }}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
             >
               {hasPreOrderItems ? "Confirm Pre-Order" : "Checkout"}

@@ -43,6 +43,8 @@ export type BackendOrder = {
   id: string;
   orderNumber: string;
   items: OrderItem[];
+  /** "direct" = bought straight from a product page, never via the cart. */
+  source: "cart" | "direct";
   address: OrderAddress;
   pricing: {
     subtotal: number;
@@ -96,13 +98,21 @@ export async function getDeliveryOptions(mode: DeliveryMode, date?: string) {
   return response.data;
 }
 
-export async function createCheckout(input: {
+export type CreateCheckoutInput = {
   addressId: string;
   deliveryMode: DeliveryMode;
   deliveryDate: string;
   deliverySlotId: string;
-}) {
-  const response = await apiPost<CheckoutSession, typeof input>("/orders/checkout", input);
+  /**
+   * Buy Now straight from a product page. Only an id and a quantity are sent —
+   * the server prices the product from the catalogue, so nothing here can
+   * influence the amount charged. Omit it to check out the persistent cart.
+   */
+  directItem?: { productId: string; quantity: number };
+};
+
+export async function createCheckout(input: CreateCheckoutInput) {
+  const response = await apiPost<CheckoutSession, CreateCheckoutInput>("/orders/checkout", input);
   return response.data;
 }
 

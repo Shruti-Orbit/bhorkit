@@ -33,6 +33,8 @@ type StartCheckoutInput = {
   deliveryMode: DeliveryMode;
   deliveryDate: string;
   deliverySlotId: string;
+  /** Set for a Buy Now; omitted for a cart checkout. */
+  directItem?: { productId: string; quantity: number };
 };
 
 function readPendingOrderId() {

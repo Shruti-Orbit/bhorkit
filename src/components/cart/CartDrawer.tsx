@@ -13,6 +13,7 @@ export function CartDrawer() {
     cartItems,
     cartSubtotal,
     cartTotal,
+    clearDirectCheckout,
     closeCartDrawer,
     handlingCharge,
     memberDiscount,
@@ -192,6 +193,8 @@ export function CartDrawer() {
               <Link
                 href="/checkout"
                 onClick={() => {
+                  // Checking out the cart supersedes any earlier Buy Now.
+                  clearDirectCheckout();
                   setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now");
                   closeCartDrawer();
                 }}

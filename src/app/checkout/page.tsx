@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { AlertTriangle, Loader2, Lock, ShieldCheck } from "lucide-react";
@@ -9,7 +10,8 @@ import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddres
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
-import { formatCurrency } from "@/src/utils/discount";
+import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
+import { formatCurrency, parsePrice } from "@/src/utils/discount";
 
 export default function CheckoutPage() {
   const {
@@ -17,6 +19,8 @@ export default function CheckoutPage() {
     cartItems,
     cartTotal,
     checkoutMode,
+    clearDirectCheckout,
+    directCheckoutItem,
     isLoggedIn,
     refreshOrders,
     selectedAddressId,
@@ -26,20 +30,31 @@ export default function CheckoutPage() {
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliverySlotId, setDeliverySlotId] = useState("");
 
+  // A Buy Now selection takes precedence over the cart for this page only —
+  // the cart itself is left untouched and is still there afterwards.
+  const direct = useDirectCheckoutProduct(directCheckoutItem);
+  const isDirect = Boolean(directCheckoutItem);
+
   // Pre-order carts deliver in the Ganesh Chaturthi window; everything else
   // uses the standard next-14-days window. The server enforces the same rule.
   const deliveryMode = checkoutMode === "buy-now" ? "standard" : "scheduled";
 
   const { phase, error, notice, isBusy, startCheckout } = useCheckout({
-    // The order now exists server-side, so pull the authoritative list rather
-    // than optimistically inventing a local one.
-    onOrderConfirmed: () => refreshOrders(),
+    onOrderConfirmed: () => {
+      // The selection is spent — without this a refresh would re-offer the
+      // same Buy Now instead of the (unchanged) cart.
+      clearDirectCheckout();
+      void refreshOrders();
+    },
   });
 
   const isPreOrder = deliveryMode === "scheduled";
+  const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
+  const payableTotal = isDirect ? direct.totals?.total ?? 0 : cartTotal;
+
   const canPay =
     isLoggedIn &&
-    cartItems.length > 0 &&
+    hasItems &&
     Boolean(selectedAddressId) &&
     Boolean(deliveryDate) &&
     Boolean(deliverySlotId) &&
@@ -53,8 +68,19 @@ export default function CheckoutPage() {
       deliveryMode,
       deliveryDate,
       deliverySlotId,
+      // Sends only the id and quantity; the server prices it.
+      ...(directCheckoutItem
+        ? {
+            directItem: {
+              productId: directCheckoutItem.productId,
+              quantity: directCheckoutItem.quantity,
+            },
+          }
+        : {}),
     });
   }
+
+  const showEmptyState = isDirect ? Boolean(direct.error) : cartItems.length === 0;
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
@@ -70,11 +96,21 @@ export default function CheckoutPage() {
             </p>
           </div>
 
-          {cartItems.length === 0 ? (
+          {isDirect && direct.isLoading ? (
             <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
-              <p className="text-bhor-body font-bhor-semibold text-bhor-text">Your cart is empty.</p>
+              <p className="flex items-center justify-center gap-2 text-bhor-small text-bhor-text-muted">
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                Loading your selection…
+              </p>
+            </div>
+          ) : showEmptyState ? (
+            <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
+              <p className="text-bhor-body font-bhor-semibold text-bhor-text">
+                {direct.error || "Your cart is empty."}
+              </p>
               <Link
-                href="/"
+                href={isDirect ? "/shop" : "/"}
+                onClick={isDirect ? clearDirectCheckout : undefined}
                 className="mt-5 inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
               >
                 Continue Shopping
@@ -83,6 +119,41 @@ export default function CheckoutPage() {
           ) : (
             <>
               <CheckoutAuth />
+
+              {isDirect && direct.product ? (
+                <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
+                  <div className="flex items-center justify-between gap-3">
+                    <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Your Item</h2>
+                    <Link
+                      href="/cart"
+                      onClick={clearDirectCheckout}
+                      className="text-bhor-caption font-bhor-bold uppercase text-bhor-primary"
+                    >
+                      Checkout cart instead
+                    </Link>
+                  </div>
+                  <div className="mt-4 flex gap-4">
+                    <div className="relative h-20 w-24 shrink-0 overflow-hidden rounded-bhor-md bg-bhor-peach">
+                      <Image
+                        src={direct.product.image}
+                        alt={direct.product.imageAlt}
+                        fill
+                        sizes="96px"
+                        className="object-cover"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-bhor-small font-bhor-semibold text-bhor-text">
+                        {direct.product.name}
+                      </p>
+                      <p className="mt-1 text-bhor-small text-bhor-text-muted">
+                        Qty {directCheckoutItem?.quantity ?? 1} ×{" "}
+                        {formatCurrency(parsePrice(direct.product.price))}
+                      </p>
+                    </div>
+                  </div>
+                </section>
+              ) : null}
 
               <DeliveryAddressSection />
 
@@ -123,9 +194,9 @@ export default function CheckoutPage() {
           )}
         </section>
 
-        {cartItems.length > 0 ? (
+        {hasItems ? (
           <div className="space-y-4">
-            <OrderSummary />
+            <OrderSummary {...(isDirect && direct.totals ? { totals: direct.totals } : {})} />
 
             {error ? (
               <p
@@ -171,6 +242,6 @@ export default function CheckoutPage() {
     if (addresses.length === 0 || !selectedAddressId) return "Add Address to Continue";
     if (!deliveryDate || !deliverySlotId) return "Select Delivery Date & Slot";
     if (isPreOrder && !policyAccepted) return "Accept Pre-Order Policy";
-    return `Pay ${formatCurrency(cartTotal)}`;
+    return `Pay ${formatCurrency(payableTotal)}`;
   }
 }
