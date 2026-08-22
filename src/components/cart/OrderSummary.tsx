@@ -1,11 +1,10 @@
 "use client";
 
-import { calculateMemberDiscount, formatCurrency } from "@/src/utils/discount";
+import { formatCurrency } from "@/src/utils/discount";
 import { useShop } from "@/src/context/ShopContext";
 
 export function OrderSummary() {
-  const { cartSubtotal, cartTotal, handlingCharge, memberDiscount, paymentMethod } = useShop();
-  const conditionalDiscount = calculateMemberDiscount(cartSubtotal);
+  const { cartSubtotal, cartTotal, handlingCharge, memberDiscount } = useShop();
 
   return (
     <aside className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
@@ -17,13 +16,8 @@ export function OrderSummary() {
         </div>
         <div className="flex justify-between gap-4 text-bhor-success">
           <span>Online Payment Discount (10%)</span>
-          <span>-{formatCurrency(paymentMethod === "online" ? memberDiscount : conditionalDiscount)}</span>
+          <span>-{formatCurrency(memberDiscount)}</span>
         </div>
-        {paymentMethod !== "online" ? (
-          <p className="text-bhor-caption font-bhor-medium text-bhor-text-muted">
-            Applied when you select Online Payment at checkout.
-          </p>
-        ) : null}
         <div className="flex justify-between gap-4 text-bhor-text-muted">
           <span>Handling Charge</span>
           <span>{handlingCharge === 0 ? "Free" : formatCurrency(handlingCharge)}</span>

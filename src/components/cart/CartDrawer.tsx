@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, Minus, Plus, ReceiptText, ShieldCheck, Trash2, X } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
-import { calculateMemberDiscount, formatCurrency, freeHandlingThreshold, parsePrice } from "@/src/utils/discount";
+import { formatCurrency, freeHandlingThreshold, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
 export function CartDrawer() {
@@ -16,13 +16,11 @@ export function CartDrawer() {
     closeCartDrawer,
     handlingCharge,
     memberDiscount,
-    paymentMethod,
     removeFromCart,
     setCheckoutMode,
     updateCartItem,
   } = useShop();
   const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
-  const conditionalDiscount = calculateMemberDiscount(cartSubtotal);
 
   if (!cartDrawerOpen) {
     return null;
@@ -161,14 +159,9 @@ export function CartDrawer() {
                   <Row label="Items total" value={formatCurrency(cartSubtotal)} />
                   <Row
                     label="Online Payment Discount (10%)"
-                    value={`-${formatCurrency(paymentMethod === "online" ? memberDiscount : conditionalDiscount)}`}
+                    value={`-${formatCurrency(memberDiscount)}`}
                     tone="success"
                   />
-                  {paymentMethod !== "online" ? (
-                    <p className="text-bhor-caption text-bhor-text-muted">
-                      Applied when you select Online Payment at checkout.
-                    </p>
-                  ) : null}
                   <Row
                     label="Handling charge"
                     value={handlingCharge === 0 ? "FREE" : formatCurrency(handlingCharge)}

@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
 import { useShop, type CustomerOrder } from "@/src/context/ShopContext";
-import { formatCurrency } from "@/src/utils/discount";
-import { isGaneshPreOrder } from "@/src/utils/preorder";
-
-const standardSteps = ["confirmed", "processing", "packed", "out-for-delivery", "delivered"];
-const preOrderSteps = ["pre-order-confirmed", "preparing", "scheduled-for-dispatch", "dispatched", "delivered"];
+import { formatPaise } from "@/src/utils/money";
+import {
+  deliveryLabel,
+  formatOrderStatus,
+  fulfilmentSteps,
+  isOrderCancelled,
+  isPreOrder,
+} from "@/src/utils/order";
 
 export default function TrackOrderPage() {
   return (
@@ -77,18 +80,18 @@ function TrackOrderContent() {
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h2 className="text-bhor-product font-bhor-bold text-bhor-text">
-                        Order #{order.id}
+                        Order #{order.orderNumber}
                       </h2>
                       <p className="mt-2 text-bhor-small font-bhor-semibold text-bhor-text">
-                        {order.items[0]?.product.name}
+                        {order.items[0]?.name}
+                        {order.items.length > 1 ? ` +${order.items.length - 1} more` : ""}
                       </p>
                       <p className="mt-1 text-bhor-small text-bhor-text-muted">
-                        {isGaneshPreOrder(order) ? "Pre-Order Delivery" : "Expected Delivery"}:{" "}
-                        {order.deliveryDate ?? order.expectedDelivery ?? order.expectedDispatch ?? "To be confirmed"}
+                        {isPreOrder(order) ? "Pre-Order Delivery" : "Delivery"}: {deliveryLabel(order)}
                       </p>
                     </div>
                     <p className="text-bhor-product font-bhor-bold text-bhor-text">
-                      {formatCurrency(order.total)}
+                      {formatPaise(order.pricing.total)}
                     </p>
                   </div>
                   <TrackingTimeline order={order} />
@@ -119,12 +122,22 @@ function TrackOrderContent() {
 }
 
 function TrackingTimeline({ order }: { order: CustomerOrder }) {
-  const steps = isGaneshPreOrder(order) ? preOrderSteps : standardSteps;
-  const activeIndex = steps.indexOf(order.status);
+  // A cancelled or failed order never entered the fulfilment pipeline, so it
+  // gets no ticked steps rather than a misleading half-complete tracker.
+  if (isOrderCancelled(order)) {
+    return (
+      <p className="mt-5 rounded-bhor-sm bg-bhor-peach px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-error">
+        {formatOrderStatus(order.status)}
+        {order.payment.failureReason ? ` — ${order.payment.failureReason}` : ""}
+      </p>
+    );
+  }
+
+  const activeIndex = fulfilmentSteps.indexOf(order.status);
 
   return (
     <div className="mt-5 grid gap-3 sm:grid-cols-5">
-      {steps.map((step, index) => {
+      {fulfilmentSteps.map((step, index) => {
         const done = index <= activeIndex;
         return (
           <div key={step} className="flex items-center gap-2 sm:flex-col sm:items-start">
@@ -132,7 +145,7 @@ function TrackingTimeline({ order }: { order: CustomerOrder }) {
               {done ? "✓" : "○"}
             </span>
             <p className="text-bhor-caption font-bhor-semibold uppercase text-bhor-text">
-              {step.split("-").join(" ")}
+              {formatOrderStatus(step)}
             </p>
           </div>
         );

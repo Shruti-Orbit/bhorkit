@@ -19,7 +19,6 @@ import {
 } from "@/src/lib/api/wishlist.api";
 import {
   addCartItem as addCartItemApi,
-  clearCart as clearCartApi,
   getCart as getCartApi,
   mergeCart as mergeCartApi,
   removeCartItem as removeCartItemApi,
@@ -33,15 +32,14 @@ import {
   setDefaultAddress as setDefaultAddressApi,
   updateAddress as updateAddressApi,
 } from "@/src/lib/api/address.api";
+import { getOrders as getOrdersApi, type BackendOrder } from "@/src/lib/api/order.api";
 import {
   calculateHandlingCharge,
   calculateMemberDiscount,
   parsePrice,
 } from "@/src/utils/discount";
-import { isValidGaneshPreOrderDate } from "@/src/utils/preorder";
 
 export type CheckoutMode = "buy-now" | "scheduled" | "pre-order";
-export type PaymentMethod = "unselected" | "online";
 
 export type CurrentUser = {
   email: string;
@@ -68,37 +66,12 @@ export type CustomerAddress = {
   isDefault?: boolean;
 };
 
-export type OrderStatus =
-  | "confirmed"
-  | "processing"
-  | "packed"
-  | "out-for-delivery"
-  | "delivered"
-  | "cancelled"
-  | "pre-order-confirmed"
-  | "preparing"
-  | "scheduled-for-dispatch"
-  | "dispatched";
-
-export type CustomerOrder = {
-  id: string;
-  userId: string;
-  items: CartItem[];
-  subtotal: number;
-  discount: number;
-  deliveryFee: number;
-  total: number;
-  address: CustomerAddress | null;
-  checkoutMode: CheckoutMode;
-  orderDate: string;
-  status: OrderStatus;
-  paymentStatus: "pending" | "paid";
-  paymentMethod: PaymentMethod;
-  expectedDelivery?: string;
-  expectedDispatch?: string;
-  deliveryDate?: string;
-  deliverySlot?: string;
-};
+// Orders are server-owned now: they're created by the payment flow, keyed to
+// a real Razorpay payment, and read back from the API. The previous
+// localStorage-backed CustomerOrder type is gone — a browser-authored order
+// record can't be reconciled against a payment, survives no device change,
+// and was only ever a placeholder for this.
+export type CustomerOrder = BackendOrder;
 
 type AuthModalOptions = {
   redirectTo?: string;
@@ -120,9 +93,9 @@ type ShopContextValue = {
   memberDiscount: number;
   handlingCharge: number;
   cartTotal: number;
-  paymentMethod: PaymentMethod;
   checkoutMode: CheckoutMode;
   orders: CustomerOrder[];
+  isOrdersLoading: boolean;
   savedItems: CollectionProduct[];
   savedItemCount: number;
   addresses: CustomerAddress[];
@@ -149,8 +122,7 @@ type ShopContextValue = {
   setSelectedAddressId: (addressId: string) => void;
   setScheduledDeliveryDate: (date: string) => void;
   setScheduledDeliverySlot: (slot: string) => void;
-  setPaymentMethod: (method: PaymentMethod) => void;
-  createOrder: () => CustomerOrder | null;
+  refreshOrders: () => Promise<void>;
   getOrderById: (orderId: string) => CustomerOrder | undefined;
   findOrders: (query: string) => CustomerOrder[];
   clearSuccessMessage: () => void;
@@ -160,7 +132,6 @@ type ShopContextValue = {
 const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
-const customerOrdersStorageKey = "bhorkit_customer_orders";
 
 function toCartItems(cart: BackendCart): CartItem[] {
   return cart.items.map((item) => ({ product: item.product, quantity: item.quantity }));
@@ -194,7 +165,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unselected");
   // Always starts null (never read from localStorage here): the server
   // never sees the session cookie during SSR — it's scoped to the backend's
   // own origin — so SSR can only ever render "logged out". Seeding this from
@@ -205,7 +175,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   // effect below is the only source of truth, confirmed against the server.
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
-  const [customerOrders, setCustomerOrders] = useState<UserOrdersStore>(() => getInitialCustomerOrders());
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  // Which user's orders the initial load has completed for. Tracking it this
+  // way lets "are we loading?" be derived during render instead of being
+  // flipped on inside the bootstrap effect (react-hooks/set-state-in-effect).
+  const [ordersSyncedUserId, setOrdersSyncedUserId] = useState<string | null>(null);
+  const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
   const [savedItems, setSavedItems] = useState<CollectionProduct[]>([]);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
@@ -215,10 +190,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const isLoggedIn = Boolean(currentUser);
   const discountUnlocked = isLoggedIn;
   const userId = currentUser?.id ?? "";
-  const orders = useMemo(
-    () => (userId ? customerOrders[userId] ?? [] : []),
-    [customerOrders, userId],
-  );
+  const isOrdersLoading = (Boolean(userId) && ordersSyncedUserId !== userId) || isRefreshingOrders;
 
   useEffect(() => {
     // Once logged in, the cart lives in the DB, not localStorage — writing it
@@ -230,10 +202,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     window.localStorage.setItem(checkoutModeStorageKey, checkoutMode);
   }, [checkoutMode]);
-
-  useEffect(() => {
-    window.localStorage.setItem(customerOrdersStorageKey, JSON.stringify(customerOrders));
-  }, [customerOrders]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -332,12 +300,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const [cart, wishlist, userAddresses] = await Promise.all([
+        const [cart, wishlist, userAddresses, userOrders] = await Promise.all([
           guestCartItems.length > 0
             ? mergeCartApi(guestCartItems.map((item) => ({ productId: item.product.id, quantity: item.quantity })))
             : getCartApi(),
           getWishlistApi(),
           getAddressesApi(),
+          getOrdersApi(),
         ]);
 
         if (!isActive) return;
@@ -346,9 +315,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         setCartItems(toCartItems(cart));
         setSavedItems(wishlist);
         setAddresses(userAddresses);
+        setOrders(userOrders);
       } catch {
         if (!isActive) return;
-        setErrorMessage("Couldn't load your saved cart, wishlist and addresses. Please refresh.");
+        setErrorMessage("Couldn't load your saved cart, wishlist and orders. Please refresh.");
+      } finally {
+        // Marked synced either way — a failed load shouldn't leave every
+        // orders view stuck on a spinner with no way out but a refresh.
+        if (isActive) setOrdersSyncedUserId(currentUser.id);
       }
     })();
 
@@ -387,6 +361,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setCurrentUser(null);
     setSavedItems([]);
     setAddresses([]);
+    setOrders([]);
+    setOrdersSyncedUserId(null);
     setSelectedAddressIdState("");
     // Start the next session with a clean guest cart rather than resurrecting
     // one that was already merged into the account we're signing out of.
@@ -463,7 +439,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       ),
     [cartItems],
   );
-  const memberDiscount = paymentMethod === "online" ? calculateMemberDiscount(cartSubtotal) : 0;
+  // Every order is paid online through Razorpay — there is no payment-method
+  // choice any more — so the online-payment discount always applies. The
+  // server applies the identical rule when it prices the order; this is only
+  // for display.
+  const memberDiscount = calculateMemberDiscount(cartSubtotal);
   const handlingCharge = calculateHandlingCharge(cartSubtotal);
   const cartTotal = cartSubtotal - memberDiscount + handlingCharge;
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
@@ -568,74 +548,32 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     });
   }, [userId]);
 
-  const createOrder = useCallback(() => {
-    if (!userId || cartItems.length === 0) {
-      return null;
+  // Re-pulls the authoritative order list. Called after a payment is
+  // confirmed, and by any page that wants to be sure it isn't rendering a
+  // stale list — the server, not this context, decides what orders exist.
+  // The cart is cleared server-side as part of confirming the payment, so it
+  // gets re-read here rather than being emptied optimistically.
+  const refreshOrders = useCallback(async () => {
+    if (!userId) return;
+    setIsRefreshingOrders(true);
+    try {
+      const [userOrders, cart] = await Promise.all([getOrdersApi(), getCartApi()]);
+      setOrders(userOrders);
+      setCartItems(toCartItems(cart));
+      setCheckoutModeState("buy-now");
+    } catch (error) {
+      setErrorMessage(errorMessageFrom(error, "Couldn't load your orders. Please refresh."));
+    } finally {
+      setIsRefreshingOrders(false);
     }
-
-    if (
-      checkoutMode === "scheduled" &&
-      (!isValidGaneshPreOrderDate(scheduledDeliveryDate) || !scheduledDeliverySlot)
-    ) {
-      setSuccessMessage("Please select a valid pre-order date and delivery slot.");
-      return null;
-    }
-
-    const address = addresses.find((item) => item.id === effectiveSelectedAddressId) ?? addresses[0] ?? null;
-    const order: CustomerOrder = {
-      id: generateOrderId(),
-      userId,
-      items: cartItems,
-      subtotal: cartSubtotal,
-      discount: memberDiscount,
-      deliveryFee: handlingCharge,
-      total: cartTotal,
-      address,
-      checkoutMode,
-      orderDate: new Date().toISOString(),
-      status:
-        checkoutMode === "pre-order" || checkoutMode === "scheduled"
-          ? "pre-order-confirmed"
-          : "confirmed",
-      paymentStatus: "paid",
-      paymentMethod,
-      expectedDelivery:
-        checkoutMode === "buy-now"
-          ? "Earliest available delivery"
-          : checkoutMode === "scheduled"
-            ? "Pre-order delivery before Ganesh Chaturthi"
-            : cartItems[0]?.product.preorder?.expectedDelivery,
-      expectedDispatch:
-        checkoutMode === "pre-order" || checkoutMode === "scheduled"
-          ? cartItems[0]?.product.preorder?.expectedDelivery
-          : undefined,
-      deliveryDate: checkoutMode === "scheduled" ? scheduledDeliveryDate : undefined,
-      deliverySlot: checkoutMode === "scheduled" ? scheduledDeliverySlot : undefined,
-    };
-
-    setCustomerOrders((data) => ({ ...data, [userId]: [order, ...(data[userId] ?? [])] }));
-    setCartItems([]);
-    setCheckoutModeState("buy-now");
-    setSuccessMessage(`Order ${order.id} created`);
-    void clearCartApi().catch(() => undefined);
-    return order;
-  }, [
-    addresses,
-    cartItems,
-    cartSubtotal,
-    cartTotal,
-    checkoutMode,
-    effectiveSelectedAddressId,
-    handlingCharge,
-    memberDiscount,
-    paymentMethod,
-    scheduledDeliveryDate,
-    scheduledDeliverySlot,
-    userId,
-  ]);
+  }, [userId]);
 
   const getOrderById = useCallback(
-    (orderId: string) => orders.find((order) => order.id.toLowerCase() === orderId.toLowerCase()),
+    (orderId: string) =>
+      orders.find(
+        (order) =>
+          order.id === orderId || order.orderNumber.toLowerCase() === orderId.toLowerCase(),
+      ),
     [orders],
   );
 
@@ -645,10 +583,15 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       if (!normalized) {
         return [];
       }
+      const digitsOnly = normalized.replace(/\s/g, "");
 
       return orders.filter((order) => {
-        const addressMobile = order.address?.mobile.replace(/\s/g, "") ?? "";
-        return order.id.toLowerCase() === normalized || addressMobile === normalized.replace(/\s/g, "");
+        const addressMobile = order.address.mobile.replace(/\s/g, "");
+        return (
+          order.orderNumber.toLowerCase() === normalized ||
+          order.id === normalized ||
+          addressMobile === digitsOnly
+        );
       });
     },
     [orders],
@@ -671,9 +614,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       memberDiscount,
       handlingCharge,
       cartTotal,
-      paymentMethod,
       checkoutMode,
       orders,
+      isOrdersLoading,
       savedItems,
       savedItemCount: savedItems.length,
       addresses,
@@ -700,8 +643,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setSelectedAddressId: setSelectedAddressIdState,
       setScheduledDeliveryDate,
       setScheduledDeliverySlot,
-      setPaymentMethod,
-      createOrder,
+      refreshOrders,
       getOrderById,
       findOrders,
       clearSuccessMessage: () => setSuccessMessage(""),
@@ -723,7 +665,6 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       closeAuthModal,
       completeAuth,
       closeCartDrawer,
-      createOrder,
       currentUser,
       deleteAddress,
       discountUnlocked,
@@ -734,13 +675,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       handlingCharge,
       isAuthReady,
       isLoggedIn,
+      isOrdersLoading,
       isSavedItem,
       logout,
       memberDiscount,
       openAuthModal,
       openCartDrawer,
       orders,
-      paymentMethod,
+      refreshOrders,
       removeFromCart,
       savedItems,
       scheduledDeliveryDate,
@@ -773,32 +715,6 @@ function safelyParseCart(value: string): CartItem[] {
   } catch {
     return [];
   }
-}
-
-type UserOrdersStore = Record<string, CustomerOrder[]>;
-
-function getInitialCustomerOrders(): UserOrdersStore {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  try {
-    const stored = window.localStorage.getItem(customerOrdersStorageKey);
-    return stored ? JSON.parse(stored) : {};
-  } catch {
-    return {};
-  }
-}
-
-function generateOrderId() {
-  const date = new Date();
-  const stamp = [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, "0"),
-    String(date.getDate()).padStart(2, "0"),
-  ].join("");
-  const suffix = `${date.getHours()}${date.getMinutes()}${date.getSeconds()}${Math.floor(Math.random() * 90 + 10)}`;
-  return `BHK${stamp}${suffix}`;
 }
 
 function getInitialCart() {
