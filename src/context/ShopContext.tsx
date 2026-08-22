@@ -286,9 +286,21 @@ export function ShopProvider({ children }: { children: ReactNode }) {
           // Without this, a single transient failure right after login
           // would leave someone who really is authenticated stuck looking
           // logged out until they manually refresh.
+          const isTokenValidButAccountGone =
+            error instanceof ApiClientError && error.status === 404;
           const isDefinitelyLoggedOut =
             error instanceof ApiClientError && (error.status === 401 || error.status === 404);
+
           if (isDefinitelyLoggedOut || hasRetried) {
+            // 404 means the cookie's token still verifies, but the account it
+            // points to no longer exists (e.g. the database was reset). That
+            // token can never succeed again, so actively clear it — otherwise
+            // the browser keeps attaching a dead cookie to every request until
+            // it expires days later, and that one browser stays stuck looking
+            // logged out while others work fine.
+            if (isTokenValidButAccountGone) {
+              void logoutFromBackend().catch(() => undefined);
+            }
             setCurrentUser(null);
             setIsAuthReady(true);
             return;
