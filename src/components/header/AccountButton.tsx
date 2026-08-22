@@ -6,7 +6,7 @@ import { LogOut, UserRound } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
 
 export function AccountButton() {
-  const { currentUser, isLoggedIn, logout, openAuthModal } = useShop();
+  const { currentUser, isAuthReady, isLoggedIn, logout, openAuthModal } = useShop();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -38,6 +38,22 @@ export function AccountButton() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isDropdownOpen]);
+
+  // Until the session check resolves we genuinely don't know whether this is
+  // a signed-in user or a guest. Rendering the "log in" icon here would state
+  // something we haven't confirmed — and right after the Google redirect it
+  // showed a just-logged-in user as logged out until they refreshed. A
+  // neutral placeholder of identical size keeps the header stable (no layout
+  // shift) and never asserts the wrong state.
+  if (!isAuthReady) {
+    return (
+      <div
+        role="status"
+        aria-label="Loading account"
+        className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-bhor-cream"
+      />
+    );
+  }
 
   if (isLoggedIn && currentUser) {
     return (

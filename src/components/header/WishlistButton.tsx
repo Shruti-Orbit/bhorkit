@@ -5,14 +5,20 @@ import { useRouter } from "next/navigation";
 import { useShop } from "@/src/context/ShopContext";
 
 export function WishlistButton() {
-  const { isLoggedIn, openAuthModal, savedItemCount } = useShop();
+  const { isAuthReady, isLoggedIn, openAuthModal, savedItemCount } = useShop();
   const router = useRouter();
 
   return (
     <button
       type="button"
       aria-label="Wishlist"
+      aria-busy={!isAuthReady}
       onClick={() => {
+        // Acting before the session check resolves would pop the login modal
+        // in front of a user who is actually already signed in.
+        if (!isAuthReady) {
+          return;
+        }
         if (!isLoggedIn) {
           openAuthModal();
           return;
