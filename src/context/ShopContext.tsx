@@ -131,7 +131,10 @@ type ShopContextValue = {
   toggleSavedItem: (product: CollectionProduct) => void;
   isSavedItem: (productId: string) => boolean;
   addAddress: (address: Omit<CustomerAddress, "id">) => Promise<boolean>;
-  updateAddress: (address: CustomerAddress) => void;
+  updateAddress: (addressId: string, fields: Partial<Omit<CustomerAddress, "id">>) => Promise<boolean>;
+  /** Cap enforced by the server; the UI hides "Add" once it's reached. */
+  maxAddresses: number;
+  canAddMoreAddresses: boolean;
   deleteAddress: (addressId: string) => void;
   setDefaultAddress: (addressId: string) => void;
   setSelectedAddressId: (addressId: string) => void;
@@ -235,6 +238,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [isRefreshingOrders, setIsRefreshingOrders] = useState(false);
   const [savedItems, setSavedItems] = useState<CollectionProduct[]>([]);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
+  // Served by the API alongside the list, so the cap lives in exactly one
+  // place (the server) instead of being duplicated as a UI constant that can
+  // drift from what's actually enforced.
+  const [maxAddresses, setMaxAddresses] = useState(2);
   const [selectedAddressId, setSelectedAddressIdState] = useState("");
   const [scheduledDeliveryDate, setScheduledDeliveryDate] = useState("");
   const [scheduledDeliverySlot, setScheduledDeliverySlot] = useState("");
@@ -243,6 +250,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const discountUnlocked = isLoggedIn;
   const userId = currentUser?.id ?? "";
   const isOrdersLoading = (Boolean(userId) && ordersSyncedUserId !== userId) || isRefreshingOrders;
+
+  // Declared here, above the bootstrap effect that calls it, so the effect
+  // always closes over the current definition.
+  const applyAddressBook = useCallback((book: { addresses: CustomerAddress[]; max: number }) => {
+    setAddresses(book.addresses);
+    setMaxAddresses(book.max);
+  }, []);
 
   useEffect(() => {
     // Once logged in, the cart lives in the DB, not localStorage — writing it
@@ -361,7 +375,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     (async () => {
       try {
-        const [cart, wishlist, userAddresses, userOrders] = await Promise.all([
+        const [cart, wishlist, addressBook, userOrders] = await Promise.all([
           guestCartItems.length > 0
             ? mergeCartApi(guestCartItems.map((item) => ({ productId: item.product.id, quantity: item.quantity })))
             : getCartApi(),
@@ -375,7 +389,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         window.localStorage.removeItem(cartStorageKey);
         setCartItems(toCartItems(cart));
         setSavedItems(wishlist);
-        setAddresses(userAddresses);
+        applyAddressBook(addressBook);
         setOrders(userOrders);
       } catch {
         if (!isActive) return;
@@ -390,7 +404,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [currentUser]);
+  }, [applyAddressBook, currentUser]);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -582,19 +596,37 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       });
   }, [openAuthModal, userId]);
 
-  const updateAddress = useCallback((address: CustomerAddress) => {
-    if (!userId) return;
-    const { id, ...fields } = address;
+  /**
+   * Edits an existing address in place. The id is unchanged by design, so
+   * anything already pointing at this address — an in-progress checkout's
+   * selection above all — stays valid, and the edit can never be mistaken for
+   * a third address against the 2-address cap.
+   *
+   * Returns whether it succeeded so the form can stay open (with the user's
+   * input intact) when the server rejects the change.
+   */
+  const updateAddress = useCallback((addressId: string, fields: Partial<Omit<CustomerAddress, "id">>) => {
+    if (!userId) {
+      openAuthModal();
+      return Promise.resolve(false);
+    }
 
-    updateAddressApi(id, fields)
+    return updateAddressApi(addressId, fields)
       .then((updated) => {
-        setAddresses((current) => current.map((item) => (item.id === id ? updated : item)));
+        setAddresses((current) => current.map((item) => (item.id === addressId ? updated : item)));
+        // Keeps the just-edited address selected for the current checkout.
+        // It is almost certainly already selected — the id doesn't change —
+        // but a user editing the *other* address at checkout clearly means to
+        // use it, and this makes the selection follow that intent.
+        setSelectedAddressIdState(addressId);
         setSuccessMessage("Address updated");
+        return true;
       })
       .catch((error) => {
         setErrorMessage(errorMessageFrom(error, "Couldn't update this address. Please try again."));
+        return false;
       });
-  }, [userId]);
+  }, [openAuthModal, userId]);
 
   const deleteAddress = useCallback((addressId: string) => {
     if (!userId) return;
@@ -609,13 +641,13 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         setSuccessMessage("Address deleted");
         // The server may have promoted a new default when the deleted
         // address was the default one — re-sync to reflect that.
-        void getAddressesApi().then(setAddresses).catch(() => undefined);
+        void getAddressesApi().then(applyAddressBook).catch(() => undefined);
       })
       .catch((error) => {
-        void getAddressesApi().then(setAddresses).catch(() => undefined);
+        void getAddressesApi().then(applyAddressBook).catch(() => undefined);
         setErrorMessage(errorMessageFrom(error, "Couldn't delete this address. Please try again."));
       });
-  }, [selectedAddressId, userId]);
+  }, [applyAddressBook, selectedAddressId, userId]);
 
   const setDefaultAddress = useCallback((addressId: string) => {
     if (!userId) return;
@@ -624,10 +656,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setSelectedAddressIdState(addressId);
 
     setDefaultAddressApi(addressId).catch((error) => {
-      void getAddressesApi().then(setAddresses).catch(() => undefined);
+      void getAddressesApi().then(applyAddressBook).catch(() => undefined);
       setErrorMessage(errorMessageFrom(error, "Couldn't update your default address. Please try again."));
     });
-  }, [userId]);
+  }, [applyAddressBook, userId]);
 
   // Re-pulls the authoritative order list. Called after a payment is
   // confirmed, and by any page that wants to be sure it isn't rendering a
@@ -721,6 +753,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       isSavedItem,
       addAddress,
       updateAddress,
+      maxAddresses,
+      canAddMoreAddresses: addresses.length < maxAddresses,
       deleteAddress,
       setDefaultAddress,
       setSelectedAddressId: setSelectedAddressIdState,
@@ -763,6 +797,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       isOrdersLoading,
       isSavedItem,
       logout,
+      maxAddresses,
       memberDiscount,
       openAuthModal,
       openCartDrawer,

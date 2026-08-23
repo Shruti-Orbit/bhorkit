@@ -15,9 +15,28 @@ export type BackendAddress = {
 
 export type AddressInput = Omit<BackendAddress, "id" | "isDefault"> & { isDefault?: boolean };
 
-export async function getAddresses() {
-  const response = await apiGet<BackendAddress[]>("/addresses");
-  return response.data;
+export type AddressBook = {
+  addresses: BackendAddress[];
+  /** Server-enforced cap, so the UI never hard-codes its own copy of it. */
+  max: number;
+  canAddMore: boolean;
+};
+
+type AddressListMeta = {
+  count: number;
+  max: number;
+  canAddMore: boolean;
+};
+
+export async function getAddresses(): Promise<AddressBook> {
+  const response = await apiGet<BackendAddress[], AddressListMeta>("/addresses");
+  const addresses = response.data;
+  const max = response.meta?.max ?? 2;
+  return {
+    addresses,
+    max,
+    canAddMore: response.meta?.canAddMore ?? addresses.length < max,
+  };
 }
 
 export async function createAddress(input: AddressInput) {
