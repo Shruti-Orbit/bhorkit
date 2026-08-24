@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Tags, Users, Loader2, ShieldAlert } from "lucide-react";
+import { LayoutDashboard, Package, ShoppingBag, Tags, Users } from "lucide-react";
 import { getCurrentUser } from "@/src/lib/api/auth.api";
-import { ApiClientError } from "@/src/lib/api/client";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -15,20 +14,22 @@ const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
 ];
 
-type Gate = "checking" | "allowed" | "denied" | "unavailable";
+type Gate = "checking" | "allowed";
 
 /**
- * Frontend guard for the /admin section.
+ * Second line of defence for the /admin section.
  *
- * This is a convenience layer, not the security boundary. It exists so an
- * unauthorised visitor sees a clear message instead of a flash of empty tables
- * and a wall of failed requests. The actual protection is server-side: every
- * /admin API re-reads the caller's role from the database, so removing this
- * component, editing it in devtools or navigating straight to a URL still
- * yields nothing but 401s and 403s.
+ * src/middleware.ts is the real gate: it redirects non-admins before any of
+ * this is rendered or even sent. This component exists for the case that
+ * middleware cannot cover — a session cookie scoped to a different host than
+ * the frontend, where the middleware sees no cookie at all — and for a role
+ * that changes while the panel is already open.
  *
- * The role comes from /auth/me — the server's answer about the current
- * session — never from anything held in the browser.
+ * It deliberately renders NOTHING until the server confirms an admin: no
+ * layout, no sidebar, no "access denied" screen. Anyone who should not be here
+ * is sent to the storefront, and sees only a blank frame on the way. Showing a
+ * denial page would tell an unauthorised visitor the panel exists and leave
+ * them looking at part of it.
  */
 export function AdminShell({ children }: { children: ReactNode }) {
   const [gate, setGate] = useState<Gate>("checking");
@@ -37,82 +38,33 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let active = true;
+
     getCurrentUser()
       .then((user) => {
         if (!active) return;
-        setGate(user.role === "admin" ? "allowed" : "denied");
+        if (user.role === "admin") {
+          setGate("allowed");
+          return;
+        }
+        // Not an admin. Replace rather than push, so the back button can't
+        // return them to a URL that only bounces again.
+        router.replace("/");
       })
-      .catch((error: unknown) => {
-        if (!active) return;
-        // Only a definitive "not you" answer is a denial. A network failure,
-        // a 429 or a 500 means we don't know — telling someone they lack
-        // permission in that case is simply wrong, and sends them chasing an
-        // access problem that doesn't exist.
-        const definitive =
-          error instanceof ApiClientError && (error.status === 401 || error.status === 403 || error.status === 404);
-        setGate(definitive ? "denied" : "unavailable");
+      .catch(() => {
+        // Unauthenticated, expired, disabled, or the API is unreachable — all
+        // of them mean "do not show the panel".
+        if (active) router.replace("/");
       });
+
     return () => {
       active = false;
     };
-  }, []);
+  }, [router]);
 
-  if (gate === "checking") {
-    return (
-      <main className="flex min-h-[60vh] flex-1 items-center justify-center bg-bhor-cream">
-        <p className="flex items-center gap-2 text-bhor-small text-bhor-text-muted">
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          Checking access…
-        </p>
-      </main>
-    );
-  }
-
-  if (gate === "unavailable") {
-    return (
-      <main className="flex min-h-[60vh] flex-1 items-center justify-center bg-bhor-cream px-4">
-        <div className="w-full max-w-md rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
-          <ShieldAlert className="mx-auto h-10 w-10 text-bhor-text-muted" aria-hidden />
-          <h1 className="mt-4 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text">
-            Couldn&apos;t verify your access
-          </h1>
-          <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
-            The server didn&apos;t respond. This isn&apos;t a permissions problem — check your connection and try again.
-          </p>
-          <button
-            type="button"
-            onClick={() => window.location.reload()}
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
-          >
-            Retry
-          </button>
-        </div>
-      </main>
-    );
-  }
-
-  if (gate === "denied") {
-    return (
-      <main className="flex min-h-[60vh] flex-1 items-center justify-center bg-bhor-cream px-4">
-        <div className="w-full max-w-md rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
-          <ShieldAlert className="mx-auto h-10 w-10 text-bhor-primary" aria-hidden />
-          <h1 className="mt-4 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text">
-            Admin access required
-          </h1>
-          <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
-            You need an administrator account to view this page. If you think this is a mistake, sign in
-            with your admin account.
-          </p>
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="mt-5 inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
-          >
-            Back to Store
-          </button>
-        </div>
-      </main>
-    );
+  // Nothing is rendered until an admin is confirmed. This is what removes the
+  // flash: there is no admin markup on screen at any point for a non-admin.
+  if (gate !== "allowed") {
+    return null;
   }
 
   return (

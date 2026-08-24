@@ -214,8 +214,21 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => getInitialCart());
-  const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>(() => getInitialCheckoutMode());
+  // Both start at the value SSR produces — an empty cart and the default
+  // mode — and are restored from localStorage in an effect below, for the same
+  // reason currentUser is (see its comment). Reading storage in the
+  // initialiser made the client's first render disagree with the server's:
+  // SSR has no `window`, so it rendered a cart of 0 with aria-label "Cart",
+  // while the browser rendered the stored guest cart with a badge and
+  // aria-label "Cart, N items". That is a genuine hydration mismatch, not a
+  // dev-only warning — React discards and re-renders the whole mismatched
+  // subtree.
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>("buy-now");
+  // Guards the persistence effects below. Without it they would fire on the
+  // first commit — before the restore effect has run — and write the empty
+  // initial state straight over the visitor's saved guest cart.
+  const [storageRestored, setStorageRestored] = useState(false);
   // Always starts null and is hydrated from sessionStorage in an effect, for
   // the same reason currentUser is: seeding it in the initialiser would make
   // the client's first render disagree with the server-rendered HTML.
@@ -258,16 +271,34 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setMaxAddresses(book.max);
   }, []);
 
+  // Restores browser-persisted state after the first paint, so the markup
+  // React hydrates is byte-identical to what the server sent. Deferred a tick
+  // rather than set synchronously in the effect body
+  // (react-hooks/set-state-in-effect).
   useEffect(() => {
+    const storedCart = getInitialCart();
+    const storedMode = getInitialCheckoutMode();
+    queueMicrotask(() => {
+      if (storedCart.length > 0) setCartItems(storedCart);
+      setCheckoutModeState(storedMode);
+      setStorageRestored(true);
+    });
+  }, []);
+
+  useEffect(() => {
+    // Nothing is written until the restore above has happened, or the empty
+    // initial cart would clobber what's already saved.
+    if (!storageRestored) return;
     // Once logged in, the cart lives in the DB, not localStorage — writing it
     // here would resurrect a stale guest cart every time the DB cart changes.
     if (isLoggedIn) return;
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
-  }, [cartItems, isLoggedIn]);
+  }, [cartItems, isLoggedIn, storageRestored]);
 
   useEffect(() => {
+    if (!storageRestored) return;
     window.localStorage.setItem(checkoutModeStorageKey, checkoutMode);
-  }, [checkoutMode]);
+  }, [checkoutMode, storageRestored]);
 
   // Restores a Buy Now selection after a refresh or back-navigation on the
   // checkout page. Deferred a tick so it isn't a synchronous setState in an
