@@ -1,10 +1,11 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, Package, ShoppingBag, Tags, Users } from "lucide-react";
-import { getCurrentUser } from "@/src/lib/api/auth.api";
+import { LayoutDashboard, LogOut, Menu, Package, ShoppingBag, Store, Tags, Users, X } from "lucide-react";
+import { getCurrentUser, logout as logoutRequest } from "@/src/lib/api/auth.api";
 
 const NAV = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
@@ -14,81 +15,108 @@ const NAV = [
   { href: "/admin/users", label: "Users", icon: Users },
 ];
 
-type Gate = "checking" | "allowed";
+type Admin = { name: string; email: string; image?: string | null };
 
 /**
- * Second line of defence for the /admin section.
+ * The admin application shell — sidebar, top bar and content region.
  *
- * src/middleware.ts is the real gate: it redirects non-admins before any of
- * this is rendered or even sent. This component exists for the case that
- * middleware cannot cover — a session cookie scoped to a different host than
- * the frontend, where the middleware sees no cookie at all — and for a role
- * that changes while the panel is already open.
- *
- * It deliberately renders NOTHING until the server confirms an admin: no
- * layout, no sidebar, no "access denied" screen. Anyone who should not be here
- * is sent to the storefront, and sees only a blank frame on the way. Showing a
- * denial page would tell an unauthorised visitor the panel exists and leave
- * them looking at part of it.
+ * It renders NOTHING until the server confirms an admin: no sidebar, no
+ * branding, no denial screen. src/middleware.ts already redirects non-admins
+ * before this is ever sent, so this is the second line of defence, for the
+ * case middleware cannot cover (a session cookie scoped to a different host)
+ * and for a role that changes while the panel is open.
  */
 export function AdminShell({ children }: { children: ReactNode }) {
-  const [gate, setGate] = useState<Gate>("checking");
+  const [admin, setAdmin] = useState<Admin | null>(null);
+  const [navOpen, setNavOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
   useEffect(() => {
     let active = true;
-
     getCurrentUser()
       .then((user) => {
         if (!active) return;
-        if (user.role === "admin") {
-          setGate("allowed");
+        if (user.role !== "admin") {
+          router.replace("/");
           return;
         }
-        // Not an admin. Replace rather than push, so the back button can't
-        // return them to a URL that only bounces again.
-        router.replace("/");
+        setAdmin({ name: user.name, email: user.email, image: user.image });
       })
       .catch(() => {
-        // Unauthenticated, expired, disabled, or the API is unreachable — all
-        // of them mean "do not show the panel".
         if (active) router.replace("/");
       });
-
     return () => {
       active = false;
     };
   }, [router]);
 
-  // Nothing is rendered until an admin is confirmed. This is what removes the
-  // flash: there is no admin markup on screen at any point for a non-admin.
-  if (gate !== "allowed") {
-    return null;
+  async function signOut() {
+    setSigningOut(true);
+    // Clears the session server-side — the cookie is httpOnly, so the browser
+    // cannot drop it on its own.
+    await logoutRequest().catch(() => undefined);
+    router.replace("/");
+    // Discards the cached RSC payload as well, so nothing rendered while the
+    // admin was signed in survives the sign-out.
+    router.refresh();
   }
 
+  if (!admin) return null;
+
   return (
-    <main className="flex flex-1 flex-col bg-bhor-cream">
-      <div className="mx-auto flex w-full max-w-[1512px] flex-col gap-6 px-4 py-6 sm:px-6 lg:flex-row lg:px-8">
-        <nav className="lg:w-56 lg:shrink-0">
-          <p className="px-3 pb-2 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
-            Admin
-          </p>
-          <ul className="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
+    <div className="flex min-h-screen bg-bhor-cream">
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-bhor-border bg-bhor-surface transition-transform lg:static lg:translate-x-0 ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex h-16 items-center gap-2 border-b border-bhor-border px-4">
+          <Link href="/admin" className="flex items-center gap-2">
+            <Image
+              src="/images/logo/bhor-kit-logo.png"
+              alt="BHORKIT"
+              width={108}
+              height={72}
+              priority
+              className="h-9 w-auto object-contain"
+            />
+            <span className="text-bhor-caption font-bhor-bold uppercase tracking-widest text-bhor-text-muted">
+              Admin
+            </span>
+          </Link>
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            aria-label="Close menu"
+            className="ml-auto rounded-bhor-sm p-1 text-bhor-text-muted lg:hidden"
+          >
+            <X className="h-5 w-5" aria-hidden />
+          </button>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto p-3">
+          <ul className="space-y-1">
             {NAV.map((item) => {
               const active = item.exact ? pathname === item.href : pathname.startsWith(item.href);
               const Icon = item.icon;
               return (
-                <li key={item.href} className="shrink-0">
+                <li key={item.href}>
                   <Link
                     href={item.href}
-                    className={`flex items-center gap-2 rounded-bhor-sm px-3 py-2 text-bhor-small font-bhor-semibold transition-colors ${
+                    aria-current={active ? "page" : undefined}
+                    // Closed here rather than in an effect watching the route:
+                    // the click is the event that should dismiss the drawer.
+                    onClick={() => setNavOpen(false)}
+                    className={`flex items-center gap-3 rounded-bhor-sm px-3 py-2 text-bhor-small font-bhor-semibold transition-colors ${
                       active
-                        ? "bg-bhor-primary-soft text-bhor-primary"
-                        : "text-bhor-text-muted hover:bg-bhor-surface hover:text-bhor-text"
+                        ? "bg-bhor-primary text-white"
+                        : "text-bhor-text-muted hover:bg-bhor-cream hover:text-bhor-text"
                     }`}
                   >
-                    <Icon className="h-4 w-4" aria-hidden />
+                    <Icon className="h-4 w-4 shrink-0" aria-hidden />
                     {item.label}
                   </Link>
                 </li>
@@ -96,8 +124,73 @@ export function AdminShell({ children }: { children: ReactNode }) {
             })}
           </ul>
         </nav>
-        <div className="min-w-0 flex-1 pb-10">{children}</div>
+
+        <div className="border-t border-bhor-border p-3">
+          <Link
+            href="/"
+            className="mb-1 flex items-center gap-3 rounded-bhor-sm px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-text-muted hover:bg-bhor-cream hover:text-bhor-text"
+          >
+            <Store className="h-4 w-4 shrink-0" aria-hidden />
+            View store
+          </Link>
+          <button
+            type="button"
+            onClick={signOut}
+            disabled={signingOut}
+            className="flex w-full items-center gap-3 rounded-bhor-sm px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-primary hover:bg-bhor-primary-soft disabled:opacity-50"
+          >
+            <LogOut className="h-4 w-4 shrink-0" aria-hidden />
+            {signingOut ? "Signing out…" : "Log out"}
+          </button>
+        </div>
+      </aside>
+
+      {navOpen ? (
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={() => setNavOpen(false)}
+          className="fixed inset-0 z-30 bg-bhor-text/40 lg:hidden"
+        />
+      ) : null}
+
+      {/* Content column */}
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-bhor-border bg-bhor-surface px-4 sm:px-6">
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open menu"
+            className="rounded-bhor-sm p-2 text-bhor-text lg:hidden"
+          >
+            <Menu className="h-5 w-5" aria-hidden />
+          </button>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-bhor-small font-bhor-semibold leading-tight text-bhor-text">{admin.name}</p>
+              <p className="text-bhor-caption leading-tight text-bhor-text-muted">{admin.email}</p>
+            </div>
+            {admin.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={admin.image}
+                alt=""
+                className="h-9 w-9 rounded-full object-cover"
+              />
+            ) : (
+              <span
+                aria-hidden
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-bhor-primary-soft text-bhor-small font-bhor-bold text-bhor-primary"
+              >
+                {admin.name.trim().charAt(0).toUpperCase() || "A"}
+              </span>
+            )}
+          </div>
+        </header>
+
+        <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
-    </main>
+    </div>
   );
 }

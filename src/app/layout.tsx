@@ -5,10 +5,6 @@ import {
   Quicksand,
   Red_Hat_Display,
 } from "next/font/google";
-import { Header } from "@/src/components/layout/Header";
-import { EcommerceTrustStrip } from "@/src/components/layout/EcommerceTrustStrip";
-import { Footer } from "@/src/components/layout/Footer";
-import { ShopProviders } from "@/src/components/providers/ShopProviders";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -41,20 +37,25 @@ export const metadata: Metadata = {
   description: "Begin Your Day Divine",
 };
 
+/**
+ * Document shell only — fonts, global styles, <html> and <body>.
+ *
+ * The storefront's header, footer, cart drawer and promotional popups moved
+ * into the (shop) route group's layout. They used to sit here, which meant the
+ * admin panel rendered *inside* the customer site: no admin layout can remove
+ * chrome a parent layout has already wrapped around it. Now they mount for
+ * customer pages and are genuinely absent from /admin.
+ *
+ * (shop) is a route group, so it shapes the layout tree without appearing in
+ * any URL — /cart is still /cart.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
       className={`${figtree.variable} ${redHatDisplay.variable} ${montserrat.variable} ${quicksand.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col overflow-x-hidden">
-        <ShopProviders>
-          <Header />
-          {children}
-          <EcommerceTrustStrip />
-          <Footer />
-        </ShopProviders>
-      </body>
+      <body className="min-h-full">{children}</body>
     </html>
   );
 }
