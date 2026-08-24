@@ -1,0 +1,191 @@
+import { apiDelete, apiGet, apiPatch, apiPost, getApiUrl } from "@/src/lib/api/client";
+import type { BackendOrder, OrderStatus } from "@/src/lib/api/order.api";
+import type { CollectionProduct } from "@/src/data/products";
+
+// Every one of these calls hits an endpoint that re-verifies the caller's
+// admin role against the database. Nothing here grants access — the UI simply
+// stops rendering what the server would refuse anyway.
+
+export type AdminPageMeta = { total: number; page: number; limit: number };
+
+export type AdminUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: "customer" | "admin";
+  image: string | null;
+  createdAt: string;
+  lastLoginAt: string;
+  disabledAt: string | null;
+  disabledReason: string | null;
+};
+
+export type AdminAddress = {
+  id: string;
+  fullName: string;
+  mobile: string;
+  house: string;
+  area: string;
+  landmark: string;
+  pincode: string;
+  city: string;
+  state: string;
+  isDefault: boolean;
+};
+
+export type AdminDashboard = {
+  users: { total: number; newLast30Days: number };
+  orders: {
+    total: number; pending: number; confirmed: number; processing: number; packed: number;
+    shipped: number; outForDelivery: number; delivered: number; cancelled: number; paymentFailed: number;
+  };
+  revenue: { totalPaise: number; last30DaysPaise: number; paidOrders: number };
+  products: { total: number; byAvailability: Record<string, number>; outOfStock: number };
+  refundsPending: number;
+  recentOrders: BackendOrder[];
+  recentUsers: AdminUser[];
+};
+
+export type AdminPaymentView = {
+  provider: string;
+  status: string;
+  method: string | null;
+  razorpayOrderId: string;
+  razorpayPaymentId: string | null;
+  paidAmountPaise: number | null;
+  paidAt: string | null;
+  failureReason: string | null;
+  attempts: { razorpayPaymentId: string | null; status: string; code: string; description: string; at: string }[];
+};
+
+export type AdminOrderDetail = {
+  order: BackendOrder;
+  payment: AdminPaymentView;
+  /** Server-computed legal next statuses; the UI never invents its own list. */
+  allowedTransitions: OrderStatus[];
+};
+
+export type AdminCategory = { category: string; products: number; collections: string[] };
+
+export type AdminProduct = CollectionProduct & {
+  catalogCollection: string;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function queryString(params: Record<string, string | number | undefined>) {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== "") search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
+// --- dashboard ---
+
+export async function getDashboard() {
+  return (await apiGet<AdminDashboard>("/admin/dashboard")).data;
+}
+
+// --- products ---
+
+export async function listProducts(params: {
+  search?: string; collection?: string; category?: string; availability?: string;
+  sort?: string; page?: number; limit?: number;
+}) {
+  const response = await apiGet<AdminProduct[], AdminPageMeta>(`/admin/products${queryString(params)}`);
+  return { products: response.data, meta: response.meta };
+}
+
+export async function getProduct(id: string) {
+  return (await apiGet<AdminProduct>(`/admin/products/${encodeURIComponent(id)}`)).data;
+}
+
+export async function createProduct(body: Record<string, unknown>) {
+  return (await apiPost<AdminProduct, Record<string, unknown>>("/admin/products", body)).data;
+}
+
+export async function updateProduct(id: string, body: Record<string, unknown>) {
+  return (await apiPatch<AdminProduct, Record<string, unknown>>(`/admin/products/${encodeURIComponent(id)}`, body)).data;
+}
+
+export async function setProductActive(id: string, active: boolean) {
+  return (await apiPatch<AdminProduct, { active: boolean }>(`/admin/products/${encodeURIComponent(id)}/active`, { active })).data;
+}
+
+export async function deleteProduct(id: string) {
+  return (await apiDelete<{ id: string }>(`/admin/products/${encodeURIComponent(id)}`)).data;
+}
+
+// --- categories ---
+
+export async function listCategories() {
+  return (await apiGet<AdminCategory[]>("/admin/categories")).data;
+}
+
+export async function renameCategory(from: string, to: string) {
+  return (await apiPatch<{ updated: number }, { from: string; to: string }>("/admin/categories", { from, to })).data;
+}
+
+// --- users ---
+
+export async function listUsers(params: { search?: string; role?: string; status?: string; page?: number; limit?: number }) {
+  const response = await apiGet<AdminUser[], AdminPageMeta>(`/admin/users${queryString(params)}`);
+  return { users: response.data, meta: response.meta };
+}
+
+export type AdminUserDetail = {
+  user: AdminUser;
+  addresses: AdminAddress[];
+  orders: BackendOrder[];
+  stats: { orderCount: number; paidOrderCount: number; lifetimeValuePaise: number };
+};
+
+export async function getUser(id: string) {
+  return (await apiGet<AdminUserDetail>(`/admin/users/${encodeURIComponent(id)}`)).data;
+}
+
+export async function updateUser(id: string, name: string) {
+  return (await apiPatch<AdminUser, { name: string }>(`/admin/users/${encodeURIComponent(id)}`, { name })).data;
+}
+
+export async function setUserDisabled(id: string, disabled: boolean, reason?: string) {
+  return (await apiPatch<AdminUser, { disabled: boolean; reason?: string }>(
+    `/admin/users/${encodeURIComponent(id)}/status`,
+    { disabled, ...(reason ? { reason } : {}) },
+  )).data;
+}
+
+// --- orders ---
+
+export async function listOrders(params: {
+  search?: string; status?: string; paymentStatus?: string; userId?: string;
+  from?: string; to?: string; page?: number; limit?: number;
+}) {
+  const response = await apiGet<BackendOrder[], AdminPageMeta>(`/admin/orders${queryString(params)}`);
+  return { orders: response.data, meta: response.meta };
+}
+
+export async function getOrder(orderId: string) {
+  return (await apiGet<AdminOrderDetail>(`/admin/orders/${encodeURIComponent(orderId)}`)).data;
+}
+
+export async function updateOrderStatus(orderId: string, status: OrderStatus, note: string) {
+  return (await apiPatch<{ order: BackendOrder; changed: boolean; refundRequired?: boolean }, { status: string; note: string }>(
+    `/admin/orders/${encodeURIComponent(orderId)}/status`,
+    { status, note },
+  )).data;
+}
+
+export async function markRefunded(orderId: string, note: string) {
+  return (await apiPost<{ order: BackendOrder; changed: boolean }, { note: string }>(
+    `/admin/orders/${encodeURIComponent(orderId)}/refund`,
+    { note },
+  )).data;
+}
+
+export function adminInvoiceUrl(orderId: string) {
+  return getApiUrl(`/admin/orders/${encodeURIComponent(orderId)}/invoice`);
+}

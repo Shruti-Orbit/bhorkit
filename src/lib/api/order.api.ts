@@ -65,6 +65,9 @@ export type BackendOrder = {
   status: OrderStatus;
   timeline: { status: OrderStatus; at: string; note?: string }[];
   invoiceNumber: string | null;
+  /** Set when a paid order is cancelled and a refund is owed. */
+  refundRequiredAt: string | null;
+  refundedAt: string | null;
   createdAt: string;
   updatedAt: string;
 };
