@@ -38,7 +38,7 @@ export default async function Home() {
       <ProductCollection
         title="Regular Pooja Kits"
         description="Everyday puja essentials for your home rituals."
-        href="/shop"
+        href="/puja-kits"
         products={regularPoojaKits}
         variant="regular"
       />

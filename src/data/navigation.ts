@@ -12,8 +12,11 @@ export const navigation: NavigationItem[] = [
     dropdown: true,
   },
   {
+    // The Regular Pooja Kits listing. A top-level path, not /shop/..., because
+    // Navbar and MobileMenu mark an item active with pathname.startsWith(href)
+    // — nesting this under /shop would light up the Shop link on this page too.
     label: "Puja Kits",
-    href: "/shop?category=puja-kits",
+    href: "/puja-kits",
   },
   {
     label: "Festival Collections",

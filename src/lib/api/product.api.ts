@@ -44,6 +44,21 @@ export async function getProductsByCollection(collection: ProductCollectionKey) 
   return response.data;
 }
 
+/**
+ * Products carrying one catalogue category, e.g. "Regular Puja".
+ *
+ * Filtering happens in MongoDB (the products collection is indexed on
+ * `category`) rather than by fetching everything and narrowing in the browser,
+ * so a growing catalogue does not grow the payload.
+ */
+export async function getProductsByCategory(category: string) {
+  const searchParams = new URLSearchParams({ category });
+  const response = await apiGet<CollectionProduct[], ProductListMeta>(
+    `/products?${searchParams.toString()}`,
+  );
+  return response.data;
+}
+
 export async function getAllProducts() {
   const response = await apiGet<CollectionProduct[], ProductListMeta>("/products");
   return response.data;

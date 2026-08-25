@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ArrowRight, Heart } from "lucide-react";
 import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
-import { isComingSoonProduct, isPreOrderProduct } from "@/src/utils/productState";
+import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct } from "@/src/utils/productState";
 
 type ProductCardProps = {
   product: CollectionProduct;
@@ -26,6 +26,7 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
   const saved = isSavedItem(product.id);
   const comingSoon = isComingSoonProduct(product);
   const preorder = isPreOrderProduct(product);
+  const readyStock = isReadyStockProduct(product);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [waitlistContact, setWaitlistContact] = useState("");
   const [waitlistSaved, setWaitlistSaved] = useState(false);
@@ -156,6 +157,19 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
               Pre-Order
               <ArrowRight className="h-4 w-4" aria-hidden />
             </Link>
+          ) : showActions && readyStock ? (
+            // In-stock products previously fell through to `null` — a card with
+            // a price and no way to buy. Every listing rendered so far happened
+            // to hold pre-order or coming-soon items, so the gap stayed hidden
+            // until the Regular Pooja Kits, the only ready-stock range, got a
+            // page of their own.
+            <button
+              type="button"
+              onClick={() => addToCart(product)}
+              className="mt-3 inline-flex min-h-10 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+            >
+              Add To Cart
+            </button>
           ) : null}
         </div>
       </div>
