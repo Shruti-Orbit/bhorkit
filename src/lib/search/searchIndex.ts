@@ -20,7 +20,7 @@ const fuseOptions: ConstructorParameters<typeof Fuse<CollectionProduct>>[1] = {
   keys: [
     { name: "name", weight: 0.6 },
     { name: "subtitle", weight: 0.25 },
-    { name: "category", weight: 0.15 },
+    { name: "shopCategory", weight: 0.15 },
   ],
   includeScore: true,
   includeMatches: true,

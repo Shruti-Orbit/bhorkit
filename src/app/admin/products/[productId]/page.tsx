@@ -8,9 +8,10 @@ import {
   Card, ErrorState, Field, LoadingState, PageHeader, Toast, inputClass,
 } from "@/src/components/admin/ui";
 import { createProduct, getProduct, updateProduct, type AdminProduct } from "@/src/lib/api/admin.api";
+import { shopCategories } from "@/src/data/shopCategories";
+import type { ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError } from "@/src/lib/api/client";
 
-const COLLECTIONS = ["ganesh-chaturthi", "navratri-upcoming", "regular-pooja"];
 const AVAILABILITY = ["available", "preorder", "unavailable"];
 const PURCHASE_STATES = ["READY_STOCK", "PRE_ORDER", "COMING_SOON"];
 
@@ -48,9 +49,9 @@ export default function AdminProductFormPage() {
 
   const [core, setCore] = useState({
     id: "", sku: "", slug: "", name: "", subtitle: "", description: "",
-    price: "", category: "", image: "", imageAlt: "", href: "",
+    price: "", image: "", imageAlt: "", href: "",
     availability: "available", purchaseState: "READY_STOCK",
-    catalogCollection: "regular-pooja", sortOrder: 0, readyStock: true,
+    shopCategory: "regular-pooja" as ShopCategorySlug, sortOrder: 0, readyStock: true,
   });
   const [images, setImages] = useState<ImageRow[]>([]);
   const [advanced, setAdvanced] = useState("{}");
@@ -83,9 +84,9 @@ export default function AdminProductFormPage() {
     setCore({
       id: product.id, sku: product.sku, slug: product.slug, name: product.name,
       subtitle: product.subtitle, description: product.description, price: product.price,
-      category: product.category, image: product.image, imageAlt: product.imageAlt, href: product.href,
+      image: product.image, imageAlt: product.imageAlt, href: product.href,
       availability: product.availability, purchaseState: product.purchaseState,
-      catalogCollection: product.catalogCollection, sortOrder: product.sortOrder,
+      shopCategory: product.shopCategory, sortOrder: product.sortOrder,
       readyStock: product.stock?.readyStock ?? true,
     });
     setImages(product.images ?? []);
@@ -120,14 +121,13 @@ export default function AdminProductFormPage() {
       subtitle: core.subtitle.trim(),
       description: core.description.trim(),
       price: core.price.trim(),
-      category: core.category.trim(),
       image: core.image.trim(),
       imageAlt: core.imageAlt.trim(),
       // Kept consistent with the slug so the storefront link never dangles.
       href: core.href.trim() || `/products/${core.slug.trim()}`,
       availability: core.availability,
       purchaseState: core.purchaseState,
-      catalogCollection: core.catalogCollection,
+      shopCategory: core.shopCategory,
       sortOrder: Number(core.sortOrder) || 0,
       stock: { readyStock: core.readyStock },
       images: images.filter((image) => image.src.trim()),
@@ -159,7 +159,7 @@ export default function AdminProductFormPage() {
   if (state === "loading") return <LoadingState label="Loading product…" />;
   if (state === "error") return <ErrorState message="Couldn't load this product." onRetry={load} />;
 
-  const canSave = core.name.trim() && core.sku.trim() && core.slug.trim() && core.price.trim() && core.category.trim();
+  const canSave = core.name.trim() && core.sku.trim() && core.slug.trim() && core.price.trim() && core.shopCategory;
 
   return (
     <div>
@@ -200,7 +200,21 @@ export default function AdminProductFormPage() {
                   <input value={core.id} readOnly className={`${inputClass} opacity-60`} />
                 </Field>
               )}
-              <Field label="Category"><input value={core.category} onChange={(e) => field("category", e.target.value)} className={inputClass} /></Field>
+              {/* A closed list, not free text. Typing a category by hand is how
+                  every Navratri kit ended up filed under "Ganesh Puja"; a
+                  product can now only be placed in a range the Shop has a
+                  route for. */}
+              <Field label="Shop category">
+                <select
+                  value={core.shopCategory}
+                  onChange={(e) => field("shopCategory", e.target.value as ShopCategorySlug)}
+                  className={inputClass}
+                >
+                  {shopCategories.map((category) => (
+                    <option key={category.slug} value={category.slug}>{category.label}</option>
+                  ))}
+                </select>
+              </Field>
               <Field label="Price (e.g. ₹699)"><input value={core.price} onChange={(e) => field("price", e.target.value)} className={inputClass} /></Field>
               <Field label="Subtitle"><input value={core.subtitle} onChange={(e) => field("subtitle", e.target.value)} className={inputClass} /></Field>
               <Field label="Storefront link"><input value={core.href} onChange={(e) => field("href", e.target.value)} placeholder={`/products/${core.slug}`} className={inputClass} /></Field>
@@ -303,11 +317,6 @@ export default function AdminProductFormPage() {
               <Field label="Purchase state">
                 <select value={core.purchaseState} onChange={(e) => field("purchaseState", e.target.value)} className={inputClass}>
                   {PURCHASE_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
-                </select>
-              </Field>
-              <Field label="Collection">
-                <select value={core.catalogCollection} onChange={(e) => field("catalogCollection", e.target.value)} className={inputClass}>
-                  {COLLECTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
                 </select>
               </Field>
               <Field label="Sort order">

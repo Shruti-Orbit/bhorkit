@@ -1,5 +1,6 @@
 "use client";
 
+import { shopCategoryLabel } from "@/src/data/shopCategories";
 import { useEffect, useState } from "react";
 import type { CollectionProduct } from "@/src/data/products";
 import { getCatalog } from "@/src/lib/search/searchIndex";
@@ -20,7 +21,7 @@ export function useSearchSuggestions() {
       .then((products) => {
         if (!isActive) return;
 
-        setCategories(Array.from(new Set(products.map((product) => product.category))));
+        setCategories(Array.from(new Set(products.map((product) => shopCategoryLabel(product.shopCategory)))));
 
         const stored = window.localStorage.getItem(recentlyViewedStorageKey);
         const slugs = stored ? safelyParseSlugs(stored) : [];

@@ -65,10 +65,10 @@ export type AdminOrderDetail = {
   allowedTransitions: OrderStatus[];
 };
 
-export type AdminCategory = { category: string; products: number; collections: string[] };
+/** One Shop range with its live product count. The set is fixed server-side. */
+export type AdminCategory = { slug: string; label: string; products: number };
 
 export type AdminProduct = CollectionProduct & {
-  catalogCollection: string;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -92,7 +92,7 @@ export async function getDashboard() {
 // --- products ---
 
 export async function listProducts(params: {
-  search?: string; collection?: string; category?: string; availability?: string;
+  search?: string; shopCategory?: string; availability?: string;
   sort?: string; page?: number; limit?: number;
 }) {
   const response = await apiGet<AdminProduct[], AdminPageMeta>(`/admin/products${queryString(params)}`);
@@ -121,12 +121,16 @@ export async function deleteProduct(id: string) {
 
 // --- categories ---
 
+/**
+ * The Shop ranges and their product counts.
+ *
+ * Read-only by design. The ranges are a closed set that the storefront routes
+ * on (/shop/<slug>), so there is nothing to create, rename or delete —
+ * renaming one would silently break three public URLs. Moving a product
+ * between ranges is an edit on the product.
+ */
 export async function listCategories() {
   return (await apiGet<AdminCategory[]>("/admin/categories")).data;
-}
-
-export async function renameCategory(from: string, to: string) {
-  return (await apiPatch<{ updated: number }, { from: string; to: string }>("/admin/categories", { from, to })).data;
 }
 
 // --- users ---

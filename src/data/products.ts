@@ -1,3 +1,5 @@
+export type ShopCategorySlug = "ganesh-chaturthi" | "navratri-upcoming" | "regular-pooja";
+
 export type ProductBadgeTone = "gold" | "success" | "primary" | "soft";
 export type ProductPurchaseState = "PRE_ORDER" | "READY_STOCK" | "COMING_SOON";
 
@@ -34,7 +36,12 @@ export type CollectionProduct = {
   id: string;
   sku: string;
   slug: string;
-  category: string;
+  /**
+   * The Shop range this product belongs to — one stable slug, matching the
+   * backend's `shopCategory`. Mirrors SHOP_CATEGORIES in the API; see
+   * src/data/shopCategories.ts for the storefront labels and page copy.
+   */
+  shopCategory: ShopCategorySlug;
   name: string;
   subtitle: string;
   description: string;
@@ -216,7 +223,9 @@ function createProduct(input: {
   return {
     ...input,
     purchaseState,
-    category: "Ganesh Puja",
+    // Every product this factory builds is a Ganesh Chaturthi one; the other
+    // ranges are declared explicitly below.
+    shopCategory: "ganesh-chaturthi",
     href: `/products/${input.slug}`,
     imageAlt: `${input.name} by BHORKIT`,
     images: [
@@ -335,6 +344,7 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
+    shopCategory: "navratri-upcoming",
     href: "/pre-order",
   },
   {
@@ -351,6 +361,7 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
+    shopCategory: "navratri-upcoming",
     href: "/pre-order",
   },
   {
@@ -367,6 +378,7 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
+    shopCategory: "navratri-upcoming",
     href: "/pre-order",
   },
   {
@@ -383,6 +395,7 @@ export const navratriUpcomingProducts: CollectionProduct[] = [
       purchaseState: "COMING_SOON",
       contents: sharedEssentials,
     }),
+    shopCategory: "navratri-upcoming",
     href: "/pre-order",
   },
 ];
@@ -402,7 +415,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
-    category: "Regular Puja",
+    shopCategory: "regular-pooja",
     href: "/shop",
   },
   {
@@ -419,7 +432,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
-    category: "Regular Puja",
+    shopCategory: "regular-pooja",
     href: "/shop",
   },
   {
@@ -436,7 +449,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
-    category: "Regular Puja",
+    shopCategory: "regular-pooja",
     href: "/shop",
   },
   {
@@ -453,7 +466,7 @@ export const regularPoojaKits: CollectionProduct[] = [
       purchaseState: "READY_STOCK",
       contents: sharedEssentials,
     }),
-    category: "Regular Puja",
+    shopCategory: "regular-pooja",
     href: "/shop",
   },
 ];

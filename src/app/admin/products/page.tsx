@@ -1,5 +1,6 @@
 "use client";
 
+import { shopCategories, shopCategoryLabel } from "@/src/data/shopCategories";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -11,7 +12,6 @@ import {
 import { ApiClientError } from "@/src/lib/api/client";
 
 const AVAILABILITY = ["available", "preorder", "unavailable"];
-const COLLECTIONS = ["ganesh-chaturthi", "navratri-upcoming", "regular-pooja"];
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
@@ -20,7 +20,7 @@ export default function AdminProductsPage() {
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" }>({ message: "", tone: "success" });
 
   const [search, setSearch] = useState("");
-  const [collection, setCollection] = useState("");
+  const [shopCategory, setShopCategory] = useState("");
   const [availability, setAvailability] = useState("");
   const [sort, setSort] = useState("recent");
   const [page, setPage] = useState(1);
@@ -30,14 +30,14 @@ export default function AdminProductsPage() {
 
   const load = useCallback(() => {
     setState("loading");
-    listProducts({ search, collection, availability, sort, page, limit: 20 })
+    listProducts({ search, shopCategory, availability, sort, page, limit: 20 })
       .then((result) => {
         setProducts(result.products);
         if (result.meta) setMeta(result.meta);
         setState("ready");
       })
       .catch(() => setState("error"));
-  }, [search, collection, availability, sort, page]);
+  }, [search, shopCategory, availability, sort, page]);
 
   useEffect(() => {
     const timer = window.setTimeout(load, 250);
@@ -97,14 +97,16 @@ export default function AdminProductsPage() {
             <input
               value={search}
               onChange={(event) => { setSearch(event.target.value); setPage(1); }}
-              placeholder="Name, SKU, slug or category"
+              placeholder="Name, SKU or slug"
               className={inputClass}
             />
           </Field>
-          <Field label="Collection">
-            <select value={collection} onChange={(event) => { setCollection(event.target.value); setPage(1); }} className={inputClass}>
-              <option value="">All collections</option>
-              {COLLECTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+          <Field label="Shop category">
+            <select value={shopCategory} onChange={(event) => { setShopCategory(event.target.value); setPage(1); }} className={inputClass}>
+              <option value="">All categories</option>
+              {shopCategories.map((category) => (
+                <option key={category.slug} value={category.slug}>{category.label}</option>
+              ))}
             </select>
           </Field>
           <Field label="Availability">
@@ -145,10 +147,10 @@ export default function AdminProductsPage() {
                     <tr key={product.id} className="border-b border-bhor-border last:border-0">
                       <td className="max-w-[280px] px-4 py-3">
                         <p className="truncate font-bhor-semibold text-bhor-text">{product.name}</p>
-                        <p className="truncate text-bhor-caption text-bhor-text-muted">{product.catalogCollection}</p>
+                        <p className="truncate text-bhor-caption text-bhor-text-muted">{product.sku}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-bhor-text-muted">{product.sku}</td>
-                      <td className="px-4 py-3 text-bhor-text-muted">{product.category}</td>
+                      <td className="px-4 py-3 text-bhor-text-muted">{shopCategoryLabel(product.shopCategory)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-bhor-text">{product.price}</td>
                       <td className="px-4 py-3">
                         <span

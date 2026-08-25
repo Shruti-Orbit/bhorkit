@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Search, X } from "lucide-react";
+import { shopCategoryLabel } from "@/src/data/shopCategories";
 import type { CollectionProduct } from "@/src/data/products";
 import { HighlightedText } from "@/src/components/search/HighlightedText";
 import { useProductSearch } from "@/src/lib/search/useProductSearch";
@@ -193,7 +194,7 @@ export function SearchBox() {
                           <p className="truncate text-bhor-small font-bhor-semibold text-bhor-text">
                             <HighlightedText text={result.product.name} ranges={result.nameMatchRanges} />
                           </p>
-                          <p className="truncate text-bhor-caption text-bhor-text-muted">{result.product.category}</p>
+                          <p className="truncate text-bhor-caption text-bhor-text-muted">{shopCategoryLabel(result.product.shopCategory)}</p>
                         </div>
                         <p className="shrink-0 text-bhor-small font-bhor-bold text-bhor-text">{result.product.price}</p>
                       </Link>

@@ -3,14 +3,14 @@ import Link from "next/link";
 import { ArrowRight, Sparkle } from "lucide-react";
 import { ProductCard } from "@/src/components/home/product-collection/ProductCard";
 import { festivalCollections } from "@/src/data/editorialCollections";
-import { getProductsByCollection } from "@/src/lib/api/product.api";
+import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 
 const upcomingPanels = festivalCollections.filter((festival) => festival.status !== "available").slice(0, 2);
 
 export const dynamic = "force-dynamic";
 
 export default async function FestivalCollectionsPage() {
-  const ganeshChaturthiProducts = await getProductsByCollection("ganesh-chaturthi");
+  const ganeshChaturthiProducts = await getProductsByShopCategory("ganesh-chaturthi");
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream">

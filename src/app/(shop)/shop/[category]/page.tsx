@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopListing } from "@/src/components/shop/ShopListing";
 import { findShopCategory, shopCategories } from "@/src/data/shopCategories";
-import { getProductsByCollection } from "@/src/lib/api/product.api";
+import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export default async function ShopCategoryPage({ params }: Params) {
   // look like a range that happens to be sold out.
   if (!category) notFound();
 
-  const products = await getProductsByCollection(category.collection);
+  const products = await getProductsByShopCategory(category.slug);
 
   return (
     <ShopListing

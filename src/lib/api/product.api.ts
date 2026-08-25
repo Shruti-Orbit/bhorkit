@@ -1,10 +1,7 @@
-import type { CollectionProduct } from "@/src/data/products";
+import type { CollectionProduct, ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError, apiGet } from "@/src/lib/api/client";
 
-export type ProductCollectionKey =
-  | "ganesh-chaturthi"
-  | "navratri-upcoming"
-  | "regular-pooja";
+export type { ShopCategorySlug } from "@/src/data/products";
 
 type ProductListMeta = {
   count: number;
@@ -36,23 +33,13 @@ export async function getHomeCatalog() {
   return response.data;
 }
 
-export async function getProductsByCollection(collection: ProductCollectionKey) {
-  const searchParams = new URLSearchParams({ collection });
-  const response = await apiGet<CollectionProduct[], ProductListMeta>(
-    `/products?${searchParams.toString()}`,
-  );
-  return response.data;
-}
-
 /**
- * Products carrying one catalogue category, e.g. "Regular Puja".
- *
- * Filtering happens in MongoDB (the products collection is indexed on
- * `category`) rather than by fetching everything and narrowing in the browser,
- * so a growing catalogue does not grow the payload.
+ * Products in one Shop range. Filtering happens in MongoDB — the products
+ * collection is indexed on `shopCategory` — rather than by fetching the whole
+ * catalogue and narrowing in the browser.
  */
-export async function getProductsByCategory(category: string) {
-  const searchParams = new URLSearchParams({ category });
+export async function getProductsByShopCategory(shopCategory: ShopCategorySlug) {
+  const searchParams = new URLSearchParams({ shopCategory });
   const response = await apiGet<CollectionProduct[], ProductListMeta>(
     `/products?${searchParams.toString()}`,
   );

@@ -1,10 +1,10 @@
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
-import { getProductsByCollection } from "@/src/lib/api/product.api";
+import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 
 export const dynamic = "force-dynamic";
 
 export default async function PreOrderPage() {
-  const navratriUpcomingProducts = await getProductsByCollection("navratri-upcoming");
+  const navratriUpcomingProducts = await getProductsByShopCategory("navratri-upcoming");
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream">
