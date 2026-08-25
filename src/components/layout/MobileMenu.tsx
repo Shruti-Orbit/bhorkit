@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronRight, Gift, Heart, UserRound, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Gift, Heart, UserRound, X } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { navigation } from "@/src/data/navigation";
 import { useShop } from "@/src/context/ShopContext";
 
@@ -16,6 +17,21 @@ type MobileMenuProps = {
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const pathname = usePathname();
   const { isLoggedIn, openAuthModal } = useShop();
+  // Which collapsible section is expanded.
+  //
+  // The default comes from the route, so opening the drawer inside a section
+  // shows that section's items straight away. A tap overrides it, and the
+  // override is stored with the route it was made on so it lapses as soon as
+  // the route changes — the same derivation the desktop menu uses, which keeps
+  // this correct on first paint with no effect syncing state to the pathname.
+  const currentSection =
+    navigation.find((item) => item.children && pathname.startsWith(item.href))?.href ?? null;
+  const [override, setOverride] = useState<{ href: string | null; path: string } | null>(null);
+  const openSection = override && override.path === pathname ? override.href : currentSection;
+
+  function toggleSection(href: string) {
+    setOverride({ href: openSection === href ? null : href, path: pathname });
+  }
 
   return (
     <AnimatePresence>
@@ -76,6 +92,56 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               {navigation.map((item) => {
                 const isActive =
                   item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+                if (item.children) {
+                  const expanded = openSection === item.href;
+                  return (
+                    <div key={item.href} className="border-b border-bhor-border/70">
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        aria-controls={`mobile-section-${item.href.replace(/\W/g, "")}`}
+                        onClick={() => toggleSection(item.href)}
+                        className={`flex min-h-12 w-full items-center justify-between px-2 text-left text-bhor-body-mobile font-bhor-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bhor-primary ${
+                          isActive ? "text-bhor-primary" : "text-bhor-text hover:text-bhor-primary"
+                        }`}
+                      >
+                        {item.label}
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            expanded ? "rotate-180 text-bhor-primary" : "text-bhor-text-muted"
+                          }`}
+                          aria-hidden
+                        />
+                      </button>
+
+                      {expanded ? (
+                        <ul id={`mobile-section-${item.href.replace(/\W/g, "")}`} className="pb-2">
+                          {item.children.map((child) => {
+                            const childActive = pathname === child.href;
+                            return (
+                              <li key={child.href}>
+                                <Link
+                                  href={child.href}
+                                  aria-current={childActive ? "page" : undefined}
+                                  onClick={onClose}
+                                  className={`flex min-h-11 items-center justify-between rounded-bhor-sm pl-5 pr-2 text-bhor-small font-bhor-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bhor-primary ${
+                                    childActive
+                                      ? "bg-bhor-primary-soft text-bhor-primary"
+                                      : "text-bhor-text-muted hover:text-bhor-primary"
+                                  }`}
+                                >
+                                  {child.label}
+                                  <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
+                    </div>
+                  );
+                }
 
                 return (
                   <Link
