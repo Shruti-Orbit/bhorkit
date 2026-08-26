@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { LayoutDashboard, LogOut, Menu, Package, ShoppingBag, Store, Tags, Users, X } from "lucide-react";
+import { LayoutDashboard, LogOut, MapPin, Menu, Package, ShoppingBag, Store, Tags, Users, X } from "lucide-react";
 import { getCurrentUser, logout as logoutRequest } from "@/src/lib/api/auth.api";
 
 const NAV = [
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag },
   { href: "/admin/products", label: "Products", icon: Package },
   { href: "/admin/categories", label: "Categories", icon: Tags },
+  { href: "/admin/delivery", label: "Delivery areas", icon: MapPin },
   { href: "/admin/users", label: "Users", icon: Users },
 ];
 

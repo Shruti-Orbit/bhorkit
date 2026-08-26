@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useMemo, useState } from "react";
+import { usePincodeAvailability } from "@/src/lib/delivery/usePincodeAvailability";
 import {
   emptyAddressDraft,
   validateAddressDraft,
@@ -37,7 +38,14 @@ export function AddressForm({
   const [isSaving, setIsSaving] = useState(false);
 
   const fieldErrors = useMemo(() => validateAddressDraft(draft), [draft]);
-  const isFormValid = Object.keys(fieldErrors).length === 0;
+
+  // Live coverage feedback. The server re-checks on save regardless, so this
+  // only decides what the form shows and whether Save is offered — it is never
+  // the thing that keeps an undeliverable address out of the database.
+  const availability = usePincodeAvailability(draft.pincode);
+  const pincodeUnavailable = availability.status === "unavailable";
+
+  const isFormValid = Object.keys(fieldErrors).length === 0 && !pincodeUnavailable;
 
   function updateField(field: AddressField, value: string) {
     setDraft((current) => ({ ...current, [field]: value }));
@@ -112,13 +120,31 @@ export function AddressForm({
           error={errorFor("landmark")}
           required={false}
         />
-        <AddressInput
-          label="Pincode"
-          value={draft.pincode}
-          onChange={(value) => updateField("pincode", value.replace(/[^\d]/g, "").slice(0, 6))}
-          error={errorFor("pincode")}
-          inputMode="numeric"
-        />
+        <div>
+          <AddressInput
+            label="Pincode"
+            value={draft.pincode}
+            onChange={(value) => updateField("pincode", value.replace(/[^\d]/g, "").slice(0, 6))}
+            error={errorFor("pincode")}
+            inputMode="numeric"
+          />
+          {/* Sits directly under the pincode field so the reason is next to the
+              input that caused it. Only one of these can show at a time, and
+              none of them shows while the field is still incomplete. */}
+          {!errorFor("pincode") && availability.status === "checking" ? (
+            <p className="mt-1 text-bhor-caption text-bhor-text-muted">Checking availability…</p>
+          ) : null}
+          {!errorFor("pincode") && availability.status === "unavailable" ? (
+            <p role="alert" className="mt-1 text-bhor-caption font-bhor-semibold text-bhor-primary">
+              {availability.message}
+            </p>
+          ) : null}
+          {!errorFor("pincode") && availability.status === "available" ? (
+            <p className="mt-1 text-bhor-caption font-bhor-medium text-bhor-success">
+              Delivery available at this pincode.
+            </p>
+          ) : null}
+        </div>
         <AddressInput
           label="City"
           value={draft.city}

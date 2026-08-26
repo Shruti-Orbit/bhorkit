@@ -91,24 +91,34 @@ export function DeliveryAddressSection() {
         <div className="mt-4 space-y-3">
           <p className="text-bhor-small font-bhor-semibold text-bhor-text">Select Delivery Address</p>
           <div className="grid gap-3">
-            {addresses.map((address) => (
+            {addresses.map((address) => {
+              // `deliverable` is decided by the server on every read, so an
+              // address whose pincode has since been withdrawn shows up here as
+              // unselectable — without being deleted or quietly rewritten.
+              const unavailable = address.deliverable === false;
+              return (
               <div
                 key={address.id}
                 className={`flex items-start gap-3 rounded-bhor-md border p-4 ${
-                  selectedAddressId === address.id
-                    ? "border-bhor-primary bg-bhor-primary-soft"
-                    : "border-bhor-border bg-bhor-cream"
+                  unavailable
+                    ? "border-bhor-border bg-bhor-cream"
+                    : selectedAddressId === address.id
+                      ? "border-bhor-primary bg-bhor-primary-soft"
+                      : "border-bhor-border bg-bhor-cream"
                 }`}
               >
-                <label className="flex flex-1 cursor-pointer gap-3">
+                <label className={`flex flex-1 gap-3 ${unavailable ? "cursor-not-allowed" : "cursor-pointer"}`}>
                   <input
                     type="radio"
                     name="delivery-address"
                     checked={selectedAddressId === address.id}
+                    disabled={unavailable}
                     onChange={() => setSelectedAddressId(address.id)}
-                    className="mt-1 h-4 w-4 shrink-0 accent-bhor-primary"
+                    className="mt-1 h-4 w-4 shrink-0 accent-bhor-primary disabled:opacity-40"
                   />
-                  <AddressText address={address} />
+                  <div className={unavailable ? "opacity-60" : undefined}>
+                    <AddressText address={address} />
+                  </div>
                 </label>
                 <button
                   type="button"
@@ -120,8 +130,23 @@ export function DeliveryAddressSection() {
                   Edit
                 </button>
               </div>
-            ))}
+              );
+            })}
           </div>
+
+          {/* One message for the whole list rather than one per card: the
+              wording is identical and repeating it per address is noise. */}
+          {addresses.some((address) => address.deliverable === false) ? (
+            <p role="status" className="rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 py-2 text-bhor-caption leading-bhor-body text-bhor-primary">
+              <span className="font-bhor-semibold">
+                {addresses.find((address) => address.deliverable === false)?.unavailableMessage ??
+                  "We're currently not available at this location."}
+              </span>{" "}
+              <span className="text-bhor-text-muted">
+                Edit the greyed-out address to a serviceable pincode, or pick another one to continue.
+              </span>
+            </p>
+          ) : null}
 
           {canAddMoreAddresses ? (
             <button

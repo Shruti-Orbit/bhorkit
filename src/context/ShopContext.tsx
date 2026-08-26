@@ -64,6 +64,10 @@ export type CustomerAddress = {
   city: string;
   state: string;
   isDefault?: boolean;
+  /** Server-computed from current delivery coverage on every read. */
+  deliverable?: boolean;
+  /** Present only when `deliverable` is false. */
+  unavailableMessage?: string;
 };
 
 // Orders are server-owned now: they're created by the payment flow, keyed to

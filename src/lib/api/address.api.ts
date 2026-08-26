@@ -11,9 +11,22 @@ export type BackendAddress = {
   city: string;
   state: string;
   isDefault: boolean;
+  /**
+   * Whether this address can be used for a NEW order right now. Computed by
+   * the server from current delivery coverage on every read — a saved address
+   * becomes undeliverable if its pincode is later withdrawn, without the
+   * address itself being changed.
+   */
+  deliverable: boolean;
+  /** Present only when `deliverable` is false. */
+  unavailableMessage?: string;
 };
 
-export type AddressInput = Omit<BackendAddress, "id" | "isDefault"> & { isDefault?: boolean };
+// deliverable/unavailableMessage are server-computed and read-only: sending
+// them would be ignored, so they are excluded from what a client may write.
+export type AddressInput = Omit<BackendAddress, "id" | "isDefault" | "deliverable" | "unavailableMessage"> & {
+  isDefault?: boolean;
+};
 
 export type AddressBook = {
   addresses: BackendAddress[];

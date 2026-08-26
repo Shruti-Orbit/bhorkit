@@ -3,14 +3,45 @@
 import { useState } from "react";
 import { MapPin } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { checkPincode } from "@/src/lib/api/delivery.api";
 
 type DeliveryCheckerProps = {
+  /** Kept for the copy above the field; coverage itself comes from the API. */
   delivery: CollectionProduct["delivery"];
 };
 
+type Status =
+  | { kind: "idle" }
+  | { kind: "checking" }
+  | { kind: "available" }
+  | { kind: "unavailable"; message: string };
+
+/**
+ * Asks the server whether we deliver to a pincode.
+ *
+ * It used to test the pincode against a list embedded in each product, which
+ * meant coverage was duplicated per product, shipped to the browser, and could
+ * disagree with what checkout would actually accept. It now calls the same
+ * endpoint the address form uses, so the answer here is the answer at checkout.
+ */
 export function DeliveryChecker({ delivery }: DeliveryCheckerProps) {
+  void delivery;
   const [pincode, setPincode] = useState("");
-  const [status, setStatus] = useState<"idle" | "available" | "unavailable">("idle");
+  const [status, setStatus] = useState<Status>({ kind: "idle" });
+
+  async function check() {
+    setStatus({ kind: "checking" });
+    try {
+      const result = await checkPincode(pincode);
+      setStatus(
+        result.serviceable
+          ? { kind: "available" }
+          : { kind: "unavailable", message: result.message ?? "We're currently not available at this location." },
+      );
+    } catch {
+      setStatus({ kind: "unavailable", message: "Couldn't check right now. Please try again." });
+    }
+  }
 
   return (
     <div className="rounded-bhor-md border border-bhor-border bg-bhor-surface p-4">
@@ -22,8 +53,8 @@ export function DeliveryChecker({ delivery }: DeliveryCheckerProps) {
         <input
           value={pincode}
           onChange={(event) => {
-            setPincode(event.target.value);
-            setStatus("idle");
+            setPincode(event.target.value.replace(/[^\d]/g, "").slice(0, 6));
+            setStatus({ kind: "idle" });
           }}
           inputMode="numeric"
           maxLength={6}
@@ -32,22 +63,21 @@ export function DeliveryChecker({ delivery }: DeliveryCheckerProps) {
         />
         <button
           type="button"
-          onClick={() => {
-            setStatus(delivery.availablePincodes.includes(pincode) ? "available" : "unavailable");
-          }}
-          className="min-h-11 rounded-bhor-sm bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-semibold text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+          onClick={check}
+          disabled={pincode.length !== 6 || status.kind === "checking"}
+          className="min-h-11 rounded-bhor-sm bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-semibold text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary disabled:opacity-50"
         >
-          Check
+          {status.kind === "checking" ? "Checking…" : "Check"}
         </button>
       </div>
-      {status === "available" ? (
+      {status.kind === "available" ? (
         <p className="mt-2 text-bhor-small font-bhor-medium text-bhor-success">
           Delivery available in your area
         </p>
       ) : null}
-      {status === "unavailable" ? (
-        <p className="mt-2 text-bhor-small font-bhor-medium text-bhor-primary">
-          This product is currently unavailable at this pincode.
+      {status.kind === "unavailable" ? (
+        <p role="alert" className="mt-2 text-bhor-small font-bhor-medium text-bhor-primary">
+          {status.message}
         </p>
       ) : null}
     </div>

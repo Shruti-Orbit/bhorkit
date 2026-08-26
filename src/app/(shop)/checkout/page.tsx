@@ -52,10 +52,17 @@ export default function CheckoutPage() {
   const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
   const payableTotal = isDirect ? direct.totals?.total ?? 0 : cartTotal;
 
+  // The selected address must still be deliverable. The server enforces this
+  // again on order creation — this only keeps the button from starting a
+  // payment that is certain to be refused.
+  const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
+  const selectedUndeliverable = selectedAddress?.deliverable === false;
+
   const canPay =
     isLoggedIn &&
     hasItems &&
     Boolean(selectedAddressId) &&
+    !selectedUndeliverable &&
     Boolean(deliveryDate) &&
     Boolean(deliverySlotId) &&
     (!isPreOrder || policyAccepted) &&
@@ -240,6 +247,7 @@ export default function CheckoutPage() {
     if (phase === "resuming") return "Checking payment status…";
     if (!isLoggedIn) return "Login to Continue";
     if (addresses.length === 0 || !selectedAddressId) return "Add Address to Continue";
+    if (selectedUndeliverable) return "Delivery Unavailable at This Pincode";
     if (!deliveryDate || !deliverySlotId) return "Select Delivery Date & Slot";
     if (isPreOrder && !policyAccepted) return "Accept Pre-Order Policy";
     return `Pay ${formatCurrency(payableTotal)}`;

@@ -133,6 +133,27 @@ export async function listCategories() {
   return (await apiGet<AdminCategory[]>("/admin/categories")).data;
 }
 
+// --- delivery coverage ---
+
+export type AdminDeliveryPincode = { pincode: string; label: string; createdAt: string };
+
+export async function listDeliveryPincodes() {
+  return (await apiGet<AdminDeliveryPincode[]>("/admin/delivery/pincodes")).data;
+}
+
+export async function addDeliveryPincode(pincode: string, label: string) {
+  return (await apiPost<AdminDeliveryPincode, { pincode: string; label: string }>(
+    "/admin/delivery/pincodes",
+    { pincode, label },
+  )).data;
+}
+
+export async function removeDeliveryPincode(pincode: string) {
+  return (await apiDelete<{ pincode: string }>(
+    `/admin/delivery/pincodes/${encodeURIComponent(pincode)}`,
+  )).data;
+}
+
 // --- users ---
 
 export async function listUsers(params: { search?: string; role?: string; status?: string; page?: number; limit?: number }) {
