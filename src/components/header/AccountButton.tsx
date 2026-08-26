@@ -5,7 +5,21 @@ import Link from "next/link";
 import { LogOut, UserRound } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
 
-export function AccountButton() {
+type AccountButtonProps = {
+  /**
+   * Render the signed-out state as a labelled "Login" button rather than a
+   * bare avatar icon.
+   *
+   * Used by the mobile/tablet header, where the icon alone was not telling
+   * anyone they needed an account — there is no nav bar beside it to give it
+   * context, and the only other way in was buried in the hamburger drawer.
+   * Desktop keeps the icon: it sits in a row of icons where its meaning is
+   * clear, and a text button there would unbalance the row.
+   */
+  showLoginLabel?: boolean;
+};
+
+export function AccountButton({ showLoginLabel = false }: AccountButtonProps = {}) {
   const { currentUser, isAuthReady, isLoggedIn, logout, openAuthModal } = useShop();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
@@ -50,7 +64,11 @@ export function AccountButton() {
       <div
         role="status"
         aria-label="Loading account"
-        className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-bhor-cream"
+        className={
+          showLoginLabel
+            ? "h-9 w-[86px] shrink-0 animate-pulse rounded-bhor-sm bg-bhor-cream"
+            : "h-11 w-11 shrink-0 animate-pulse rounded-full bg-bhor-cream"
+        }
       />
     );
   }
@@ -63,7 +81,7 @@ export function AccountButton() {
           aria-label="Account menu"
           aria-expanded={isDropdownOpen}
           onClick={() => setIsDropdownOpen((open) => !open)}
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-bhor-primary-soft text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-bhor-primary-soft text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
         >
           {currentUser.image && !imageFailed ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -115,6 +133,19 @@ export function AccountButton() {
           </div>
         ) : null}
       </div>
+    );
+  }
+
+  if (showLoginLabel) {
+    return (
+      <button
+        type="button"
+        onClick={() => openAuthModal()}
+        className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-bhor-sm border border-bhor-primary px-3 text-bhor-caption font-bhor-bold uppercase text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+      >
+        <UserRound className="h-4 w-4" aria-hidden />
+        Login
+      </button>
     );
   }
 

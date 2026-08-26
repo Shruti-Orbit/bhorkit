@@ -16,7 +16,7 @@ type MobileMenuProps = {
 
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const pathname = usePathname();
-  const { isLoggedIn, openAuthModal } = useShop();
+  const { currentUser, isLoggedIn, openAuthModal } = useShop();
   // Which collapsible section is expanded.
   //
   // The default comes from the route, so opening the drawer inside a section
@@ -185,11 +185,21 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                   onClick={onClose}
                   className="flex min-h-12 w-full items-center justify-between border-b border-bhor-border/70 px-2 text-left text-bhor-body-mobile font-bhor-medium text-bhor-text hover:text-bhor-primary"
                 >
-                  <span className="flex items-center gap-2">
-                    <UserRound className="h-4 w-4 text-bhor-gold" aria-hidden />
-                    Account
+                  <span className="flex min-w-0 items-center gap-2">
+                    <UserRound className="h-4 w-4 shrink-0 text-bhor-gold" aria-hidden />
+                    <span className="min-w-0">
+                      Account
+                      {/* Which account is signed in — the drawer otherwise
+                          gives no sign of it. Truncated because an address can
+                          be longer than the drawer is wide. */}
+                      {currentUser?.email ? (
+                        <span className="block truncate text-bhor-caption font-bhor-medium leading-bhor-body text-bhor-text-muted">
+                          {currentUser.email}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
-                  <ChevronRight className="h-4 w-4 text-bhor-text-muted" aria-hidden />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-bhor-text-muted" aria-hidden />
                 </Link>
               ) : (
                 <button

@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu } from "lucide-react";
+import { AccountButton } from "../header/AccountButton";
 import { CartButton } from "../header/CartButton";
 import { SearchBox } from "../header/SearchBox";
 import { MobileMenu } from "./MobileMenu";
+import { useShop } from "@/src/context/ShopContext";
 
 export function MobileHeader() {
   const [isOpen, setIsOpen] = useState(false);
+  const { isAuthReady, isLoggedIn } = useShop();
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -30,7 +33,7 @@ export function MobileHeader() {
 
   return (
     <div className="border-b border-bhor-border bg-bhor-surface lg:hidden">
-      <div className="grid h-16 grid-cols-[44px_1fr_92px] items-center px-4 sm:h-[72px]">
+      <div className="grid h-16 grid-cols-[44px_1fr_auto] items-center gap-1 px-4 sm:h-[72px]">
         <button
           type="button"
           aria-label="Open menu"
@@ -56,9 +59,23 @@ export function MobileHeader() {
           />
         </Link>
 
-        <div className="flex items-center justify-end">
-          <SearchBox />
-          <CartButton />
+        {/* Signed out, the header carries nothing but "Login" — there is no
+            point offering search or a cart to someone who has to sign in
+            first, and a single control makes the next step unmissable.
+            Signed in, the controls read search, cart, avatar left to right,
+            so from the right edge it is avatar, cart, search.
+
+            While the session check is still in flight neither state is known,
+            so only the account slot is rendered: showing search and a cart and
+            then removing them would be a visible flinch on every load. */}
+        <div className="flex items-center justify-end gap-0.5">
+          {isAuthReady && isLoggedIn ? (
+            <>
+              <SearchBox />
+              <CartButton />
+            </>
+          ) : null}
+          <AccountButton showLoginLabel />
         </div>
       </div>
 
