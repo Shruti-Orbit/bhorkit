@@ -154,6 +154,49 @@ export async function removeDeliveryPincode(pincode: string) {
   )).data;
 }
 
+// --- policies ---
+
+export type AdminPolicySection = {
+  slug: string;
+  navLabel: string;
+  title: string;
+  order: number;
+  /** The Markdown source an admin edits. */
+  bodyMarkdown: string;
+  updatedAt: string;
+  updatedBy: string | null;
+};
+
+export type AdminPolicies = {
+  title: string;
+  preambleMarkdown: string;
+  lastUpdated: string;
+  sections: AdminPolicySection[];
+  updatedAt: string;
+  updatedBy: string | null;
+};
+
+export async function getPolicies() {
+  return (await apiGet<AdminPolicies>("/admin/policies")).data;
+}
+
+/** Updates one policy. Other sections are untouched by the write. */
+export async function updatePolicySection(
+  slug: string,
+  changes: { title?: string; bodyMarkdown?: string },
+) {
+  return (await apiPatch<AdminPolicies, typeof changes>(
+    `/admin/policies/${encodeURIComponent(slug)}`,
+    changes,
+  )).data;
+}
+
+export async function updatePolicyMeta(
+  changes: { title?: string; preambleMarkdown?: string; lastUpdated?: string },
+) {
+  return (await apiPatch<AdminPolicies, typeof changes>("/admin/policies/meta", changes)).data;
+}
+
 // --- users ---
 
 export async function listUsers(params: { search?: string; role?: string; status?: string; page?: number; limit?: number }) {

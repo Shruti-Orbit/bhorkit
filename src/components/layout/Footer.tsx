@@ -16,18 +16,18 @@ const footerGroups = [
     title: "Help & Support",
     links: [
       { label: "Track Order", href: "/track-order" },
-      { label: "Shipping & Delivery", href: "/shipping-policy" },
-      { label: "Returns & Refunds", href: "/refund-policy" },
+      { label: "Shipping & Delivery", href: "/policies#shipping-delivery" },
+      { label: "Returns & Refunds", href: "/policies#returns-refunds" },
       { label: "Contact Us", href: "/contact" },
     ],
   },
   {
     title: "Policies",
     links: [
-      { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "Terms & Conditions", href: "/terms-and-conditions" },
-      { label: "Refund Policy", href: "/refund-policy" },
-      { label: "Cancellation Policy", href: "/cancellation-policy" },
+      { label: "Privacy Policy", href: "/policies#privacy" },
+      { label: "Terms & Conditions", href: "/policies#terms" },
+      { label: "Refund Policy", href: "/policies#returns-refunds" },
+      { label: "Cancellation Policy", href: "/policies#cancellation" },
     ],
   },
   {

@@ -66,3 +66,12 @@ body {
   color: var(--foreground);
   font-family: var(--font-body);
 }
+
+/* Anchor links (the footer's policy links, and the policies page's own section
+   nav) glide rather than jump. Respects a reduced-motion preference, where an
+   instant jump is the accessible behaviour. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
