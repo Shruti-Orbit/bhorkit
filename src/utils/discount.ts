@@ -22,6 +22,18 @@ export function calculateLowestItemMemberDiscount(
   return Number.isFinite(lowestItemPrice) ? lowestItemPrice * memberDiscountRate : 0;
 }
 
+/**
+ * What an applied coupon takes off, for display only.
+ *
+ * Mirrors the server's rounding so the summary and the amount actually charged
+ * agree. The server recomputes this from catalogue prices when the order is
+ * created — this figure is never sent anywhere and never decides anything.
+ */
+export function calculateCouponDiscount(subtotal: number, discountPercent: number) {
+  if (subtotal <= 0 || discountPercent <= 0) return 0;
+  return Math.round(subtotal * discountPercent) / 100;
+}
+
 export function calculateHandlingCharge(subtotal: number) {
   if (subtotal <= 0) {
     return 0;

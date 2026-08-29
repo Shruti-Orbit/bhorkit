@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { formatCurrency } from "@/src/utils/discount";
 import { useShop } from "@/src/context/ShopContext";
 
@@ -10,6 +11,13 @@ export type SummaryTotals = {
   total: number;
 };
 
+/** An applied coupon, for display. The amount charged is priced by the server. */
+export type SummaryCoupon = {
+  code: string;
+  discountPercent: number;
+  discount: number;
+};
+
 type OrderSummaryProps = {
   /**
    * Totals to display instead of the cart's. Used by direct (Buy Now)
@@ -18,15 +26,29 @@ type OrderSummaryProps = {
    * way, so these can never determine what's charged.
    */
   totals?: SummaryTotals;
+  /** Shown as its own line when the customer has applied a coupon. */
+  coupon?: SummaryCoupon | null;
+  /**
+   * The Apply Coupon control, rendered between the breakdown and the total.
+   *
+   * Passed in rather than built here so this component stays a summary: the
+   * cart page shows the same totals without any way to enter a code, and gets
+   * no control at all.
+   */
+  couponControl?: ReactNode;
 };
 
-export function OrderSummary({ totals }: OrderSummaryProps = {}) {
+export function OrderSummary({ totals, coupon, couponControl }: OrderSummaryProps = {}) {
   const { cartSubtotal, cartTotal, handlingCharge, memberDiscount } = useShop();
 
   const subtotal = totals?.subtotal ?? cartSubtotal;
   const discount = totals?.discount ?? memberDiscount;
   const handling = totals?.handlingCharge ?? handlingCharge;
-  const total = totals?.total ?? cartTotal;
+  const baseTotal = totals?.total ?? cartTotal;
+  const couponDiscount = coupon?.discount ?? 0;
+  // Never below zero: a coupon large enough to cover the goods still leaves the
+  // handling charge, and the server clamps the same way when it prices.
+  const total = Math.max(0, baseTotal - couponDiscount);
 
   return (
     <aside className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
@@ -40,6 +62,14 @@ export function OrderSummary({ totals }: OrderSummaryProps = {}) {
           <span>Online Payment Discount (10%)</span>
           <span>-{formatCurrency(discount)}</span>
         </div>
+        {coupon ? (
+          <div className="flex justify-between gap-4 text-bhor-success">
+            <span>
+              Coupon {coupon.code} ({coupon.discountPercent}%)
+            </span>
+            <span>-{formatCurrency(couponDiscount)}</span>
+          </div>
+        ) : null}
         <div className="flex justify-between gap-4 text-bhor-text-muted">
           <span>Handling Charge</span>
           <span>{handling === 0 ? "Free" : formatCurrency(handling)}</span>
@@ -48,6 +78,9 @@ export function OrderSummary({ totals }: OrderSummaryProps = {}) {
           <p className="text-bhor-caption font-bhor-medium text-bhor-text-muted">
             Free handling on orders above ₹999.
           </p>
+        ) : null}
+        {couponControl ? (
+          <div className="border-t border-bhor-border pt-3">{couponControl}</div>
         ) : null}
         <div className="flex justify-between gap-4 border-t border-bhor-border pt-3 text-bhor-product font-bhor-bold text-bhor-text">
           <span>Total</span>

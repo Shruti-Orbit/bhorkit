@@ -9,16 +9,19 @@ import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
 import { FirstOrderGiftSection } from "@/src/components/checkout/FirstOrderGiftSection";
+import { CouponField } from "@/src/components/checkout/CouponField";
+import type { AppliedCoupon } from "@/src/lib/api/coupon.api";
 import { getCheckoutGiftState, type CheckoutGiftState } from "@/src/lib/api/gift.api";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
 import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
-import { formatCurrency, parsePrice } from "@/src/utils/discount";
+import { calculateCouponDiscount, formatCurrency, parsePrice } from "@/src/utils/discount";
 
 export default function CheckoutPage() {
   const {
     addresses,
     cartItems,
+    cartSubtotal,
     cartTotal,
     checkoutMode,
     clearDirectCheckout,
@@ -31,6 +34,7 @@ export default function CheckoutPage() {
   const [policyAccepted, setPolicyAccepted] = useState(false);
   const [giftState, setGiftState] = useState<CheckoutGiftState | null>(null);
   const [selectedGiftId, setSelectedGiftId] = useState("");
+  const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliverySlotId, setDeliverySlotId] = useState("");
 
@@ -86,8 +90,25 @@ export default function CheckoutPage() {
   const selectGift = useCallback((giftId: string) => setSelectedGiftId(giftId), []);
 
   const isPreOrder = deliveryMode === "scheduled";
+  // A preview only. The order is priced again server-side from catalogue
+  // prices, so this figure decides what the customer sees and nothing else.
+  const summaryCoupon = coupon
+    ? {
+        code: coupon.code,
+        discountPercent: coupon.discountPercent,
+        discount: calculateCouponDiscount(
+          isDirect ? direct.totals?.subtotal ?? 0 : cartSubtotal,
+          coupon.discountPercent,
+        ),
+      }
+    : null;
   const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
-  const payableTotal = isDirect ? direct.totals?.total ?? 0 : cartTotal;
+  // The button says what the summary says. Both are previews — the amount
+  // Razorpay is asked for comes from the server's own pricing.
+  const payableTotal = Math.max(
+    0,
+    (isDirect ? direct.totals?.total ?? 0 : cartTotal) - (summaryCoupon?.discount ?? 0),
+  );
 
   // The selected address must still be deliverable. The server enforces this
   // again on order creation — this only keeps the button from starting a
@@ -111,6 +132,7 @@ export default function CheckoutPage() {
       addressId: selectedAddressId,
       deliveryMode,
       ...(giftState?.eligible && selectedGiftId ? { giftId: selectedGiftId } : {}),
+      ...(coupon ? { couponCode: coupon.code } : {}),
       deliveryDate,
       deliverySlotId,
       // Sends only the id and quantity; the server prices it.
@@ -249,7 +271,19 @@ export default function CheckoutPage() {
 
         {hasItems ? (
           <div className="space-y-4">
-            <OrderSummary {...(isDirect && direct.totals ? { totals: direct.totals } : {})} />
+            <OrderSummary
+              {...(isDirect && direct.totals ? { totals: direct.totals } : {})}
+              coupon={summaryCoupon}
+              couponControl={
+                isLoggedIn ? (
+                  <CouponField
+                    applied={coupon}
+                    onApplied={setCoupon}
+                    onRemoved={() => setCoupon(null)}
+                  />
+                ) : null
+              }
+            />
 
             {error ? (
               <p

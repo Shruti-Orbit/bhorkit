@@ -114,6 +114,8 @@ export type CreateCheckoutInput = {
   directItem?: { productId: string; quantity: number };
   /** Which first-order gift card was chosen, when one was offered. */
   giftId?: string;
+  /** The applied coupon code. Never a percentage and never an amount. */
+  couponCode?: string;
 };
 
 export async function createCheckout(input: CreateCheckoutInput) {

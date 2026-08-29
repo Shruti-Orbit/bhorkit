@@ -41,6 +41,11 @@ type StartCheckoutInput = {
    * refuses it otherwise.
    */
   giftId?: string;
+  /**
+   * The coupon code the customer applied. Only the code — the server looks the
+   * percentage up again and recomputes the discount when it prices the order.
+   */
+  couponCode?: string;
 };
 
 function readPendingOrderId() {
