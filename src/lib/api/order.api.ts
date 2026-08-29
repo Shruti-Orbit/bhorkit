@@ -73,6 +73,8 @@ export type BackendOrder = {
 };
 
 export type DeliveryOptions = {
+  /** The product ranges this window had to satisfy. */
+  categories?: string[];
   mode: DeliveryMode;
   minDate: string;
   maxDate: string;
@@ -94,9 +96,17 @@ export type CheckoutSession = {
   contact: string;
 };
 
-export async function getDeliveryOptions(mode: DeliveryMode, date?: string) {
+/**
+ * The bookable dates and slots for what this customer is buying.
+ *
+ * `productId` is sent for a Buy Now so the server looks at that product rather
+ * than the cart. It is only a pointer — the server reads the product and its
+ * range from the catalogue, so it cannot be used to claim a friendlier window.
+ */
+export async function getDeliveryOptions(mode: DeliveryMode, date?: string, productId?: string) {
   const params = new URLSearchParams({ mode });
   if (date) params.set("date", date);
+  if (productId) params.set("productId", productId);
   const response = await apiGet<DeliveryOptions>(`/orders/delivery-options?${params.toString()}`);
   return response.data;
 }

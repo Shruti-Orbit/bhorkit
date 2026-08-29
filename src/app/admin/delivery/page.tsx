@@ -9,6 +9,7 @@ import {
   addDeliveryPincode, listDeliveryPincodes, removeDeliveryPincode, type AdminDeliveryPincode,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
+import { DeliveryAvailability } from "@/src/components/admin/DeliveryAvailability";
 
 const PINCODE_PATTERN = /^[1-9]\d{5}$/;
 
@@ -93,11 +94,18 @@ export default function AdminDeliveryPage() {
   return (
     <div>
       <PageHeader
-        title="Delivery areas"
-        description="Pincodes BHORKIT delivers to. Customers can only save addresses and place orders on a pincode listed here."
+        title="Delivery"
+        description="When each range can be delivered, the time slots that apply to all of them, and the pincodes BHORKIT covers."
       />
 
-      <Card>
+      <DeliveryAvailability />
+
+      <h2 className="mt-8 mb-3 text-base font-semibold text-slate-900">Delivery areas</h2>
+      <p className="mb-3 text-sm text-slate-600">
+        Customers can only save addresses and place orders on a pincode listed here.
+      </p>
+
+      <Card className="p-4">
         <form
           onSubmit={(event) => { event.preventDefault(); if (isValid && !isDuplicate) void add(); }}
           className="grid gap-3 sm:grid-cols-[160px_minmax(0,1fr)_auto] sm:items-end"

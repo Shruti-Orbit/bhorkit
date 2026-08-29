@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, ShieldCheck } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
@@ -229,6 +229,7 @@ export default function CheckoutPage() {
                   mode={deliveryMode}
                   date={deliveryDate}
                   slotId={deliverySlotId}
+                  {...(directCheckoutItem ? { directProductId: directCheckoutItem.productId } : {})}
                   onDateChange={setDeliveryDate}
                   onSlotChange={setDeliverySlotId}
                 />
@@ -242,29 +243,6 @@ export default function CheckoutPage() {
                 />
               ) : null}
 
-              {isPreOrder ? (
-                <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
-                  <h2 className="flex items-center gap-2 text-bhor-product font-bhor-bold text-bhor-text">
-                    <AlertTriangle className="h-5 w-5 text-bhor-primary" aria-hidden />
-                    Pre-Order Policy
-                  </h2>
-                  <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
-                    Once your pre-order is confirmed and payment is completed, it cannot be cancelled or refunded.
-                  </p>
-                  <label className="mt-4 flex gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-cream p-3 text-bhor-small font-bhor-semibold leading-bhor-body text-bhor-text">
-                    <input
-                      type="checkbox"
-                      checked={policyAccepted}
-                      onChange={(event) => setPolicyAccepted(event.target.checked)}
-                      className="mt-1 h-4 w-4 accent-bhor-primary"
-                    />
-                    <span>
-                      I understand that this is a pre-order and that payment is non-refundable and the order
-                      cannot be cancelled after payment.
-                    </span>
-                  </label>
-                </section>
-              ) : null}
             </>
           )}
         </section>
@@ -284,6 +262,21 @@ export default function CheckoutPage() {
                 ) : null
               }
             />
+
+            {isPreOrder ? (
+              <label className="flex gap-3 p-3 text-xs text-bhor-text">
+                <input
+                  type="checkbox"
+                  checked={policyAccepted}
+                  onChange={(event) => setPolicyAccepted(event.target.checked)}
+                  className="mt-0.5 h-4 w-4 shrink-0 accent-bhor-primary"
+                />
+                <span className="text-bhor-primary">
+                  I understand this is a pre-order and payment is non-refundable and the order cannot be
+                  cancelled after payment.
+                </span>
+              </label>
+            ) : null}
 
             {error ? (
               <p

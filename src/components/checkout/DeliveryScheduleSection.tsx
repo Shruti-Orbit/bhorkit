@@ -3,14 +3,25 @@
 import { useEffect, useState } from "react";
 import { CalendarDays, Loader2 } from "lucide-react";
 import { getDeliveryOptions, type DeliveryMode, type DeliveryOptions } from "@/src/lib/api/order.api";
+import { DeliveryCalendar } from "@/src/components/checkout/DeliveryCalendar";
 
 type Props = {
   mode: DeliveryMode;
   date: string;
   slotId: string;
+  /** Set for a Buy Now, so the window is computed for that product rather
+   *  than for whatever happens to be in the cart. */
+  directProductId?: string;
   onDateChange: (date: string) => void;
   onSlotChange: (slotId: string) => void;
 };
+
+/** The chosen day, spelled out, so the customer is in no doubt which it is. */
+function formatDeliveryDate(iso: string) {
+  return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString("en-IN", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC",
+  });
+}
 
 type LoadedOptions = {
   /** The mode+date this result was fetched for. */
@@ -24,8 +35,10 @@ type LoadedOptions = {
  * them at checkout — so the UI can never offer a window the backend would
  * reject, and slots that have already passed today simply aren't listed.
  */
-export function DeliveryScheduleSection({ mode, date, slotId, onDateChange, onSlotChange }: Props) {
-  const requestKey = `${mode}|${date}`;
+export function DeliveryScheduleSection({
+  mode, date, slotId, directProductId, onDateChange, onSlotChange,
+}: Props) {
+  const requestKey = `${mode}|${date}|${directProductId ?? ""}`;
   const [loaded, setLoaded] = useState<LoadedOptions | null>(null);
 
   // Loading is derived by comparing what we have against what's currently
@@ -40,7 +53,7 @@ export function DeliveryScheduleSection({ mode, date, slotId, onDateChange, onSl
   useEffect(() => {
     let active = true;
 
-    getDeliveryOptions(mode, date || undefined)
+    getDeliveryOptions(mode, date || undefined, directProductId)
       .then((result) => {
         if (!active) return;
         setLoaded({ key: requestKey, options: result, error: "" });
@@ -65,7 +78,7 @@ export function DeliveryScheduleSection({ mode, date, slotId, onDateChange, onSl
     // onDateChange is a setter whose identity changes every render; including
     // it would re-fetch forever.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, date, requestKey]);
+  }, [mode, date, directProductId, requestKey]);
 
   // A slot that's no longer offered for the chosen date must not stay selected
   // — otherwise the customer submits a window the server will reject.
@@ -84,9 +97,8 @@ export function DeliveryScheduleSection({ mode, date, slotId, onDateChange, onSl
         Delivery Date &amp; Time
       </h2>
       <p className="mt-2 text-bhor-small text-bhor-text-muted">
-        {mode === "scheduled"
-          ? "Your BHORKIT will be prepared and delivered before Ganesh Chaturthi. Choose your preferred date and slot."
-          : "Pick the day and time window that suits you best."}
+        Pick a day and time window. Only the dates we can deliver everything in your order are
+        selectable.
       </p>
 
       {loadError ? (
@@ -100,19 +112,26 @@ export function DeliveryScheduleSection({ mode, date, slotId, onDateChange, onSl
         </p>
       ) : (
         <div className="mt-4 space-y-4">
-          <label className="block">
+          <div>
             <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
               Delivery Date
             </span>
-            <input
-              type="date"
-              min={options.minDate}
-              max={options.maxDate}
-              value={date}
-              onChange={(event) => onDateChange(event.target.value)}
-              className="mt-2 min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary sm:max-w-xs"
-            />
-          </label>
+            <div className="mt-2 sm:max-w-sm">
+              <DeliveryCalendar
+                minDate={options.minDate}
+                maxDate={options.maxDate}
+                today={options.today}
+                value={date}
+                onSelect={onDateChange}
+              />
+            </div>
+            {date ? (
+              <p className="mt-2 text-bhor-small text-bhor-text">
+                Delivering on{" "}
+                <strong className="font-bhor-bold text-bhor-primary">{formatDeliveryDate(date)}</strong>
+              </p>
+            ) : null}
+          </div>
 
           <div>
             <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">

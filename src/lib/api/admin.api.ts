@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, getApiUrl } from "@/src/lib/api/client";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, getApiUrl } from "@/src/lib/api/client";
 import type { BackendOrder, OrderStatus } from "@/src/lib/api/order.api";
 import type { CollectionProduct } from "@/src/data/products";
 
@@ -256,4 +256,52 @@ export async function markRefunded(orderId: string, note: string) {
 
 export function adminInvoiceUrl(orderId: string) {
   return getApiUrl(`/admin/orders/${encodeURIComponent(orderId)}/invoice`);
+}
+
+// --- delivery availability ---
+
+/**
+ * When each product range can be delivered, and the time slots that apply to
+ * all of them.
+ *
+ * The windows are what the checkout calendar is built from — but only after
+ * the server has intersected them for whatever is in the customer's order, so
+ * these are the raw configuration rather than anything a customer sees.
+ */
+export type AdminDeliveryWindow = {
+  slug: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type AdminDeliverySlot = {
+  id: string;
+  label: string;
+  startHour: number;
+  endHour: number;
+};
+
+export type AdminDeliverySettings = {
+  windows: AdminDeliveryWindow[];
+  slots: AdminDeliverySlot[];
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export async function getDeliverySettings() {
+  return (await apiGet<{ settings: AdminDeliverySettings }>("/admin/delivery/settings")).data.settings;
+}
+
+export type DeliverySettingsInput = {
+  windows?: Record<string, { startDate: string; endDate: string }>;
+  slots?: { startHour: number; endHour: number }[];
+};
+
+export async function saveDeliverySettings(input: DeliverySettingsInput) {
+  const response = await apiPut<{ settings: AdminDeliverySettings }, DeliverySettingsInput>(
+    "/admin/delivery/settings",
+    input,
+  );
+  return response.data.settings;
 }
