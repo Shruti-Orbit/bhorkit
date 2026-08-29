@@ -7,6 +7,8 @@ import { ArrowRight, Heart } from "lucide-react";
 import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
 import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct } from "@/src/utils/productState";
+import { looksLikeEmail, subscribeToLaunch } from "@/src/lib/api/notify.api";
+import { ApiClientError } from "@/src/lib/api/client";
 
 type ProductCardProps = {
   product: CollectionProduct;
@@ -28,32 +30,40 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
   const preorder = isPreOrderProduct(product);
   const readyStock = isReadyStockProduct(product);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
-  const [waitlistContact, setWaitlistContact] = useState("");
-  const [waitlistSaved, setWaitlistSaved] = useState(false);
+  const [waitlistEmail, setWaitlistEmail] = useState("");
+  const [waitlistMessage, setWaitlistMessage] = useState("");
+  const [waitlistError, setWaitlistError] = useState("");
+  const [isSubscribing, setIsSubscribing] = useState(false);
 
-  function saveWaitlist() {
-    const contact = waitlistContact.trim();
+  /**
+   * Signs the address up with the server.
+   *
+   * Everything that ends up stored beyond the address — the product's name,
+   * its range, where the request came from — is derived server-side from the
+   * product id, so there is nothing else to send. Submitting the same address
+   * twice is a success, not a failure: the server says which it was and the
+   * message it returns is what is shown.
+   */
+  async function joinWaitlist() {
+    const email = waitlistEmail.trim();
 
-    if (!contact) {
+    if (!looksLikeEmail(email)) {
+      setWaitlistError("Enter a valid email address");
       return;
     }
 
-    const key = "bhorkit_waitlist_requests";
-    const existing = window.localStorage.getItem(key);
-    const requests = existing ? safelyParseWaitlist(existing) : [];
-    window.localStorage.setItem(
-      key,
-      JSON.stringify([
-        ...requests,
-        {
-          productId: product.id,
-          productName: product.name,
-          contact,
-          createdAt: new Date().toISOString(),
-        },
-      ]),
-    );
-    setWaitlistSaved(true);
+    setIsSubscribing(true);
+    setWaitlistError("");
+
+    try {
+      const result = await subscribeToLaunch({ email, productId: product.id });
+      setWaitlistMessage(result.message);
+    } catch (error) {
+      setWaitlistError(
+        error instanceof ApiClientError ? error.message : "Something went wrong. Please try again.",
+      );
+      setIsSubscribing(false);
+    }
   }
 
   return (
@@ -107,9 +117,12 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
 
           {showActions && comingSoon ? (
             <div className="mt-3">
-              {waitlistSaved ? (
-                <p className="rounded-bhor-sm bg-bhor-primary-soft px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-primary">
-                  You&apos;re on the list ✨
+              {waitlistMessage ? (
+                <p
+                  role="status"
+                  className="rounded-bhor-sm bg-bhor-primary-soft px-3 py-2 text-bhor-small font-bhor-semibold text-bhor-primary"
+                >
+                  {waitlistMessage}
                 </p>
               ) : waitlistOpen ? (
                 <div className="space-y-2">
@@ -117,17 +130,37 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
                     We&apos;ll let you know when Navratri pre-orders open.
                   </p>
                   <input
-                    value={waitlistContact}
-                    onChange={(event) => setWaitlistContact(event.target.value)}
-                    placeholder="Email or mobile number"
-                    className="min-h-10 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream px-3 text-bhor-caption text-bhor-text outline-none focus:border-bhor-primary"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    value={waitlistEmail}
+                    onChange={(event) => {
+                      setWaitlistEmail(event.target.value);
+                      // Typing is an attempt to fix it, so the complaint goes.
+                      if (waitlistError) setWaitlistError("");
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void joinWaitlist();
+                    }}
+                    aria-label={`Email address to be notified about ${product.name}`}
+                    aria-invalid={Boolean(waitlistError)}
+                    placeholder="Email address"
+                    className={`min-h-10 w-full rounded-bhor-sm border bg-bhor-cream px-3 text-bhor-caption text-bhor-text outline-none focus:border-bhor-primary ${
+                      waitlistError ? "border-bhor-error" : "border-bhor-border"
+                    }`}
                   />
+                  {waitlistError ? (
+                    <p role="alert" className="text-bhor-caption font-bhor-medium text-bhor-error">
+                      {waitlistError}
+                    </p>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={saveWaitlist}
-                    className="inline-flex min-h-10 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white"
+                    onClick={() => void joinWaitlist()}
+                    disabled={isSubscribing}
+                    className="inline-flex min-h-10 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white disabled:opacity-70"
                   >
-                    Join Waitlist
+                    {isSubscribing ? "Adding..." : "Join Waitlist"}
                   </button>
                 </div>
               ) : (
@@ -175,13 +208,4 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
       </div>
     </article>
   );
-}
-
-function safelyParseWaitlist(value: string): unknown[] {
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
 }
