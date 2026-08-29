@@ -2,12 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Loader2, Lock, ShieldCheck } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
+import { FirstOrderGiftSection } from "@/src/components/checkout/FirstOrderGiftSection";
+import { getCheckoutGiftState, type CheckoutGiftState } from "@/src/lib/api/gift.api";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
 import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
@@ -27,6 +29,8 @@ export default function CheckoutPage() {
   } = useShop();
 
   const [policyAccepted, setPolicyAccepted] = useState(false);
+  const [giftState, setGiftState] = useState<CheckoutGiftState | null>(null);
+  const [selectedGiftId, setSelectedGiftId] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliverySlotId, setDeliverySlotId] = useState("");
 
@@ -47,6 +51,39 @@ export default function CheckoutPage() {
       void refreshOrders();
     },
   });
+
+  // Asked of the server, never inferred here: whether this is a first order
+  // depends on payment history the browser does not have.
+  useEffect(() => {
+    let isActive = true;
+
+    if (!isLoggedIn) {
+      // Deferred a tick so this isn't a synchronous setState in the effect
+      // body (react-hooks/set-state-in-effect).
+      queueMicrotask(() => {
+        if (isActive) setGiftState(null);
+      });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    getCheckoutGiftState()
+      .then((state) => {
+        if (isActive) setGiftState(state);
+      })
+      .catch(() => {
+        // A gift is a bonus, not a blocker — a failure here must not stop
+        // someone checking out.
+        if (isActive) setGiftState(null);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isLoggedIn]);
+
+  const selectGift = useCallback((giftId: string) => setSelectedGiftId(giftId), []);
 
   const isPreOrder = deliveryMode === "scheduled";
   const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
@@ -73,6 +110,7 @@ export default function CheckoutPage() {
     void startCheckout({
       addressId: selectedAddressId,
       deliveryMode,
+      ...(giftState?.eligible && selectedGiftId ? { giftId: selectedGiftId } : {}),
       deliveryDate,
       deliverySlotId,
       // Sends only the id and quantity; the server prices it.
@@ -171,6 +209,14 @@ export default function CheckoutPage() {
                   slotId={deliverySlotId}
                   onDateChange={setDeliveryDate}
                   onSlotChange={setDeliverySlotId}
+                />
+              ) : null}
+
+              {isLoggedIn ? (
+                <FirstOrderGiftSection
+                  state={giftState}
+                  selectedGiftId={selectedGiftId}
+                  onSelect={selectGift}
                 />
               ) : null}
 

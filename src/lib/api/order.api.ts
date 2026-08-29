@@ -112,6 +112,8 @@ export type CreateCheckoutInput = {
    * influence the amount charged. Omit it to check out the persistent cart.
    */
   directItem?: { productId: string; quantity: number };
+  /** Which first-order gift card was chosen, when one was offered. */
+  giftId?: string;
 };
 
 export async function createCheckout(input: CreateCheckoutInput) {

@@ -35,6 +35,12 @@ type StartCheckoutInput = {
   deliverySlotId: string;
   /** Set for a Buy Now; omitted for a cart checkout. */
   directItem?: { productId: string; quantity: number };
+  /**
+   * The first-order gift card the customer clicked. Passed straight through —
+   * the server decides whether this customer may choose at all, and ignores or
+   * refuses it otherwise.
+   */
+  giftId?: string;
 };
 
 function readPendingOrderId() {
