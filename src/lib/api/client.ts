@@ -98,7 +98,29 @@ async function apiRequest<TData, TMeta = unknown>(
     },
   });
 
-  const payload = (await response.json()) as ApiResponse<TData, TMeta>;
+  // Not every response is JSON. The rate limiter answers with plain text, and
+  // a proxy or gateway in front of the API can return HTML on a bad day.
+  // Parsing unconditionally turned those into a SyntaxError thrown from inside
+  // the client — which surfaced to the user as "Unexpected token 'T'" and took
+  // the page down, instead of the request simply failing with a readable
+  // reason.
+  const raw = await response.text();
+  let payload: ApiResponse<TData, TMeta> | null = null;
+  try {
+    payload = raw ? (JSON.parse(raw) as ApiResponse<TData, TMeta>) : null;
+  } catch {
+    payload = null;
+  }
+
+  if (!payload) {
+    throw new ApiClientError(
+      response.status === 429
+        ? "You're going a bit fast. Please wait a moment and try again."
+        : "Something went wrong. Please try again.",
+      response.status,
+      response.status === 429 ? "RATE_LIMITED" : "UNEXPECTED_RESPONSE",
+    );
+  }
 
   if (!response.ok || !payload.success) {
     throw new ApiClientError(

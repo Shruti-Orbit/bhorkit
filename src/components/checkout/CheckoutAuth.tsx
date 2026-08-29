@@ -2,11 +2,9 @@
 
 import { useState } from "react";
 import { useShop } from "@/src/context/ShopContext";
-import { getGoogleLoginUrl } from "@/src/lib/api/auth.api";
 
 export function CheckoutAuth() {
-  const { currentUser, isAuthReady, isLoggedIn } = useShop();
-  const [isLoading, setIsLoading] = useState(false);
+  const { currentUser, isAuthReady, isLoggedIn, openAuthModal } = useShop();
   const [imageFailed, setImageFailed] = useState(false);
 
   // Avoids flashing the "Continue with Google" button in front of an
@@ -42,13 +40,6 @@ export function CheckoutAuth() {
     );
   }
 
-  function continueWithGoogle() {
-    setIsLoading(true);
-    const loginUrl = new URL(getGoogleLoginUrl());
-    loginUrl.searchParams.set("returnTo", "/checkout");
-    window.location.href = loginUrl.toString();
-  }
-
   return (
     <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
       <div className="space-y-4">
@@ -59,16 +50,19 @@ export function CheckoutAuth() {
           </p>
         </div>
 
+        {/* Opens the shared login modal rather than starting Google directly.
+            The terms checkbox lives in that modal, and a second entry point
+            that skipped it would be a hole in exactly the thing it is there
+            to enforce. */}
         <button
           type="button"
-          onClick={continueWithGoogle}
-          disabled={isLoading}
-          className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-surface px-5 text-bhor-button font-bhor-bold text-bhor-text transition-colors hover:border-bhor-primary hover:text-bhor-primary disabled:opacity-70"
+          onClick={() => openAuthModal({ redirectTo: "/checkout" })}
+          className="inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-bhor-sm border border-bhor-border bg-bhor-surface px-5 text-bhor-button font-bhor-bold text-bhor-text transition-colors hover:border-bhor-primary hover:text-bhor-primary"
         >
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-base font-bhor-bold text-bhor-primary shadow-bhor-soft">
             G
           </span>
-          {isLoading ? "Redirecting..." : "Continue with Google"}
+          Continue with Google
         </button>
       </div>
     </section>

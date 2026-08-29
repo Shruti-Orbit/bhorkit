@@ -10,7 +10,13 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import type { CollectionProduct } from "@/src/data/products";
-import { getCurrentUser, logout as logoutFromBackend } from "@/src/lib/api/auth.api";
+import {
+  cancelSignup,
+  getCurrentUser,
+  getPendingSignup,
+  logout as logoutFromBackend,
+  type PendingSignup,
+} from "@/src/lib/api/auth.api";
 import { ApiClientError } from "@/src/lib/api/client";
 import {
   addToWishlist as addToWishlistApi,
@@ -46,6 +52,11 @@ export type CurrentUser = {
   id: string;
   image?: string | null;
   name: string;
+  /**
+   * Whether this account has agreed to the CURRENT terms. Always the server's
+   * answer, refetched with the session — never inferred from a ticked box.
+   */
+  policiesAccepted: boolean;
 };
 
 export type CartItem = {
@@ -101,6 +112,10 @@ type ShopContextValue = {
   discountUnlocked: boolean;
   authModalOpen: boolean;
   authRedirectTo: string;
+  /** Signed in, but has not agreed to the current terms. */
+  needsPolicyAcceptance: boolean;
+  /** Google verified an email with no account yet, awaiting acceptance. */
+  pendingSignup: PendingSignup | null;
   successMessage: string;
   errorMessage: string;
   cartDrawerOpen: boolean;
@@ -121,6 +136,8 @@ type ShopContextValue = {
   scheduledDeliverySlot: string;
   openAuthModal: (options?: AuthModalOptions) => void;
   closeAuthModal: () => void;
+  markPoliciesAccepted: () => void;
+  abandonSignup: () => void;
   completeAuth: (user: CurrentUser) => void;
   logout: () => void;
   openCartDrawer: () => void;
@@ -214,6 +231,8 @@ function errorMessageFrom(error: unknown, fallback: string) {
 
 export function ShopProvider({ children }: { children: ReactNode }) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [pendingSignup, setPendingSignup] = useState<PendingSignup | null>(null);
+  const [signupCheckRequested, setSignupCheckRequested] = useState(false);
   const [authRedirectTo, setAuthRedirectTo] = useState("/");
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -264,6 +283,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const [scheduledDeliverySlot, setScheduledDeliverySlot] = useState("");
 
   const isLoggedIn = Boolean(currentUser);
+  // Derived, never stored: there is one source for this and it is the session
+  // response, so the flag cannot drift out of step with what the API believes.
+  const needsPolicyAcceptance = Boolean(currentUser) && currentUser?.policiesAccepted === false;
   const discountUnlocked = isLoggedIn;
   const userId = currentUser?.id ?? "";
   const isOrdersLoading = (Boolean(userId) && ordersSyncedUserId !== userId) || isRefreshingOrders;
@@ -313,6 +335,80 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     queueMicrotask(() => setDirectCheckoutItem(restored));
   }, []);
 
+  /**
+   * Picks up a signup that came back from Google without an account.
+   *
+   * The query parameter is only a hint that it is worth asking; the answer
+   * comes from the server, which is holding the verified profile behind an
+   * httpOnly cookie. Adding ?signup=terms by hand therefore gets a 404 and
+   * nothing else — the acceptance step cannot be conjured up, and equally
+   * cannot be skipped by removing the parameter, because no session exists
+   * until it is completed.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("signup") !== "terms") return;
+
+    // Noting the request in state, rather than asking here, is deliberate. The
+    // parameter is stripped from the URL immediately below, so an effect that
+    // both read the URL and awaited the answer would lose the answer whenever
+    // it ran twice: the first pass would be cancelled mid-flight and the
+    // second would find the parameter already gone. State survives that.
+    queueMicrotask(() => setSignupCheckRequested(true));
+
+    params.delete("signup");
+    params.delete("returnTo");
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!signupCheckRequested) return;
+
+    let isActive = true;
+    getPendingSignup()
+      .then((pending) => {
+        if (!isActive) return;
+        setPendingSignup(pending);
+        setAuthRedirectTo(pending.returnTo);
+        setAuthModalOpen(true);
+      })
+      .catch(() => {
+        // Nothing pending — an expired or already-finished signup.
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [signupCheckRequested]);
+
+  // The server bounces an unaccepted sign-in back here with where it was
+  // headed, so accepting can resume the journey instead of dead-ending on the
+  // homepage. Only ever an in-app path — anything else is ignored rather than
+  // followed.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("consent") !== "required") return;
+
+    const requested = params.get("returnTo") ?? "";
+    if (requested.startsWith("/") && !requested.startsWith("//")) {
+      queueMicrotask(() => setAuthRedirectTo(requested));
+    }
+
+    params.delete("consent");
+    params.delete("returnTo");
+    const nextSearch = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${nextSearch ? `?${nextSearch}` : ""}${window.location.hash}`,
+    );
+  }, []);
+
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const authStatus = params.get("auth");
@@ -350,6 +446,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
             id: user.id,
             image: user.image,
             name: user.name,
+            policiesAccepted: user.policiesAccepted,
           });
           setIsAuthReady(true);
         })
@@ -426,8 +523,16 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         setSavedItems(wishlist);
         applyAddressBook(addressBook);
         setOrders(userOrders);
-      } catch {
+      } catch (error) {
         if (!isActive) return;
+        // A signed-in account that has not yet agreed to the terms is refused
+        // by every one of these endpoints, by design. That is an expected step
+        // in the sign-in flow, not a failure — the customer is on their way to
+        // the acceptance screen, and telling them their data failed to load
+        // would be both alarming and untrue.
+        if (error instanceof ApiClientError && error.code === "POLICIES_ACCEPTANCE_REQUIRED") {
+          return;
+        }
         setErrorMessage("Couldn't load your saved cart, wishlist and orders. Please refresh.");
       } finally {
         // Marked synced either way — a failed load shouldn't leave every
@@ -441,12 +546,33 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     };
   }, [applyAddressBook, currentUser]);
 
+  // Signing in normally dismisses the modal. The exception is an account that
+  // still owes an acceptance — for them the modal is not a login prompt any
+  // more, it is the acceptance step, and closing it would strand someone with
+  // a session that every API route refuses.
   useEffect(() => {
-    if (isLoggedIn) {
+    if (isLoggedIn && !needsPolicyAcceptance) {
       const timer = window.setTimeout(() => setAuthModalOpen(false), 0);
       return () => window.clearTimeout(timer);
     }
-  }, [isLoggedIn]);
+    if (needsPolicyAcceptance) {
+      const timer = window.setTimeout(() => setAuthModalOpen(true), 0);
+      return () => window.clearTimeout(timer);
+    }
+  }, [isLoggedIn, needsPolicyAcceptance]);
+
+  /**
+   * Walking away from the acceptance step throws the parked profile away.
+   *
+   * Told to the server rather than just forgotten locally, so the half-finished
+   * signup stops existing immediately instead of lingering until it expires.
+   * There is no account to delete — one was never created.
+   */
+  const abandonSignup = useCallback(() => {
+    setPendingSignup(null);
+    setAuthModalOpen(false);
+    void cancelSignup().catch(() => undefined);
+  }, []);
 
   const effectiveSelectedAddressId =
     selectedAddressId || addresses.find((address) => address.isDefault)?.id || addresses[0]?.id || "";
@@ -458,6 +584,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
   const closeAuthModal = useCallback(() => {
     setAuthModalOpen(false);
+  }, []);
+
+  const markPoliciesAccepted = useCallback(() => {
+    setCurrentUser((user) => (user ? { ...user, policiesAccepted: true } : user));
   }, []);
 
   const completeAuth = useCallback((user: CurrentUser) => {
@@ -753,6 +883,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       discountUnlocked,
       authModalOpen,
       authRedirectTo,
+      needsPolicyAcceptance,
+      pendingSignup,
       successMessage,
       errorMessage,
       cartDrawerOpen,
@@ -773,6 +905,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       scheduledDeliverySlot,
       openAuthModal,
       closeAuthModal,
+      markPoliciesAccepted,
+      abandonSignup,
       completeAuth,
       logout,
       openCartDrawer,
@@ -807,6 +941,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       addresses,
       authRedirectTo,
       authModalOpen,
+      needsPolicyAcceptance,
+      markPoliciesAccepted,
+      pendingSignup,
+      abandonSignup,
       buyNow,
       cartCount,
       cartDrawerOpen,

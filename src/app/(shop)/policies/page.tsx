@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { getPolicies, type PolicyBlock, type PolicyInline } from "@/src/lib/api/policy.api";
+import { getPolicies } from "@/src/lib/api/policy.api";
+import { PolicyBlocks } from "@/src/components/policies/PolicyBlocks";
 import { PolicyNav } from "@/src/components/policies/PolicyNav";
 
 // Rendered per request rather than prerendered: the policies are editable from
@@ -13,102 +14,6 @@ export const metadata: Metadata = {
     "Shipping & delivery, returns & refunds, privacy, terms & conditions and cancellation policies for BHORKIT.",
 };
 
-function Text({ content }: { content: PolicyInline[] }) {
-  return (
-    <>
-      {content.map((part, index) =>
-        part.bold ? (
-          <strong key={index} className="font-bhor-semibold text-bhor-text">
-            {part.text}
-          </strong>
-        ) : (
-          <span key={index}>{part.text}</span>
-        ),
-      )}
-    </>
-  );
-}
-
-function Blocks({ blocks }: { blocks: PolicyBlock[] }) {
-  return (
-    <>
-      {blocks.map((block, index) => {
-        if (block.kind === "paragraph") {
-          return (
-            <p key={index} className="mt-3 text-bhor-small leading-bhor-body text-bhor-text-muted md:text-bhor-body-mobile">
-              <Text content={block.content} />
-            </p>
-          );
-        }
-
-        if (block.kind === "bullets") {
-          return (
-            <ul key={index} className="mt-3 space-y-2 pl-5">
-              {block.items.map((item, itemIndex) => (
-                <li
-                  key={itemIndex}
-                  className="list-disc text-bhor-small leading-bhor-body text-bhor-text-muted marker:text-bhor-gold md:text-bhor-body-mobile"
-                >
-                  <Text content={item} />
-                </li>
-              ))}
-            </ul>
-          );
-        }
-
-        if (block.kind === "numbers") {
-          return (
-            <ol key={index} className="mt-3 space-y-2 pl-5">
-              {block.items.map((item, itemIndex) => (
-                <li
-                  key={itemIndex}
-                  className="list-decimal text-bhor-small leading-bhor-body text-bhor-text-muted marker:font-bhor-bold marker:text-bhor-gold md:text-bhor-body-mobile"
-                >
-                  <Text content={item} />
-                </li>
-              ))}
-            </ol>
-          );
-        }
-
-        // Tables are the one block that can be wider than a phone, so it gets
-        // its own scroll container rather than pushing the page sideways.
-        return (
-          <div key={index} className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[420px] border-collapse text-left text-bhor-small">
-              <thead>
-                <tr>
-                  {block.head.map((cell, cellIndex) => (
-                    <th
-                      key={cellIndex}
-                      className="border-b border-bhor-border px-3 py-2 align-top text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted"
-                    >
-                      <Text content={cell} />
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {block.rows.map((row, rowIndex) => (
-                  <tr key={rowIndex} className="border-b border-bhor-border last:border-0">
-                    {row.map((cell, cellIndex) => (
-                      <td
-                        key={cellIndex}
-                        className="px-3 py-3 align-top leading-bhor-body text-bhor-text-muted"
-                      >
-                        <Text content={cell} />
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        );
-      })}
-    </>
-  );
-}
 
 /**
  * All five policies on one page.
@@ -140,7 +45,7 @@ export default async function PoliciesPage() {
             {title}
           </h1>
           <div className="mt-4 max-w-[760px]">
-            <Blocks blocks={preamble} />
+            <PolicyBlocks blocks={preamble} />
           </div>
         </div>
       </section>
@@ -162,7 +67,7 @@ export default async function PoliciesPage() {
                   {section.title}
                 </h2>
 
-                <Blocks blocks={section.intro} />
+                <PolicyBlocks blocks={section.intro} />
 
                 {section.subsections.map((subsection) => (
                   <section key={subsection.id} id={subsection.id} className="mt-6 scroll-mt-28">
@@ -172,7 +77,7 @@ export default async function PoliciesPage() {
                       ) : null}
                       {subsection.title}
                     </h3>
-                    <Blocks blocks={subsection.blocks} />
+                    <PolicyBlocks blocks={subsection.blocks} />
                   </section>
                 ))}
               </article>
