@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Lock, ShieldCheck } from "lucide-react";
-import { OrderSummary } from "@/src/components/cart/OrderSummary";
+import { OrderSummary, type SummaryItem } from "@/src/components/cart/OrderSummary";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
@@ -16,6 +16,7 @@ import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
 import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
 import { calculateCouponDiscount, formatCurrency, parsePrice } from "@/src/utils/discount";
+import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CheckoutPage() {
   const {
@@ -88,6 +89,40 @@ export default function CheckoutPage() {
   }, [isLoggedIn]);
 
   const selectGift = useCallback((giftId: string) => setSelectedGiftId(giftId), []);
+
+  /**
+   * What the customer is actually buying, for the summary.
+   *
+   * Built from whichever source this checkout is using — the cart, or the one
+   * product of a Buy Now — so the list beside the totals is always the same
+   * set of items those totals were calculated from.
+   *
+   * Display only. The server re-prices every line from the catalogue when the
+   * order is created, so nothing here can influence what is charged.
+   */
+  const summaryItems: SummaryItem[] = isDirect
+    ? direct.product
+      ? [{
+          id: direct.product.id,
+          name: direct.product.name,
+          image: direct.product.image,
+          imageAlt: direct.product.imageAlt,
+          quantity: directCheckoutItem?.quantity ?? 1,
+          unitPrice: parsePrice(direct.product.price),
+          lineTotal: parsePrice(direct.product.price) * (directCheckoutItem?.quantity ?? 1),
+          ...(isPreOrderProduct(direct.product) ? { badge: "Pre-order" } : {}),
+        }]
+      : []
+    : cartItems.map((line) => ({
+        id: line.product.id,
+        name: line.product.name,
+        image: line.product.image,
+        imageAlt: line.product.imageAlt,
+        quantity: line.quantity,
+        unitPrice: parsePrice(line.product.price),
+        lineTotal: parsePrice(line.product.price) * line.quantity,
+        ...(isPreOrderProduct(line.product) ? { badge: "Pre-order" } : {}),
+      }));
 
   const isPreOrder = deliveryMode === "scheduled";
   // A preview only. The order is priced again server-side from catalogue
@@ -250,6 +285,7 @@ export default function CheckoutPage() {
         {hasItems ? (
           <div className="space-y-4">
             <OrderSummary
+              items={summaryItems}
               {...(isDirect && direct.totals ? { totals: direct.totals } : {})}
               coupon={summaryCoupon}
               couponControl={

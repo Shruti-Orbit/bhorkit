@@ -20,9 +20,12 @@ export async function generateMetadata({
   const product = detail?.product;
 
   if (!product) {
-    return {
-      title: "Product Not Found | BHORKIT",
-    };
+    // Raised here, not just in the component below, because metadata is
+    // resolved first: once it returns successfully Next has committed a 200
+    // and begun streaming, and a notFound() thrown afterwards can only swap
+    // the body — leaving a "soft 404" that search engines index as a real
+    // page. /shop/[category] does the same for the same reason.
+    notFound();
   }
 
   return {
