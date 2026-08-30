@@ -21,7 +21,7 @@ export function FinalProductCta({ product }: FinalProductCtaProps) {
             Reserve {product.name} and keep your celebration simple, beautiful and thoughtfully prepared.
           </p>
           <Link
-            href="/pre-order"
+            href="/shop/ganesh-chaturthi"
             className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-6 text-bhor-button font-bhor-bold uppercase text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
           >
             Pre-Order Ganesh Kit
