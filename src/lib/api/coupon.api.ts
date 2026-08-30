@@ -17,10 +17,52 @@ export async function applyCoupon(code: string) {
   return response.data;
 }
 
+/**
+ * The promotional bar, as the storefront sees it.
+ *
+ * Only what the bar draws — no settings, no timestamps beyond the two the
+ * countdown needs. `serverTime` is the moment the API answered, used to
+ * correct for a browser clock that is wrong.
+ */
+export type Announcement = {
+  message: string;
+  code: string;
+  discountPercent: number;
+  buttonLabel: string;
+  endsAt: string;
+  serverTime: string;
+  background: string;
+  textColor: string;
+  accentColor: string;
+  buttonBackground: string;
+  buttonTextColor: string;
+};
+
+export async function getAnnouncement() {
+  const response = await apiGet<{ announcement: Announcement | null }>("/orders/announcement");
+  return response.data.announcement;
+}
+
 // --- admin ---
+
+/** The bar's configuration, as the admin screen edits it. */
+export type AnnouncementSettings = {
+  enabled: boolean;
+  message: string;
+  buttonLabel: string;
+  /** ISO instants, or empty when unset. */
+  startsAt: string;
+  endsAt: string;
+  background: string;
+  textColor: string;
+  accentColor: string;
+  buttonBackground: string;
+  buttonTextColor: string;
+};
 
 export type AdminCoupon = AppliedCoupon & {
   isActive: boolean;
+  announcement: AnnouncementSettings;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -30,7 +72,12 @@ export async function getCouponForAdmin() {
   return response.data.coupon;
 }
 
-export type CouponInput = { code: string; discountPercent: number; isActive: boolean };
+export type CouponInput = {
+  code: string;
+  discountPercent: number;
+  isActive: boolean;
+  announcement?: Partial<AnnouncementSettings>;
+};
 
 export async function saveCoupon(input: CouponInput) {
   const response = await apiPut<{ coupon: AdminCoupon }, CouponInput>("/admin/coupon", input);
