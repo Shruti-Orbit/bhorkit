@@ -1,14 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Camera, Mail, MapPin, Phone } from "lucide-react";
+import { FooterTrending } from "@/src/components/layout/FooterTrending";
 
+// Every href here points at a route that exists. The Shop links use the same
+// range slugs the Shop navigation and the API filter use, so a column heading
+// and the page it opens can never disagree about which products belong to it.
 const footerGroups = [
   {
     title: "Shop",
     links: [
-      { label: "Ganesh Chaturthi Kits", href: "/shop/ganesh-kits" },
-      { label: "Navratri Pre-Orders", href: "/pre-order" },
-      { label: "Daily Puja Kits", href: "/shop/daily-puja" },
+      { label: "Ganesh Chaturthi Kits", href: "/shop/ganesh-chaturthi" },
+      { label: "Navratri Pre-Orders", href: "/shop/navratri-upcoming" },
+      { label: "Daily Puja Kits", href: "/shop/regular-pooja" },
       { label: "All Products", href: "/shop" },
     ],
   },
@@ -18,7 +22,7 @@ const footerGroups = [
       { label: "Track Order", href: "/track-order" },
       { label: "Shipping & Delivery", href: "/policies#shipping-delivery" },
       { label: "Returns & Refunds", href: "/policies#returns-refunds" },
-      { label: "Contact Us", href: "/contact" },
+      { label: "Contact Us", href: "/support" },
     ],
   },
   {
@@ -28,15 +32,6 @@ const footerGroups = [
       { label: "Terms & Conditions", href: "/policies#terms" },
       { label: "Refund Policy", href: "/policies#returns-refunds" },
       { label: "Cancellation Policy", href: "/policies#cancellation" },
-    ],
-  },
-  {
-    title: "BHORKIT",
-    links: [
-      { label: "About Us", href: "/about" },
-      { label: "Blog", href: "/blog" },
-      { label: "Careers", href: "/careers" },
-      { label: "Corporate Gifting", href: "/corporate-gifting" },
     ],
   },
 ];
@@ -94,6 +89,10 @@ export function Footer() {
               </ul>
             </nav>
           ))}
+
+          {/* The fourth column is the catalogue rather than a fixed list, so it
+              is fetched instead of being written out above. */}
+          <FooterTrending />
         </div>
       </div>
 
