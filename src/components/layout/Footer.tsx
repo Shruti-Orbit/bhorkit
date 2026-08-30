@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowRight, Camera, Mail, MapPin, Phone } from "lucide-react";
+import { Camera, Mail, MapPin, Phone } from "lucide-react";
 import { FooterTrending } from "@/src/components/layout/FooterTrending";
+import { FooterNewsletter } from "@/src/components/layout/FooterNewsletter";
 
 // Every href here points at a route that exists. The Shop links use the same
 // range slugs the Shop navigation and the API filter use, so a column heading
@@ -101,25 +102,7 @@ export function Footer() {
           <p className="text-bhor-caption text-white/70">
             © 2026 BHORKIT. All Rights Reserved.
           </p>
-          <form className="flex max-w-md gap-2" action="/newsletter">
-            <label htmlFor="footer-email" className="sr-only">
-              Email address
-            </label>
-            <input
-              id="footer-email"
-              name="email"
-              type="email"
-              placeholder="Enter your email"
-              className="min-h-11 flex-1 rounded-bhor-sm border border-white/20 bg-white px-4 text-bhor-small text-bhor-text placeholder:text-bhor-text-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-gold-light"
-            />
-            <button
-              type="submit"
-              aria-label="Subscribe"
-              className="inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-gold-light px-4 text-bhor-primary-dark transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-gold-light"
-            >
-              <ArrowRight className="h-4 w-4" aria-hidden />
-            </button>
-          </form>
+          <FooterNewsletter />
           <Link
             href="https://www.instagram.com/"
             className="inline-flex items-center gap-2 text-bhor-caption text-white/80 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-gold-light"

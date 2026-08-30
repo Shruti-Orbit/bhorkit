@@ -8,6 +8,7 @@ import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
 import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct } from "@/src/utils/productState";
 import { looksLikeEmail, subscribeToLaunch } from "@/src/lib/api/notify.api";
+import { getBestEffortLocation } from "@/src/lib/geolocation";
 import { ApiClientError } from "@/src/lib/api/client";
 
 type ProductCardProps = {
@@ -56,7 +57,11 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
     setWaitlistError("");
 
     try {
-      const result = await subscribeToLaunch({ email, productId: product.id });
+      // Best-effort, the same as the footer sign-up and the support form: if
+      // the browser cannot or will not say where it is, this resolves to null
+      // and the subscription is recorded without one.
+      const location = await getBestEffortLocation();
+      const result = await subscribeToLaunch({ email, productId: product.id, location });
       setWaitlistMessage(result.message);
     } catch (error) {
       setWaitlistError(

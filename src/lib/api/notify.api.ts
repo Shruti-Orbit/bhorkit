@@ -1,4 +1,5 @@
 import { apiPost } from "@/src/lib/api/client";
+import type { RawGeoLocation } from "@/src/lib/geolocation";
 
 /**
  * Asks to be told when a Coming Soon product launches.
@@ -16,10 +17,39 @@ export type LaunchSubscription = {
   alreadyOnList: boolean;
 };
 
-export async function subscribeToLaunch(input: { email: string; productId: string }) {
-  const response = await apiPost<LaunchSubscription, { email: string; productId: string }>(
+export async function subscribeToLaunch(input: {
+  email: string;
+  productId: string;
+  /** The browser's own position, when the visitor allowed it. */
+  location?: RawGeoLocation;
+}) {
+  const response = await apiPost<
+    LaunchSubscription,
+    { email: string; productId: string; location: RawGeoLocation }
+  >("/notify/subscribe", {
+    email: input.email,
+    productId: input.productId,
+    location: input.location ?? null,
+  });
+  return { alreadyOnList: response.data.alreadyOnList, message: response.message };
+}
+
+/**
+ * Signs an address up to the newsletter.
+ *
+ * The same endpoint as a launch alert, with no product id — that absence is
+ * what makes it a newsletter subscription. Reusing the route means this form
+ * gets the same validation, rate limiting and duplicate handling for free, and
+ * the server decides the wording of the confirmation.
+ *
+ * `location` is the browser's own position when the visitor allowed it, the
+ * same shape the support form sends. Coordinates only: the server turns them
+ * into a place name, so nothing here can claim to be somewhere it is not.
+ */
+export async function subscribeToNewsletter(email: string, location: RawGeoLocation = null) {
+  const response = await apiPost<LaunchSubscription, { email: string; location: RawGeoLocation }>(
     "/notify/subscribe",
-    input,
+    { email, location },
   );
   return { alreadyOnList: response.data.alreadyOnList, message: response.message };
 }
