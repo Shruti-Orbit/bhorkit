@@ -7,7 +7,13 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   Card, ErrorState, Field, LoadingState, PageHeader, Toast, inputClass,
 } from "@/src/components/admin/ui";
-import { createProduct, getProduct, updateProduct, type AdminProduct } from "@/src/lib/api/admin.api";
+import {
+  createProduct, getProduct, listIngredients, updateProduct,
+  type AdminIngredient, type AdminProduct,
+} from "@/src/lib/api/admin.api";
+import {
+  AdvancedContentForm, EMPTY_ADVANCED, type AdvancedContent,
+} from "@/src/components/admin/product/AdvancedContentForm";
 import { shopCategories } from "@/src/data/shopCategories";
 import type { ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError } from "@/src/lib/api/client";
@@ -19,23 +25,35 @@ type ImageRow = { src: string; alt: string };
 
 /**
  * Every field the backend requires, with defaults good enough to create a
- * valid product. The catalogue document also carries rich marketing content
- * (highlights, contents, story, packaging, FAQs, reviews); those are edited
- * through the Advanced panel rather than eight bespoke sub-forms, which would
- * bury the fields staff actually change day to day.
+ * valid product. The richer marketing content — highlights, kit contents,
+ * story, packaging, FAQs, delivery, reviews — is edited through
+ * AdvancedContentForm, as ordinary labelled inputs rather than JSON.
  */
-const ADVANCED_KEYS = ["highlights", "contents", "howToUse", "story", "packaging", "faqs", "reviews", "delivery", "preorder", "badge"] as const;
-
-const ADVANCED_DEFAULTS: Record<string, unknown> = {
-  highlights: [],
-  contents: [],
-  howToUse: [],
-  story: { eyebrow: "", title: "", description: "", image: "", imageAlt: "" },
-  packaging: { title: "", points: [], image: "", imageAlt: "" },
-  faqs: [],
-  reviews: [],
-  delivery: { location: "Patna", description: "", availablePincodes: [], twoHourEligiblePincodes: [], supportsTwoHourDelivery: false },
-};
+/** Fills in whatever a product is missing, so every field has something to bind to. */
+function toAdvanced(product: Partial<AdminProduct>): AdvancedContent {
+  return {
+    highlights: product.highlights ?? [],
+    contents: (product.contents ?? []).map((line) => ({
+      ingredientId: (line as { ingredientId?: string }).ingredientId ?? "",
+      quantity: line.quantity ?? "",
+      name: line.name,
+      unit: line.unit,
+    })),
+    howToUse: product.howToUse ?? [],
+    story: { ...EMPTY_ADVANCED.story, ...(product.story ?? {}) },
+    packaging: { ...EMPTY_ADVANCED.packaging, ...(product.packaging ?? {}) },
+    faqs: product.faqs ?? [],
+    reviews: (product.reviews ?? []).map((review) => ({
+      customerName: review.customerName ?? "",
+      rating: review.rating ?? 5,
+      date: review.date ?? "",
+      verified: review.verified ?? false,
+      content: review.content ?? "",
+    })),
+    delivery: { ...EMPTY_ADVANCED.delivery, ...(product.delivery ?? {}) },
+    preorder: { ...EMPTY_ADVANCED.preorder, ...(product.preorder ?? {}) },
+  };
+}
 
 export default function AdminProductFormPage() {
   const raw = useParams<{ productId: string }>().productId;
@@ -54,13 +72,13 @@ export default function AdminProductFormPage() {
     shopCategory: "regular-pooja" as ShopCategorySlug, sortOrder: 0, readyStock: true,
   });
   const [images, setImages] = useState<ImageRow[]>([]);
-  const [advanced, setAdvanced] = useState("{}");
-  const [advancedError, setAdvancedError] = useState("");
+  const [advanced, setAdvanced] = useState<AdvancedContent>(EMPTY_ADVANCED);
+  const [ingredients, setIngredients] = useState<AdminIngredient[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const load = useCallback(() => {
     if (isNew) {
-      setAdvanced(JSON.stringify(ADVANCED_DEFAULTS, null, 2));
+      setAdvanced(EMPTY_ADVANCED);
       setState("ready");
       return;
     }
@@ -80,6 +98,16 @@ export default function AdminProductFormPage() {
     queueMicrotask(load);
   }, [load]);
 
+  // The ingredient picker needs the inventory. Failing to load it leaves the
+  // picker empty with an explanation rather than breaking the whole form.
+  useEffect(() => {
+    let active = true;
+    listIngredients()
+      .then((loaded) => { if (active) setIngredients(loaded.ingredients); })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, []);
+
   function hydrate(product: AdminProduct) {
     setCore({
       id: product.id, sku: product.sku, slug: product.slug, name: product.name,
@@ -90,12 +118,7 @@ export default function AdminProductFormPage() {
       readyStock: product.stock?.readyStock ?? true,
     });
     setImages(product.images ?? []);
-    const rest: Record<string, unknown> = {};
-    for (const key of ADVANCED_KEYS) {
-      const value = (product as unknown as Record<string, unknown>)[key];
-      if (value !== undefined) rest[key] = value;
-    }
-    setAdvanced(JSON.stringify(rest, null, 2));
+    setAdvanced(toAdvanced(product));
   }
 
   function field<K extends keyof typeof core>(key: K, value: (typeof core)[K]) {
@@ -103,18 +126,13 @@ export default function AdminProductFormPage() {
   }
 
   async function save() {
-    let parsedAdvanced: Record<string, unknown>;
-    try {
-      parsedAdvanced = JSON.parse(advanced || "{}") as Record<string, unknown>;
-      setAdvancedError("");
-    } catch {
-      setAdvancedError("Advanced content isn't valid JSON.");
-      setShowAdvanced(true);
-      return;
-    }
-
     const body: Record<string, unknown> = {
-      ...parsedAdvanced,
+      ...advanced,
+      // Only complete lines are sent. A half-filled row is someone mid-edit,
+      // not an instruction to save an ingredient with no amount.
+      contents: advanced.contents
+        .filter((line) => line.ingredientId && line.quantity.trim())
+        .map((line) => ({ ingredientId: line.ingredientId, quantity: line.quantity.trim() })),
       sku: core.sku.trim(),
       slug: core.slug.trim(),
       name: core.name.trim(),
@@ -288,19 +306,12 @@ export default function AdminProductFormPage() {
               {showAdvanced ? "▾" : "▸"} Advanced content
             </button>
             <p className="mt-1 text-bhor-caption text-bhor-text-muted">
-              Highlights, kit contents, story, packaging, FAQs, delivery and reviews, as JSON.
+              Ingredients, highlights, story, packaging, FAQs, delivery and reviews.
             </p>
             {showAdvanced ? (
-              <>
-                <textarea
-                  value={advanced}
-                  onChange={(e) => { setAdvanced(e.target.value); setAdvancedError(""); }}
-                  rows={16}
-                  spellCheck={false}
-                  className={`${inputClass} mt-3 min-h-64 py-2 font-mono text-bhor-caption`}
-                />
-                {advancedError ? <p className="mt-1 text-bhor-caption text-bhor-error">{advancedError}</p> : null}
-              </>
+              <div className="mt-4">
+                <AdvancedContentForm value={advanced} onChange={setAdvanced} ingredients={ingredients} />
+              </div>
             ) : null}
           </Card>
         </div>

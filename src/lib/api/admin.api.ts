@@ -305,3 +305,44 @@ export async function saveDeliverySettings(input: DeliverySettingsInput) {
   );
   return response.data.settings;
 }
+
+// --- inventory ---
+
+/**
+ * The ingredient list every kit is built from.
+ *
+ * A product does not name its ingredients; it points at these rows. The unit
+ * belongs to the ingredient rather than to the product line, because it is a
+ * property of the substance — camphor is weighed in grams wherever it appears.
+ */
+export type AdminIngredient = {
+  id: string;
+  name: string;
+  unit: string;
+  quantity: number;
+  updatedAt: string;
+};
+
+export async function listIngredients() {
+  const response = await apiGet<{ ingredients: AdminIngredient[]; units: string[] }>("/admin/ingredients");
+  return response.data;
+}
+
+export type IngredientInput = { name: string; unit: string; quantity: number };
+
+export async function createIngredient(input: IngredientInput) {
+  const response = await apiPost<{ ingredient: AdminIngredient }, IngredientInput>("/admin/ingredients", input);
+  return response.data.ingredient;
+}
+
+export async function updateIngredient(id: string, input: Partial<IngredientInput>) {
+  const response = await apiPatch<{ ingredient: AdminIngredient }, Partial<IngredientInput>>(
+    `/admin/ingredients/${id}`,
+    input,
+  );
+  return response.data.ingredient;
+}
+
+export async function deleteIngredient(id: string) {
+  await apiDelete<{ removed: boolean }>(`/admin/ingredients/${id}`);
+}
