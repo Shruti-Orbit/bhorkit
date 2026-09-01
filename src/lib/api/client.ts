@@ -9,8 +9,7 @@ type ApiResponse<TData, TMeta = unknown> = {
   };
 };
 
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "http://localhost:5000/api/v1";
+const apiBaseUrl = "https://api.bhorkit.com/api/v1";
 
 export function getApiUrl(path: string) {
   return `${apiBaseUrl}${path}`;
