@@ -26,7 +26,7 @@ export function RitualSeparator() {
             href="/shop"
             className="mt-5 inline-flex min-h-11 w-fit items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
           >
-            Discover BHOR
+            Discover BHORKIT
           </Link>
         </div>
       </div>

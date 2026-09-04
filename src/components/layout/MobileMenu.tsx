@@ -9,6 +9,8 @@ import { useState } from "react";
 import { navigation } from "@/src/data/navigation";
 import { useShop } from "@/src/context/ShopContext";
 
+const SUPPORT_PHONE = "9296914463";
+
 type MobileMenuProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -65,7 +67,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                   alt="BHORKIT — Begin Your Day Divine"
                   width={1536}
                   height={1024}
-                  className="h-auto w-[122px]"
+                  className="h-auto max-h-[68px] w-[132px] object-contain"
                 />
               </Link>
               <button
@@ -220,13 +222,13 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </div>
 
             <div className="mt-auto border-t border-bhor-border bg-bhor-cream px-5 py-5">
-              <Link
-                href="/support"
+              <a
+                href={`tel:${SUPPORT_PHONE}`}
                 onClick={onClose}
                 className="inline-flex min-h-11 w-full items-center justify-center bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-semibold text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
               >
-                Help & Support
-              </Link>
+                {SUPPORT_PHONE}
+              </a>
             </div>
           </motion.aside>
         </div>

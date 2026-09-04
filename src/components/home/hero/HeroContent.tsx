@@ -28,7 +28,7 @@ const trustItems = [
 
 export function HeroContent({ slide }: HeroContentProps) {
   return (
-    <div className="relative z-10 flex max-w-[520px] flex-col justify-start px-5 pb-[230px] pt-7 min-[390px]:pb-[260px] sm:px-8 sm:pb-[310px] sm:pt-9 md:h-full md:w-[42%] md:justify-center md:px-10 md:py-14 lg:px-14 xl:px-20">
+    <div className="relative z-10 flex h-full max-w-[520px] flex-col justify-start px-5 pb-10 pt-6 sm:px-8 sm:pt-8 md:w-[42%] md:justify-center md:px-10 md:py-14 lg:px-14 xl:px-20">
       <p
         className="mb-3 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary md:mb-4 md:text-bhor-small"
       >
@@ -43,13 +43,13 @@ export function HeroContent({ slide }: HeroContentProps) {
       </h1>
 
       <p
-        className="mt-3 max-w-[290px] text-bhor-body-mobile leading-bhor-body text-bhor-text-muted min-[390px]:max-w-[310px] md:mt-5 md:max-w-md md:text-bhor-body"
+        className="mt-3 max-w-[27ch] text-bhor-body-mobile leading-bhor-body text-bhor-text-muted md:mt-5 md:max-w-md md:text-bhor-body"
       >
         {slide.description}
       </p>
 
       <div
-        className="mt-5 flex flex-nowrap gap-2.5 md:mt-7 md:gap-3"
+        className="mt-5 flex flex-wrap gap-2.5 md:mt-7 md:flex-nowrap md:gap-3"
       >
         <Link
           href={slide.primaryHref}

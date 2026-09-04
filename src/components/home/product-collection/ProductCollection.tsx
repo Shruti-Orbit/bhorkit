@@ -5,7 +5,12 @@ import { ProductCard } from "./ProductCard";
 
 type ProductCollectionProps = {
   title: string;
-  href: string;
+  /**
+   * Target of the "View All" link. Optional: a block that is already showing
+   * its whole set — Shop All's purchase-state groups — has nowhere further to
+   * send anyone, and a link back to the same page is worse than no link.
+   */
+  href?: string;
   products: CollectionProduct[];
   description?: string;
   tone?: "default" | "muted";
@@ -39,13 +44,16 @@ export function ProductCollection({
               </p>
             ) : null}
           </div>
-          <Link
-            href={href}
-            className="inline-flex shrink-0 items-center gap-2 text-bhor-button-mobile font-bhor-bold text-bhor-primary transition-colors hover:text-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:text-bhor-button"
-          >
-            View All
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
+          {href ? (
+            <Link
+              href={href}
+              aria-label={`View all ${title}`}
+              className="inline-flex shrink-0 items-center gap-2 text-bhor-button-mobile font-bhor-bold text-bhor-primary transition-colors hover:text-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary md:text-bhor-button"
+            >
+              View All
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </Link>
+          ) : null}
         </div>
 
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-4 lg:gap-7">
@@ -59,6 +67,7 @@ export function ProductCollection({
               <ProductCard
                 product={product}
                 actionMode={productActionMode}
+                compact={variant === "upcoming"}
                 showActions={showProductActions}
               />
             </div>

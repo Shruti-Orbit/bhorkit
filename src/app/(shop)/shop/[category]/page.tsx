@@ -36,9 +36,14 @@ export default async function ShopCategoryPage({ params }: Params) {
     <ShopListing
       eyebrow={category.eyebrow}
       title={category.title}
-      listingHref={`/shop/${category.slug}`}
-      listingTitle={category.listingTitle}
-      products={products}
+      sections={[
+        {
+          key: category.slug,
+          title: category.listingTitle,
+          href: `/shop/${category.slug}`,
+          products,
+        },
+      ]}
     />
   );
 }

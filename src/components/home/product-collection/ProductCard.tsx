@@ -15,6 +15,7 @@ type ProductCardProps = {
   product: CollectionProduct;
   showActions?: boolean;
   actionMode?: "default" | "add-to-cart";
+  compact?: boolean;
 };
 
 const badgeToneClass: Record<ProductBadgeTone, string> = {
@@ -24,7 +25,12 @@ const badgeToneClass: Record<ProductBadgeTone, string> = {
   soft: "bg-bhor-primary-soft text-bhor-primary",
 };
 
-export function ProductCard({ product, actionMode = "default", showActions = true }: ProductCardProps) {
+export function ProductCard({
+  product,
+  actionMode = "default",
+  compact = false,
+  showActions = true,
+}: ProductCardProps) {
   const { addToCart, isSavedItem, toggleSavedItem } = useShop();
   const saved = isSavedItem(product.id);
   const comingSoon = isComingSoonProduct(product);
@@ -72,7 +78,11 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
   }
 
   return (
-    <article className="group flex h-full min-h-[350px] w-full flex-col overflow-hidden rounded-bhor-md bg-bhor-surface shadow-bhor-soft sm:min-w-0 md:min-h-[445px]">
+    <article
+      className={`group flex h-full w-full flex-col overflow-hidden rounded-bhor-md bg-bhor-surface shadow-bhor-soft sm:min-w-0 ${
+        compact ? "min-h-[330px] md:min-h-[405px]" : "min-h-[350px] md:min-h-[445px]"
+      }`}
+    >
       <Link
         href={product.href}
         className="relative block aspect-[4/3] overflow-hidden bg-bhor-peach focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bhor-primary"
@@ -100,17 +110,27 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
         </button>
       </Link>
 
-      <div className="flex flex-1 flex-col px-3 py-4 md:px-4">
-        <Link
-          href={product.href}
-          className="line-clamp-2 min-h-[42px] text-bhor-product-mobile font-bhor-semibold leading-bhor-heading text-bhor-text transition-colors hover:text-bhor-primary md:min-h-[52px] md:text-bhor-product"
+      <div className={`flex flex-1 flex-col px-3 md:px-4 ${compact ? "py-3" : "py-4"}`}>
+        <h3
+          className={`line-clamp-2 text-bhor-product-mobile font-bhor-semibold leading-bhor-heading md:text-bhor-product ${
+            compact ? "min-h-[40px] md:min-h-[44px]" : "min-h-[42px] md:min-h-[52px]"
+          }`}
         >
-          {product.name}
-        </Link>
-        <p className="mt-2 line-clamp-2 min-h-[42px] text-bhor-small leading-bhor-body text-bhor-text-muted">
+          <Link
+            href={product.href}
+            className="text-bhor-text transition-colors hover:text-bhor-primary"
+          >
+            {product.name}
+          </Link>
+        </h3>
+        <p
+          className={`mt-2 line-clamp-2 text-bhor-small leading-bhor-body text-bhor-text-muted ${
+            compact ? "min-h-[34px]" : "min-h-[42px]"
+          }`}
+        >
           {product.description}
         </p>
-        <div className="mt-auto pt-4">
+        <div className={`mt-auto ${compact ? "pt-3" : "pt-4"}`}>
           {product.badge ? (
             <span
               className={`inline-flex w-fit rounded-bhor-sm px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide ${badgeToneClass[product.badge.tone]}`}
@@ -172,6 +192,7 @@ export function ProductCard({ product, actionMode = "default", showActions = tru
                 <button
                   type="button"
                   onClick={() => setWaitlistOpen(true)}
+                  aria-label={`Notify me about ${product.name}`}
                   className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
                 >
                   Notify Me

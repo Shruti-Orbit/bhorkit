@@ -55,7 +55,7 @@ export function MobileHeader() {
             width={1536}
             height={1024}
             priority
-            className="h-auto w-[96px] sm:w-[106px]"
+            className="h-auto max-h-[58px] w-[104px] object-contain sm:w-[116px]"
           />
         </Link>
 

@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
+import { getImageProps } from "next/image";
 import { heroSlides } from "@/src/data/heroSlides";
 import { HeroControls } from "./HeroControls";
+import { HERO_MOBILE_MEDIA } from "./HeroImage";
 import { HeroSlide } from "./HeroSlide";
 
 const AUTOPLAY_DELAY = 5500;
@@ -32,10 +34,29 @@ export function Hero() {
     setIsPaused(true);
   }, []);
 
+  // Warm the upcoming slides through the image optimizer, matching the variant
+  // and candidate the <picture> will actually pick for this viewport.
   useEffect(() => {
+    const isMobile = window.matchMedia(HERO_MOBILE_MEDIA).matches;
+
     heroSlides.forEach((slide) => {
+      const { props } = getImageProps({
+        alt: "",
+        fill: true,
+        sizes: "100vw",
+        src: (isMobile && slide.imageMobile) || slide.image,
+      });
+
       const image = new window.Image();
-      image.src = slide.image;
+      image.sizes = "100vw";
+
+      if (props.srcSet) {
+        image.srcset = props.srcSet;
+      }
+
+      if (props.src) {
+        image.src = props.src;
+      }
     });
   }, []);
 
@@ -97,7 +118,7 @@ export function Hero() {
         touchStartX.current = null;
       }}
     >
-      <div className="relative grid w-full overflow-hidden bg-bhor-peach md:h-[calc(100svh-132px)] md:min-h-[560px]">
+      <div className="relative grid aspect-[3/4] w-full overflow-hidden bg-bhor-peach md:aspect-auto md:h-[calc(100svh-132px)] md:min-h-[560px]">
         <AnimatePresence initial={false} mode="sync">
           <HeroSlide
             key={heroSlides[currentSlide].id}

@@ -5,6 +5,7 @@ import {
   Quicksand,
   Red_Hat_Display,
 } from "next/font/google";
+import { seoConfig } from "@/src/lib/seo/config";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -32,9 +33,42 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://bhorkit.com"),
-  title: "BHORKIT",
+  metadataBase: new URL(seoConfig.siteUrl),
+  title: {
+    default: "BHORKIT",
+    template: "%s",
+  },
   description: "Begin Your Day Divine",
+  applicationName: seoConfig.siteName,
+  manifest: "/site.webmanifest",
+  // Served straight from public/ so every URL is a stable, unhashed site-root
+  // path (/favicon.ico, /favicon-32x32.png, ...). Google re-crawls favicons on
+  // its own schedule and keys them by URL, so these must not move again.
+  //
+  // Deliberately NOT using the app/favicon.ico file convention: it can only
+  // describe the .ico, and having both would emit two competing icon tags.
+  // One declaration site, one set of tags.
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-48x48.png", sizes: "48x48", type: "image/png" },
+      {
+        url: "/android-chrome-192x192.png",
+        sizes: "192x192",
+        type: "image/png",
+      },
+      {
+        url: "/android-chrome-512x512.png",
+        sizes: "512x512",
+        type: "image/png",
+      },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
 };
 
 /**

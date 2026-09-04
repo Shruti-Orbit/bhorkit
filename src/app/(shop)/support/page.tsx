@@ -9,7 +9,7 @@ import { getBestEffortLocation } from "@/src/lib/geolocation";
 
 const MIN_LENGTH = 5;
 const MAX_LENGTH = 300;
-const SUPPORT_EMAIL = "support@bhorkit.com";
+const SUPPORT_EMAIL = "bhorkit@gmail.com";
 
 export default function SupportPage() {
   return (
@@ -107,9 +107,8 @@ function SupportForm() {
           maxLength={MAX_LENGTH}
           rows={5}
           placeholder="Tell us about your order, delivery, or any issue you're facing..."
-          className={`mt-2 w-full resize-none rounded-bhor-sm border bg-bhor-cream px-3 py-2.5 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary ${
-            showTooShortHint ? "border-bhor-error" : "border-bhor-border"
-          }`}
+          className={`mt-2 w-full resize-none rounded-bhor-sm border bg-bhor-cream px-3 py-2.5 text-bhor-small text-bhor-text outline-none focus:border-bhor-primary ${showTooShortHint ? "border-bhor-error" : "border-bhor-border"
+            }`}
         />
         <div className="mt-1 flex items-center justify-between">
           <span className="text-bhor-caption text-bhor-error">
@@ -123,9 +122,8 @@ function SupportForm() {
 
       {feedback ? (
         <p
-          className={`text-bhor-small font-bhor-semibold ${
-            feedback.type === "success" ? "text-bhor-success" : "text-bhor-error"
-          }`}
+          className={`text-bhor-small font-bhor-semibold ${feedback.type === "success" ? "text-bhor-success" : "text-bhor-error"
+            }`}
         >
           {feedback.message}
         </p>

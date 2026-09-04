@@ -42,7 +42,7 @@ export const navigation: NavigationItem[] = [
     href: "/collections/festivals",
   },
   {
-    label: "Pre-Order",
+    label: "Coming Soon",
     href: "/pre-order",
     badge: "New",
   },

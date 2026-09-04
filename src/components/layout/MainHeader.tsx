@@ -20,7 +20,7 @@ export function MainHeader() {
             width={1536}
             height={1024}
             priority
-            className="h-auto w-[122px] xl:w-[134px]"
+            className="h-auto max-h-[76px] w-[132px] object-contain xl:w-[146px]"
           />
         </Link>
 

@@ -72,15 +72,16 @@ export function HomeBannerStrip() {
               key={`${banner.id}-${index}`}
               href={banner.href}
               onFocus={() => scrollToIndex(index % homeBanners.length)}
-              className={`relative block ${banner.aspectClass} max-h-[220px] w-[82vw] shrink-0 snap-center overflow-hidden rounded-[28px] bg-bhor-surface shadow-bhor-soft ring-1 ring-bhor-border/60 transition-opacity duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary sm:w-[76vw] md:max-h-[260px] md:w-[68vw] lg:max-h-[300px] lg:w-[60vw] xl:max-h-[320px] xl:w-[56vw]`}
+              className="block w-[82vw] shrink-0 snap-center overflow-hidden rounded-[28px] bg-bhor-surface shadow-bhor-soft ring-1 ring-bhor-border/60 transition-opacity duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary sm:w-[76vw] md:w-[68vw] lg:w-[60vw] xl:w-[56vw]"
             >
               <Image
                 src={banner.image}
                 alt={banner.alt}
-                fill
+                width={1774}
+                height={887}
                 sizes="(max-width: 640px) 88vw, (max-width: 1024px) 76vw, 68vw"
                 priority={index === loopOffset}
-                className="object-cover object-center"
+                className="h-auto w-full"
               />
             </Link>
           ))}

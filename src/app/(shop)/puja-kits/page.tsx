@@ -27,9 +27,14 @@ export default async function RegularPoojaKitsPage() {
     <ShopListing
       eyebrow="Puja Kits"
       title="Regular Pooja Kits"
-      listingHref="/puja-kits"
-      listingTitle="Everyday Puja Essentials"
-      products={products}
+      sections={[
+        {
+          key: "regular-pooja",
+          title: "Everyday Puja Essentials",
+          href: "/puja-kits",
+          products,
+        },
+      ]}
     />
   );
 }

@@ -1,8 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Camera, Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone } from "lucide-react";
 import { FooterTrending } from "@/src/components/layout/FooterTrending";
 import { FooterNewsletter } from "@/src/components/layout/FooterNewsletter";
+import { SocialLinks } from "@/src/components/layout/SocialLinks";
+
+const SUPPORT_PHONE = "9296914463";
 
 // Every href here points at a route that exists. The Shop links use the same
 // range slugs the Shop navigation and the API filter use, so a column heading
@@ -61,11 +64,13 @@ export function Footer() {
             </p>
             <p className="flex items-center gap-2">
               <Phone className="h-4 w-4 text-bhor-gold-light" aria-hidden />
-              Help & Support
+              <a href={`tel:${SUPPORT_PHONE}`} className="transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-gold-light">
+                {SUPPORT_PHONE}
+              </a>
             </p>
             <p className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-bhor-gold-light" aria-hidden />
-              support@bhorkit.com
+              bhorkit@gmail.com
             </p>
           </div>
         </div>
@@ -103,13 +108,7 @@ export function Footer() {
             © 2026 BHORKIT. All Rights Reserved.
           </p>
           <FooterNewsletter />
-          <Link
-            href="https://www.instagram.com/"
-            className="inline-flex items-center gap-2 text-bhor-caption text-white/80 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-gold-light"
-          >
-            <Camera className="h-4 w-4" aria-hidden />
-            Instagram
-          </Link>
+          <SocialLinks className="text-bhor-caption text-white/80 hover:text-white" showLabels />
         </div>
       </div>
     </footer>

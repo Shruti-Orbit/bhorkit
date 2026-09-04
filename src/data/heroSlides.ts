@@ -1,7 +1,11 @@
 export type HeroSlide = {
   id: number;
   image: string;
+  /** Portrait artwork used below the `md` breakpoint. Falls back to `image`. */
+  imageMobile?: string;
   imageAlt: string;
+  /** Flat colour sampled from the artwork's copy space, used to tint the text overlay. */
+  tint?: string;
   eyebrow: string;
   title: string;
   highlightedTitle: string;
@@ -15,25 +19,28 @@ export type HeroSlide = {
 export const heroSlides: HeroSlide[] = [
   {
     id: 1,
-    image: "/images/slider/slider-1.png",
+    image: "/images/banner/first-hero.png",
+    imageMobile: "/images/banner/first-hero-mobile.png",
     imageAlt:
-      "BHORKIT Ganesh puja kit with Ganesh idol, diya, flowers and devotional essentials",
-    eyebrow: "GANESH CHATURTHI 2025",
-    title: "Bring Home",
-    highlightedTitle: "Bappa's Blessings",
+      "BHORKIT puja kit in Patna with Ganesh idol, haldi, kumkum and devotional essentials",
+    tint: "#FAEEDF",
+    eyebrow: "PUJA ESSENTIALS IN PATNA",
+    title: "Puja Kit",
+    highlightedTitle: "in Patna",
     description:
-      "Premium puja kits, thoughtfully curated with devotion and delivered across Patna.",
-    primaryCta: "PRE-ORDER GANESH KITS →",
+      "Buy complete puja kit online in Patna with essential puja samagri packed for doorstep delivery.",
+    primaryCta: "SHOP PUJA KITS →",
     primaryHref: "/shop/ganesh-chaturthi",
     secondaryCta: "EXPLORE COLLECTION",
     secondaryHref: "/shop",
   },
   {
     id: 2,
-    image: "/images/slider/slider-2.png",
+    image: "/images/banner/second-hero.png",
     imageAlt:
-      "BHORKIT Ganesh puja kit with premium packaging, Ganesh idol, diya and flowers",
-    eyebrow: "GANESH CHATURTHI 2025",
+      "BHORKIT botanical Ganesh puja kit with brass bowls of puja samagri and a lit diya",
+    tint: "#EDEAC6",
+    eyebrow: "GANESH CHATURTHI 2026",
     title: "Make Your",
     highlightedTitle: "Puja More Divine",
     description:

@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { Camera, Gift, HelpCircle, MapPin, MessageCircle } from "lucide-react";
+import { Gift, HelpCircle, MapPin } from "lucide-react";
+import { SocialLinks } from "./SocialLinks";
+
+const SUPPORT_PHONE = "9296914463";
 
 export function TopBar() {
   return (
@@ -20,17 +23,12 @@ export function TopBar() {
             Track Order
           </Link>
           <span className="h-3 w-px bg-white/40" aria-hidden />
-          <Link className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href="/support">
+          <a className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href={`tel:${SUPPORT_PHONE}`}>
             <HelpCircle className="h-3.5 w-3.5" aria-hidden />
-            Help & Support
-          </Link>
+            {SUPPORT_PHONE}
+          </a>
           <span className="h-3 w-px bg-white/40" aria-hidden />
-          <Link aria-label="Instagram" className="transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href="https://www.instagram.com/">
-            <Camera className="h-4 w-4" aria-hidden />
-          </Link>
-          <Link aria-label="Facebook" className="transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href="https://www.facebook.com/">
-            <MessageCircle className="h-4 w-4" aria-hidden />
-          </Link>
+          <SocialLinks iconClassName="h-4 w-4" />
         </div>
       </div>
     </div>
