@@ -34,8 +34,8 @@ export const metadata: Metadata = {
     locale: seoConfig.locale,
     siteName: seoConfig.siteName,
     url: absoluteUrl(seoConfig.home.path),
-    title: seoConfig.home.title,
-    description: seoConfig.home.description,
+    title: seoConfig.home.socialTitle,
+    description: seoConfig.home.socialDescription,
     images: [
       {
         url: seoConfig.home.ogImage.url,
@@ -48,8 +48,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: seoConfig.home.title,
-    description: seoConfig.home.description,
+    title: seoConfig.home.socialTitle,
+    description: seoConfig.home.socialDescription,
     images: [seoConfig.home.ogImage.url],
   },
 };

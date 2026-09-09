@@ -47,7 +47,7 @@ export const navigation: NavigationItem[] = [
     badge: "New",
   },
   {
-    label: "Track Order",
-    href: "/track-order",
+    label: "Help & Support",
+    href: "/support",
   },
 ];

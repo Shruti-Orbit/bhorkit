@@ -283,7 +283,7 @@ export default function CheckoutPage() {
         </section>
 
         {hasItems ? (
-          <div className="space-y-4">
+          <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
             <OrderSummary
               items={summaryItems}
               {...(isDirect && direct.totals ? { totals: direct.totals } : {})}

@@ -24,9 +24,10 @@ const footerGroups = [
     title: "Help & Support",
     links: [
       { label: "Track Order", href: "/track-order" },
+      { label: "FAQs", href: "/faq" },
       { label: "Shipping & Delivery", href: "/policies#shipping-delivery" },
       { label: "Returns & Refunds", href: "/policies#returns-refunds" },
-      { label: "Contact Us", href: "/support" },
+      { label: "Help & Support", href: "/support" },
     ],
   },
   {
@@ -108,7 +109,11 @@ export function Footer() {
             © 2026 BHORKIT. All Rights Reserved.
           </p>
           <FooterNewsletter />
-          <SocialLinks className="text-bhor-caption text-white/80 hover:text-white" showLabels />
+          <SocialLinks
+            className="text-bhor-caption text-white/80 hover:text-white"
+            includeWhatsApp={false}
+            showLabels
+          />
         </div>
       </div>
     </footer>

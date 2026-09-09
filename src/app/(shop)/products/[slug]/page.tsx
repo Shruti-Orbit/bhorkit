@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
 import { getProductDetail } from "@/src/lib/api/product.api";
+import { seoConfig } from "@/src/lib/seo/config";
 
 type ProductPageProps = {
   params: Promise<{
@@ -28,12 +29,20 @@ export async function generateMetadata({
     notFound();
   }
 
+  const seo = seoConfig.products[slug as keyof typeof seoConfig.products];
+  const title = seo?.title ?? `${product.name} | BHORKIT`;
+  const description = seo?.description ?? product.subtitle;
+
   return {
-    title: `${product.name} | BHORKIT`,
-    description: product.subtitle,
+    title,
+    description,
+    keywords: seo ? [...seo.keywords] : undefined,
+    alternates: {
+      canonical: `/products/${slug}`,
+    },
     openGraph: {
-      title: `${product.name} | BHORKIT`,
-      description: product.subtitle,
+      title,
+      description,
       images: [
         {
           url: product.image,

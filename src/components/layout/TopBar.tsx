@@ -2,8 +2,6 @@ import Link from "next/link";
 import { Gift, HelpCircle, MapPin } from "lucide-react";
 import { SocialLinks } from "./SocialLinks";
 
-const SUPPORT_PHONE = "9296914463";
-
 export function TopBar() {
   return (
     <div className="bg-bhor-header text-white">
@@ -23,10 +21,10 @@ export function TopBar() {
             Track Order
           </Link>
           <span className="h-3 w-px bg-white/40" aria-hidden />
-          <a className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href={`tel:${SUPPORT_PHONE}`}>
+          <Link className="inline-flex items-center gap-1.5 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white" href="/support">
             <HelpCircle className="h-3.5 w-3.5" aria-hidden />
-            {SUPPORT_PHONE}
-          </a>
+            Help & Support
+          </Link>
           <span className="h-3 w-px bg-white/40" aria-hidden />
           <SocialLinks iconClassName="h-4 w-4" />
         </div>

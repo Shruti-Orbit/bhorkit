@@ -59,22 +59,14 @@ export function MobileHeader() {
           />
         </Link>
 
-        {/* Signed out, the header carries nothing but "Login" — there is no
-            point offering search or a cart to someone who has to sign in
-            first, and a single control makes the next step unmissable.
-            Signed in, the controls read search, cart, avatar left to right,
-            so from the right edge it is avatar, cart, search.
-
-            While the session check is still in flight neither state is known,
-            so only the account slot is rendered: showing search and a cart and
-            then removing them would be a visible flinch on every load. */}
+        {/* Signed in, the controls read search, cart, avatar left to right.
+            Signed out, cart stays beside the login button using the same
+            CartButton component as the desktop header. */}
         <div className="flex items-center justify-end gap-0.5">
           {isAuthReady && isLoggedIn ? (
-            <>
-              <SearchBox />
-              <CartButton />
-            </>
+            <SearchBox />
           ) : null}
+          <CartButton />
           <AccountButton showLoginLabel />
         </div>
       </div>

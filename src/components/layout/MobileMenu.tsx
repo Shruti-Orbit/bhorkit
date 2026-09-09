@@ -8,8 +8,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { navigation } from "@/src/data/navigation";
 import { useShop } from "@/src/context/ShopContext";
-
-const SUPPORT_PHONE = "9296914463";
+import { SocialLinks } from "./SocialLinks";
 
 type MobileMenuProps = {
   isOpen: boolean;
@@ -222,13 +221,12 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </div>
 
             <div className="mt-auto border-t border-bhor-border bg-bhor-cream px-5 py-5">
-              <a
-                href={`tel:${SUPPORT_PHONE}`}
-                onClick={onClose}
-                className="inline-flex min-h-11 w-full items-center justify-center bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-semibold text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
-              >
-                {SUPPORT_PHONE}
-              </a>
+              <SocialLinks
+                className="justify-center"
+                iconClassName="h-5 w-5"
+                includeWhatsApp={false}
+                useBrandColors
+              />
             </div>
           </motion.aside>
         </div>

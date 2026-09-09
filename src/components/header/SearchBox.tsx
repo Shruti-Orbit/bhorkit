@@ -9,7 +9,10 @@ import { shopCategoryLabel } from "@/src/data/shopCategories";
 import type { CollectionProduct } from "@/src/data/products";
 import { HighlightedText } from "@/src/components/search/HighlightedText";
 import { useProductSearch } from "@/src/lib/search/useProductSearch";
-import { useSearchSuggestions } from "@/src/lib/search/useSearchSuggestions";
+import {
+  useSearchSuggestions,
+  type SearchSuggestionCategory,
+} from "@/src/lib/search/useSearchSuggestions";
 
 const DROPDOWN_LIMIT = 6;
 
@@ -101,9 +104,8 @@ export function SearchBox() {
 
       {isOpen ? (
         <div className="fixed inset-0 z-[80] lg:flex lg:items-start lg:justify-center lg:px-4 lg:pt-24">
-          <button
-            type="button"
-            aria-label="Close search"
+          <div
+            aria-hidden="true"
             onClick={close}
             className="absolute inset-0 hidden bg-bhor-text/35 lg:block"
           />
@@ -119,7 +121,7 @@ export function SearchBox() {
               <input
                 ref={inputRef}
                 autoFocus
-                type="search"
+                type="text"
                 role="combobox"
                 aria-expanded={isOpen}
                 aria-controls="search-results-list"
@@ -130,19 +132,6 @@ export function SearchBox() {
                 placeholder="Search puja kits, festivals, essentials"
                 className="min-h-12 min-w-0 flex-1 bg-transparent text-bhor-body text-bhor-text outline-none placeholder:text-bhor-text-muted"
               />
-              {query ? (
-                <button
-                  type="button"
-                  aria-label="Clear search"
-                  onClick={() => {
-                    setQuery("");
-                    inputRef.current?.focus();
-                  }}
-                  className="flex h-8 w-8 shrink-0 items-center justify-center text-bhor-text-muted hover:text-bhor-primary"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                </button>
-              ) : null}
               <button
                 type="button"
                 aria-label="Close search"
@@ -158,7 +147,7 @@ export function SearchBox() {
                 <SearchSuggestions
                   categories={categories}
                   recentlyViewed={recentlyViewed}
-                  onPickCategory={(category) => setQuery(category)}
+                  onNavigate={close}
                 />
               ) : isLoading ? (
                 <p className="py-8 text-center text-bhor-small text-bhor-text-muted">Searching…</p>
@@ -167,7 +156,7 @@ export function SearchBox() {
                   Couldn&apos;t load search right now. Please try again.
                 </p>
               ) : results.length === 0 ? (
-                <NoResults query={activeQuery} />
+                <NoResults query={activeQuery} onNavigate={close} />
               ) : (
                 <ul className="space-y-1">
                   {results.map((result, index) => (
@@ -226,7 +215,13 @@ export function SearchBox() {
   );
 }
 
-function NoResults({ query }: { query: string }) {
+function NoResults({
+  query,
+  onNavigate,
+}: {
+  query: string;
+  onNavigate: () => void;
+}) {
   return (
     <div className="py-8 text-center">
       <p className="text-bhor-small font-bhor-semibold text-bhor-text">No results for &ldquo;{query}&rdquo;.</p>
@@ -235,6 +230,7 @@ function NoResults({ query }: { query: string }) {
       </p>
       <Link
         href="/shop"
+        onClick={onNavigate}
         className="mt-4 inline-flex min-h-10 items-center justify-center rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white"
       >
         Browse All Products
@@ -246,11 +242,11 @@ function NoResults({ query }: { query: string }) {
 function SearchSuggestions({
   categories,
   recentlyViewed,
-  onPickCategory,
+  onNavigate,
 }: {
-  categories: string[];
+  categories: SearchSuggestionCategory[];
   recentlyViewed: CollectionProduct[];
-  onPickCategory: (category: string) => void;
+  onNavigate: () => void;
 }) {
   if (categories.length === 0 && recentlyViewed.length === 0) {
     return (
@@ -269,14 +265,14 @@ function SearchSuggestions({
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {categories.map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => onPickCategory(category)}
+              <Link
+                key={category.href}
+                href={category.href}
+                onClick={onNavigate}
                 className="rounded-full border border-bhor-border px-3 py-1.5 text-bhor-caption font-bhor-semibold text-bhor-text hover:border-bhor-primary hover:text-bhor-primary"
               >
-                {category}
-              </button>
+                {category.label}
+              </Link>
             ))}
           </div>
         </div>
@@ -292,6 +288,7 @@ function SearchSuggestions({
               <li key={product.id}>
                 <Link
                   href={product.href}
+                  onClick={onNavigate}
                   className="flex items-center gap-3 rounded-bhor-sm p-2 hover:bg-bhor-cream"
                 >
                   <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-bhor-sm bg-bhor-peach">

@@ -2,16 +2,21 @@ import type { Metadata } from "next";
 import { getPolicies } from "@/src/lib/api/policy.api";
 import { PolicyBlocks } from "@/src/components/policies/PolicyBlocks";
 import { PolicyNav } from "@/src/components/policies/PolicyNav";
+import { seoConfig } from "@/src/lib/seo/config";
 
 // Rendered per request rather than prerendered: the policies are editable from
 // the admin panel, and an edit has to be live for customers immediately rather
 // than at the next deploy.
 export const dynamic = "force-dynamic";
 
+const pageSeo = seoConfig.pages["/policies"];
+
 export const metadata: Metadata = {
-  title: "Policies | BHORKIT",
-  description:
-    "Shipping & delivery, returns & refunds, privacy, terms & conditions and cancellation policies for BHORKIT.",
+  title: pageSeo.title,
+  description: pageSeo.description,
+  alternates: {
+    canonical: "/policies",
+  },
 };
 
 

@@ -1,24 +1,37 @@
 import type { MetadataRoute } from "next";
-import { absoluteUrl } from "@/src/lib/seo/config";
 import { shopCategories } from "@/src/data/shopCategories";
+import { getAllProducts } from "@/src/lib/api/product.api";
+import { absoluteUrl } from "@/src/lib/seo/config";
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  const now = new Date();
-  const routes = [
-    "/",
-    "/shop",
-    "/puja-kits",
-    "/pre-order",
-    "/support",
-    "/policies",
-    "/collections/festivals",
-    ...shopCategories.map((category) => `/shop/${category.slug}`),
-  ];
+const publicStaticRoutes = [
+  "/",
+  "/shop",
+  "/puja-kits",
+  "/pre-order",
+  "/support",
+  "/faq",
+  "/policies",
+  "/collections/festivals",
+] as const;
 
-  return routes.map((route) => ({
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const products = await getAllProducts();
+  const shopCategoryRoutes = shopCategories.map(
+    (category) => `/shop/${category.slug}`,
+  );
+  const productRoutes = products
+    .map((product) => product.href)
+    .filter((href) => href.startsWith("/products/"));
+
+  return uniqueRoutes([
+    ...publicStaticRoutes,
+    ...shopCategoryRoutes,
+    ...productRoutes,
+  ]).map((route) => ({
     url: absoluteUrl(route),
-    lastModified: now,
-    changeFrequency: route === "/" ? "daily" : "weekly",
-    priority: route === "/" ? 1 : 0.7,
   }));
+}
+
+function uniqueRoutes(routes: string[]) {
+  return Array.from(new Set(routes));
 }

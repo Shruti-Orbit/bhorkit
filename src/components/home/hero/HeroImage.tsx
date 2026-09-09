@@ -69,10 +69,10 @@ export function HeroImage({ slide, priority = false }: HeroImageProps) {
       </picture>
       {/* Mobile: the copy sits across the top of a portrait frame, so the scrim falls downwards. */}
       <div
-        className="absolute inset-x-0 top-0 h-[62%] md:hidden"
+        className="absolute inset-x-0 top-0 h-[68%] md:hidden"
         style={{
           backgroundImage:
-            "linear-gradient(to bottom, color-mix(in srgb, var(--hero-tint) 95%, transparent), color-mix(in srgb, var(--hero-tint) 82%, transparent) 42%, color-mix(in srgb, var(--hero-tint) 34%, transparent) 72%, transparent)",
+            "linear-gradient(to bottom, color-mix(in srgb, var(--hero-tint) 98%, transparent), color-mix(in srgb, var(--hero-tint) 88%, transparent) 46%, color-mix(in srgb, var(--hero-tint) 48%, transparent) 76%, transparent)",
         }}
         aria-hidden
       />

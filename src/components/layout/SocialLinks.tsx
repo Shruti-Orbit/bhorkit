@@ -7,6 +7,8 @@ export const WHATSAPP_HREF = "https://wa.me/919296914463";
 type SocialLinksProps = {
   className?: string;
   iconClassName?: string;
+  includeWhatsApp?: boolean;
+  useBrandColors?: boolean;
   showLabels?: boolean;
 };
 
@@ -15,50 +17,61 @@ const socialItems = [
     label: "Instagram",
     href: seoConfig.socialLinks.instagram,
     icon: InstagramIcon,
+    brandClassName: "bg-[radial-gradient(circle_at_30%_110%,#FEDA75_0%,#FA7E1E_28%,#D62976_55%,#962FBF_78%,#4F5BD5_100%)] text-white",
   },
   {
     label: "Facebook",
     href: seoConfig.socialLinks.facebook,
     icon: FacebookIcon,
+    brandClassName: "bg-[#08214A] text-[#1877F2]",
   },
   {
     label: "YouTube",
     href: seoConfig.socialLinks.youtube,
     icon: YouTubeIcon,
+    brandClassName: "bg-[#061A3A] text-[#FF0000]",
   },
 ];
 
 export function SocialLinks({
   className = "",
   iconClassName = "h-4 w-4",
+  includeWhatsApp = true,
+  useBrandColors = false,
   showLabels = false,
 }: SocialLinksProps) {
   return (
     <div className={`flex items-center gap-3 ${className}`} aria-label="BHORKIT social media">
-      {socialItems.map(({ href, icon: Icon, label }) => (
+      {socialItems.map(({ href, icon: Icon, label, brandClassName }) => (
         <Link
           key={label}
           href={href}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={label}
-          className="inline-flex items-center gap-2 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+          className={`inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${
+            useBrandColors ? `h-9 w-9 rounded-full ${brandClassName}` : ""
+          }`}
         >
           <Icon className={iconClassName} aria-hidden />
           {showLabels ? <span>{label}</span> : null}
         </Link>
       ))}
-      <Link
-        href={WHATSAPP_HREF}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="WhatsApp"
-        title="WhatsApp"
-        className="inline-flex items-center gap-2 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
-      >
-        <WhatsAppIcon className={iconClassName} aria-hidden />
-        {showLabels ? <span>WhatsApp</span> : null}
-      </Link>
+      {includeWhatsApp ? (
+        <Link
+          href={WHATSAPP_HREF}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="WhatsApp"
+          title="WhatsApp"
+          className={`inline-flex items-center justify-center gap-2 transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${
+            useBrandColors ? "h-9 w-9 rounded-full bg-[#25D366] text-white" : ""
+          }`}
+        >
+          <WhatsAppIcon className={iconClassName} aria-hidden />
+          {showLabels ? <span>WhatsApp</span> : null}
+        </Link>
+      ) : null}
     </div>
   );
 }

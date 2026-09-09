@@ -28,7 +28,7 @@ const trustItems = [
 
 export function HeroContent({ slide }: HeroContentProps) {
   return (
-    <div className="relative z-10 flex h-full max-w-[520px] flex-col justify-start px-5 pb-10 pt-6 sm:px-8 sm:pt-8 md:w-[42%] md:justify-center md:px-10 md:py-14 lg:px-14 xl:px-20">
+    <div className="relative z-10 flex h-full max-w-[520px] flex-col justify-start px-5 pb-10 pt-10 min-[390px]:pt-12 sm:px-8 sm:pt-14 md:w-[42%] md:justify-center md:px-10 md:py-14 lg:px-14 xl:px-20">
       <p
         className="mb-3 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary md:mb-4 md:text-bhor-small"
       >
@@ -49,7 +49,7 @@ export function HeroContent({ slide }: HeroContentProps) {
       </p>
 
       <div
-        className="mt-5 flex flex-wrap gap-2.5 md:mt-7 md:flex-nowrap md:gap-3"
+        className="mt-5 flex flex-col items-start gap-2.5 md:mt-7 md:flex-row md:flex-nowrap md:gap-3"
       >
         <Link
           href={slide.primaryHref}
@@ -82,7 +82,7 @@ export function HeroContent({ slide }: HeroContentProps) {
               </p>
             </div>
           );
-        })}
+        })} 
       </div>
     </div>
   );

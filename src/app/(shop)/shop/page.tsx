@@ -1,10 +1,23 @@
+import type { Metadata } from "next";
 import { ShopListing } from "@/src/components/shop/ShopListing";
 import type { ShopListingSection } from "@/src/components/shop/ShopListing";
 import { withNavratriComingSoonPresentation } from "@/src/data/navratriComingSoon";
 import { shopPurchaseStates } from "@/src/data/shopPurchaseStates";
 import { getAllProducts } from "@/src/lib/api/product.api";
+import { seoConfig } from "@/src/lib/seo/config";
 
 export const dynamic = "force-dynamic";
+
+const pageSeo = seoConfig.pages["/shop"];
+
+export const metadata: Metadata = {
+  title: pageSeo.title,
+  description: pageSeo.description,
+  keywords: [...pageSeo.keywords],
+  alternates: {
+    canonical: "/shop",
+  },
+};
 
 /**
  * Shop All — the whole catalogue, grouped by what a shopper can actually do

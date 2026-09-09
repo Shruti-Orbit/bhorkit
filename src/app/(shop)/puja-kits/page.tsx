@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/src/components/shop/ShopListing";
 import { getProductsByShopCategory } from "@/src/lib/api/product.api";
+import { seoConfig } from "@/src/lib/seo/config";
 
 export const dynamic = "force-dynamic";
 
+const pageSeo = seoConfig.pages["/puja-kits"];
+
 export const metadata: Metadata = {
-  title: "Regular Pooja Kits | BHORKIT",
-  description: "Everyday puja essentials for your home rituals.",
+  title: pageSeo.title,
+  description: pageSeo.description,
+  keywords: [...pageSeo.keywords],
+  alternates: {
+    canonical: "/puja-kits",
+  },
 };
 
 /**

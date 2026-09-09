@@ -1,13 +1,25 @@
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, Sparkle } from "lucide-react";
 import { ProductCard } from "@/src/components/home/product-collection/ProductCard";
 import { festivalCollections } from "@/src/data/editorialCollections";
 import { getProductsByShopCategory } from "@/src/lib/api/product.api";
+import { seoConfig } from "@/src/lib/seo/config";
 
 const upcomingPanels = festivalCollections.filter((festival) => festival.status !== "available").slice(0, 2);
+const pageSeo = seoConfig.pages["/collections/festivals"];
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: pageSeo.title,
+  description: pageSeo.description,
+  keywords: [...pageSeo.keywords],
+  alternates: {
+    canonical: "/collections/festivals",
+  },
+};
 
 export default async function FestivalCollectionsPage() {
   const ganeshChaturthiProducts = await getProductsByShopCategory("ganesh-chaturthi");
