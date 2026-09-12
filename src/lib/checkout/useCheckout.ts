@@ -75,7 +75,13 @@ function messageFrom(error: unknown, fallback: string) {
   return fallback;
 }
 
-export function useCheckout(options: { onOrderConfirmed?: (order: BackendOrder) => void } = {}) {
+export function useCheckout(
+  options: {
+    onOrderConfirmed?: (order: BackendOrder) => void;
+    /** Called when the server refused to start because the cart changed underneath the page. */
+    onCartChanged?: () => void;
+  } = {},
+) {
   const router = useRouter();
   const [phase, setPhase] = useState<CheckoutPhase>("idle");
   const [error, setError] = useState("");
@@ -86,6 +92,7 @@ export function useCheckout(options: { onOrderConfirmed?: (order: BackendOrder) 
   const inFlight = useRef(false);
   const mounted = useRef(true);
   const onOrderConfirmed = options.onOrderConfirmed;
+  const onCartChanged = options.onCartChanged;
 
   useEffect(() => {
     mounted.current = true;
@@ -245,9 +252,15 @@ export function useCheckout(options: { onOrderConfirmed?: (order: BackendOrder) 
         if (!mounted.current) return;
         setPhase("failed");
         setError(messageFrom(startError, "We couldn't start the payment. Please try again."));
+        // The server removed something while pricing the cart — an item was
+        // deactivated or deleted. Its message already says so; refreshing makes
+        // the summary on this page match what a retry will actually charge.
+        if (startError instanceof ApiClientError && startError.code === "CART_CHANGED") {
+          onCartChanged?.();
+        }
       }
     },
-    [settleConfirmed],
+    [settleConfirmed, onCartChanged],
   );
 
   const clearMessages = useCallback(() => {

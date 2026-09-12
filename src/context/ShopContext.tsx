@@ -162,6 +162,8 @@ type ShopContextValue = {
   setScheduledDeliveryDate: (date: string) => void;
   setScheduledDeliverySlot: (slot: string) => void;
   refreshOrders: () => Promise<void>;
+  /** Re-reads the cart from the server, e.g. after checkout reports it changed. */
+  refreshCart: () => Promise<void>;
   getOrderById: (orderId: string) => CustomerOrder | undefined;
   findOrders: (query: string) => CustomerOrder[];
   clearSuccessMessage: () => void;
@@ -170,6 +172,10 @@ type ShopContextValue = {
 
 const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
+// Shown whenever the server reports it removed cart items that can no longer be
+// bought, so an item never just disappears without explanation.
+const UNAVAILABLE_REMOVED_MESSAGE =
+  "Some items in your cart are no longer available and were removed.";
 const checkoutModeStorageKey = "bhorkit_checkout_mode";
 // sessionStorage, not localStorage: a Buy Now belongs to the tab and journey
 // the customer is in the middle of. It has to survive a refresh or a
@@ -520,6 +526,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
         window.localStorage.removeItem(cartStorageKey);
         setCartItems(toCartItems(cart));
+        if (cart.removedUnavailableProductIds.length > 0) {
+          setErrorMessage(UNAVAILABLE_REMOVED_MESSAGE);
+        }
         setSavedItems(wishlist);
         applyAddressBook(addressBook);
         setOrders(userOrders);
@@ -664,6 +673,23 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setDirectCheckoutItem(null);
     writeDirectCheckout(null);
   }, []);
+
+  // The server drops anything that can no longer be bought — deleted or
+  // deactivated — on every cart read and says which, so this doubles as the
+  // way the page learns an item has gone.
+  const refreshCart = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const cart = await getCartApi();
+      setCartItems(toCartItems(cart));
+      if (cart.removedUnavailableProductIds.length > 0) {
+        setErrorMessage(UNAVAILABLE_REMOVED_MESSAGE);
+      }
+    } catch {
+      // The checkout error already on screen explains the failure; a second
+      // message about the refresh would only add noise.
+    }
+  }, [userId]);
 
   const updateCartItem = useCallback((productId: string, quantity: number) => {
     setCartItems((items) => applyCartSet(items, productId, quantity));
@@ -930,6 +956,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setScheduledDeliveryDate,
       setScheduledDeliverySlot,
       refreshOrders,
+      refreshCart,
       getOrderById,
       findOrders,
       clearSuccessMessage: () => setSuccessMessage(""),
@@ -975,6 +1002,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       openAuthModal,
       openCartDrawer,
       orders,
+      refreshCart,
       refreshOrders,
       removeFromCart,
       savedItems,
