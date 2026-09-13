@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CalendarRange, Clock, Plus, Trash2 } from "lucide-react";
-import { Card, ErrorState, Field, Toast, inputClass } from "@/src/components/admin/ui";
+import { CalendarRange, Clock, Plus, Store, Trash2 } from "lucide-react";
+import { Card, ConfirmDialog, ErrorState, Field, Toast, inputClass } from "@/src/components/admin/ui";
 import {
   getDeliverySettings,
   saveDeliverySettings,
+  saveOrderingSettings,
   type AdminDeliverySettings,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
@@ -34,6 +35,41 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
  * nothing else. Setting ranges that never overlap is therefore a real decision,
  * and the note below the table says so.
  */
+/** An accessible on/off switch. */
+function Switch({
+  checked,
+  onChange,
+  disabled,
+  label,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+        checked ? "bg-emerald-600" : "bg-slate-300"
+      }`}
+    >
+      <span
+        className={`inline-block h-5 w-5 rounded-full bg-white shadow transition-transform ${
+          checked ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
+type PendingClose = { scope: "store" } | { scope: "range"; slug: string; label: string };
+
 export function DeliveryAvailability() {
   const [settings, setSettings] = useState<AdminDeliverySettings | null>(null);
   const [windows, setWindows] = useState<Record<string, { startDate: string; endDate: string }>>({});
@@ -42,6 +78,9 @@ export function DeliveryAvailability() {
   const [savingWindows, setSavingWindows] = useState(false);
   const [savingSlots, setSavingSlots] = useState(false);
   const [toast, setToast] = useState("");
+  const [savingOrdering, setSavingOrdering] = useState(false);
+  // Turning ordering OFF is confirmed first; turning it back on applies at once.
+  const [pendingClose, setPendingClose] = useState<PendingClose | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -83,6 +122,46 @@ export function DeliveryAvailability() {
     }
   }
 
+  async function applyOrdering(body: Parameters<typeof saveOrderingSettings>[0], message: string) {
+    setSavingOrdering(true);
+    setError("");
+    try {
+      const saved = await saveOrderingSettings(body);
+      setSettings(saved);
+      setToast(message);
+    } catch (caught) {
+      setError(caught instanceof ApiClientError ? caught.message : "Couldn't update order acceptance.");
+    } finally {
+      setSavingOrdering(false);
+      setPendingClose(null);
+    }
+  }
+
+  function toggleStore(next: boolean) {
+    if (!next) {
+      setPendingClose({ scope: "store" });
+      return;
+    }
+    void applyOrdering({ acceptingOrders: true }, "The website is taking orders again");
+  }
+
+  function toggleRange(slug: string, label: string, next: boolean) {
+    if (!next) {
+      setPendingClose({ scope: "range", slug, label });
+      return;
+    }
+    void applyOrdering({ ranges: { [slug]: true } }, `${label} is taking orders again`);
+  }
+
+  function confirmClose() {
+    if (!pendingClose) return;
+    if (pendingClose.scope === "store") {
+      void applyOrdering({ acceptingOrders: false }, "All orders have been stopped");
+    } else {
+      void applyOrdering({ ranges: { [pendingClose.slug]: false } }, `Orders for ${pendingClose.label} have been stopped`);
+    }
+  }
+
   if (!settings) {
     return error ? <ErrorState message={error} onRetry={() => void load()} /> : null;
   }
@@ -93,13 +172,46 @@ export function DeliveryAvailability() {
     <div className="space-y-5">
       {error ? <ErrorState message={error} /> : null}
 
+      <Card className={`p-4 ${settings.acceptingOrders ? "" : "border-rose-300 bg-rose-50"}`}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
+              <Store className="h-5 w-5 text-rose-700" aria-hidden />
+              Order acceptance
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              {settings.acceptingOrders
+                ? "The website is taking orders. Switch this off to stop every order at once."
+                : "The website is NOT taking any orders. Customers can browse, but cannot check out."}
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className={`text-sm font-semibold ${settings.acceptingOrders ? "text-emerald-700" : "text-rose-700"}`}>
+              {settings.acceptingOrders ? "Accepting orders" : "All orders stopped"}
+            </span>
+            <Switch
+              checked={settings.acceptingOrders}
+              disabled={savingOrdering}
+              label="Accept orders on the website"
+              onChange={toggleStore}
+            />
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-slate-500">
+          Each range below also has its own switch. Stopping everything here does not change them, so
+          switching this back on restores every range exactly as it was.
+        </p>
+      </Card>
+
       <Card className="p-4">
         <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
           <CalendarRange className="h-5 w-5 text-rose-700" aria-hidden />
           Delivery periods
         </h2>
         <p className="mt-1 text-sm text-slate-600">
-          When each range can be delivered. Customers can only choose dates inside these windows.
+          When each range can be delivered, and whether it is taking new orders. Customers can only
+          choose dates inside these windows. Stopping a range&apos;s orders does not change its dates, so
+          orders already placed are still delivered as booked.
         </p>
 
         <div className="mt-4 space-y-4">
@@ -112,7 +224,28 @@ export function DeliveryAvailability() {
                 key={window.slug}
                 className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[minmax(0,1fr)_170px_170px] sm:items-end"
               >
-                <p className="text-sm font-semibold text-slate-900">{window.label}</p>
+                <div className="flex items-center justify-between gap-3 sm:block">
+                  <p className="text-sm font-semibold text-slate-900">{window.label}</p>
+                  <div className="flex items-center gap-2 sm:mt-2">
+                    <Switch
+                      checked={window.acceptingOrders}
+                      disabled={savingOrdering}
+                      label={`Accept orders for ${window.label}`}
+                      onChange={(next) => toggleRange(window.slug, window.label, next)}
+                    />
+                    <span
+                      className={`text-xs font-semibold ${
+                        !window.acceptingOrders ? "text-rose-700" : settings.acceptingOrders ? "text-emerald-700" : "text-slate-500"
+                      }`}
+                    >
+                      {!window.acceptingOrders
+                        ? "Orders closed"
+                        : settings.acceptingOrders
+                          ? "Accepting orders"
+                          : "Paused (all orders stopped)"}
+                    </span>
+                  </div>
+                </div>
                 <Field label="Start date">
                   <input
                     type="date"
@@ -243,6 +376,23 @@ export function DeliveryAvailability() {
           </button>
         </div>
       </Card>
+
+      <ConfirmDialog
+        open={pendingClose !== null}
+        title={
+          pendingClose?.scope === "range" ? `Stop orders for ${pendingClose.label}?` : "Stop all orders?"
+        }
+        message={
+          pendingClose?.scope === "range"
+            ? "Customers will not be able to order these kits until you switch this back on. They stay visible, marked Orders Closed, and are removed from customers' carts so the rest of a cart can still be ordered. Orders already placed keep their delivery dates."
+            : "Customers will not be able to place any order until you switch this back on. Products stay visible and marked Orders Closed, carts are kept as they are, and orders already placed are not affected."
+        }
+        confirmLabel="Stop orders"
+        destructive
+        busy={savingOrdering}
+        onConfirm={confirmClose}
+        onCancel={() => setPendingClose(null)}
+      />
 
       {toast ? <Toast message={toast} onDone={() => setToast("")} /> : null}
     </div>

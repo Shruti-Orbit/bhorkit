@@ -273,6 +273,8 @@ export type AdminDeliveryWindow = {
   label: string;
   startDate: string;
   endDate: string;
+  /** This range's own order switch. */
+  acceptingOrders: boolean;
 };
 
 export type AdminDeliverySlot = {
@@ -285,6 +287,8 @@ export type AdminDeliverySlot = {
 export type AdminDeliverySettings = {
   windows: AdminDeliveryWindow[];
   slots: AdminDeliverySlot[];
+  /** The store-wide order switch. */
+  acceptingOrders: boolean;
   updatedAt: string | null;
   updatedBy: string | null;
 };
@@ -297,6 +301,20 @@ export type DeliverySettingsInput = {
   windows?: Record<string, { startDate: string; endDate: string }>;
   slots?: { startHour: number; endHour: number }[];
 };
+
+export type OrderingSettingsInput = {
+  acceptingOrders?: boolean;
+  ranges?: Record<string, boolean>;
+};
+
+/** Turns order acceptance on or off for the store and/or individual ranges. Takes effect immediately. */
+export async function saveOrderingSettings(input: OrderingSettingsInput) {
+  const response = await apiPut<{ settings: AdminDeliverySettings }, OrderingSettingsInput>(
+    "/admin/delivery/ordering",
+    input,
+  );
+  return response.data.settings;
+}
 
 export async function saveDeliverySettings(input: DeliverySettingsInput) {
   const response = await apiPut<{ settings: AdminDeliverySettings }, DeliverySettingsInput>(

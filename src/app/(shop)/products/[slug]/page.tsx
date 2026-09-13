@@ -1,4 +1,4 @@
-import { isOutOfStockProduct } from "@/src/utils/productState";
+import { purchaseBlock } from "@/src/utils/productState";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
@@ -75,9 +75,9 @@ export default async function ProductPage({ params }: ProductPageProps) {
       "@type": "Offer",
       priceCurrency: "INR",
       price: product.price.replace(/[^\d]/g, ""),
-      // A deactivated kit must not be advertised to search engines as open
-      // for pre-order.
-      availability: isOutOfStockProduct(product)
+      // A kit that cannot be ordered — deactivated, or its range or the store
+      // closed — must not be advertised to search engines as open for pre-order.
+      availability: purchaseBlock(product)
         ? "https://schema.org/OutOfStock"
         : "https://schema.org/PreOrder",
     },

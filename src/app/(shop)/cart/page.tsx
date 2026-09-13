@@ -5,12 +5,18 @@ import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { useShop } from "@/src/context/ShopContext";
+import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CartPage() {
   const { cartItems, clearDirectCheckout, removeFromCart, setCheckoutMode, updateCartItem } = useShop();
   const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
+  const ordering = useOrderingStatus();
+  // Only the store switch leaves closed items in a cart: a closed range's
+  // items are removed by the server. Checkout refuses either way; this keeps
+  // the button from promising an order that will be refused.
+  const storeClosed = ordering?.acceptingOrders === false;
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
@@ -89,7 +95,23 @@ export default function CartPage() {
 
         <div className="space-y-4">
           <OrderSummary />
-          {cartItems.length > 0 ? (
+          {cartItems.length > 0 && storeClosed ? (
+            <>
+              <p
+                role="status"
+                className="rounded-bhor-sm border border-bhor-border bg-bhor-surface px-4 py-3 text-bhor-small font-bhor-semibold leading-bhor-body text-bhor-error"
+              >
+                {ordering?.message}
+              </p>
+              <button
+                type="button"
+                disabled
+                className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-5 text-bhor-button font-bhor-bold uppercase text-bhor-text-muted"
+              >
+                Orders Closed
+              </button>
+            </>
+          ) : cartItems.length > 0 ? (
             <Link
               href="/checkout"
               onClick={() => {

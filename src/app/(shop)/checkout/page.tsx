@@ -14,6 +14,7 @@ import type { AppliedCoupon } from "@/src/lib/api/coupon.api";
 import { getCheckoutGiftState, type CheckoutGiftState } from "@/src/lib/api/gift.api";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
+import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
 import { calculateCouponDiscount, formatCurrency, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
@@ -155,6 +156,11 @@ export default function CheckoutPage() {
   const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
   const selectedUndeliverable = selectedAddress?.deliverable === false;
 
+  // The store switch: while it is off the server refuses every order, so the
+  // Pay button is held back and the reason shown instead.
+  const ordering = useOrderingStatus();
+  const storeClosed = ordering?.acceptingOrders === false;
+
   const canPay =
     isLoggedIn &&
     hasItems &&
@@ -163,6 +169,7 @@ export default function CheckoutPage() {
     Boolean(deliveryDate) &&
     Boolean(deliverySlotId) &&
     (!isPreOrder || policyAccepted) &&
+    !storeClosed &&
     !isBusy;
 
   function pay() {
@@ -318,6 +325,15 @@ export default function CheckoutPage() {
               </label>
             ) : null}
 
+            {storeClosed ? (
+              <p
+                role="status"
+                className="rounded-bhor-sm border border-bhor-error bg-bhor-peach px-4 py-3 text-bhor-small font-bhor-semibold leading-bhor-body text-bhor-error"
+              >
+                {ordering?.message}
+              </p>
+            ) : null}
+
             {error ? (
               <p
                 role="alert"
@@ -354,6 +370,7 @@ export default function CheckoutPage() {
   );
 
   function payButtonLabel() {
+    if (storeClosed) return "Orders Closed";
     if (phase === "creating") return "Starting secure payment…";
     if (phase === "awaiting_payment") return "Complete payment in the window";
     if (phase === "verifying") return "Confirming your payment…";

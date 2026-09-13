@@ -1,3 +1,5 @@
+import type { ShopCategorySlug } from "@/src/data/products";
+
 export type HeroSlide = {
   id: number;
   image: string;
@@ -12,6 +14,12 @@ export type HeroSlide = {
   description: string;
   primaryCta: string;
   primaryHref: string;
+  /**
+   * Set when the primary button asks the shopper to order from one range.
+   * It is hidden while that range, or the whole store, is not taking orders;
+   * the secondary explore button stays.
+   */
+  primaryCtaRange?: ShopCategorySlug;
   secondaryCta: string;
   secondaryHref: string;
 };
@@ -47,6 +55,7 @@ export const heroSlides: HeroSlide[] = [
       "Thoughtfully curated puja essentials, made for meaningful celebrations.",
     primaryCta: "PRE-ORDER GANESH KITS →",
     primaryHref: "/shop/ganesh-chaturthi",
+    primaryCtaRange: "ganesh-chaturthi",
     secondaryCta: "EXPLORE COLLECTION",
     secondaryHref: "/shop",
   },

@@ -1,6 +1,6 @@
 "use client";
 
-import { isOutOfStockProduct } from "@/src/utils/productState";
+import { purchaseBlock } from "@/src/utils/productState";
 import {
   createContext,
   useCallback,
@@ -636,8 +636,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     // would flash "Added to your cart" and then be taken back out when the
     // server refuses it. The server refuses regardless; this only keeps the
     // page honest when a button is reached through stale data.
-    if (isOutOfStockProduct(product)) {
-      setErrorMessage("This product is currently out of stock.");
+    const block = purchaseBlock(product);
+    if (block) {
+      setErrorMessage(block.kind === "out-of-stock" ? "This product is currently out of stock." : block.message);
       return;
     }
     setCartItems((items) => applyCartAdd(items, product, quantity));

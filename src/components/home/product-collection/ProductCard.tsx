@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ArrowRight, Heart } from "lucide-react";
 import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
-import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct, isOutOfStockProduct } from "@/src/utils/productState";
+import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct, isOutOfStockProduct, isOrderingClosed, purchaseBlock } from "@/src/utils/productState";
 import { looksLikeEmail, subscribeToLaunch } from "@/src/lib/api/notify.api";
 import { getBestEffortLocation } from "@/src/lib/geolocation";
 import { ApiClientError } from "@/src/lib/api/client";
@@ -37,6 +37,10 @@ export function ProductCard({
   const preorder = isPreOrderProduct(product);
   const readyStock = isReadyStockProduct(product);
   const outOfStock = isOutOfStockProduct(product);
+  // Out of stock overrides everything; a closed range or store overrides the
+  // buy buttons but not Coming Soon, whose Notify Me is not an order.
+  const block = outOfStock || (!comingSoon && isOrderingClosed(product)) ? purchaseBlock(product) : null;
+  console.log(block)
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistMessage, setWaitlistMessage] = useState("");
@@ -132,11 +136,11 @@ export function ProductCard({
           {product.description}
         </p>
         <div className={`mt-auto ${compact ? "pt-3" : "pt-4"}`}>
-          {outOfStock ? (
+          {block ? (
             // Replaces the product's own badge: "Pre-Order" beside a disabled
             // button would contradict it.
             <span className="inline-flex w-fit rounded-bhor-sm bg-bhor-error/10 px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide text-bhor-error">
-              Out of Stock
+              {block.label}
             </span>
           ) : product.badge ? (
             <span
@@ -147,16 +151,17 @@ export function ProductCard({
           ) : null}
           <p className="mt-2 text-bhor-product font-bhor-bold text-bhor-text">{product.price}</p>
 
-          {showActions && outOfStock ? (
-            // Checked first: a deactivated product keeps its purchase state, so
+          {showActions && block ? (
+            // Checked first: a blocked product keeps its purchase state, so
             // without this it would still get that state's buy button.
             <button
               type="button"
               disabled
               aria-disabled="true"
+              title={block.message}
               className="mt-3 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-4 text-bhor-caption font-bhor-bold uppercase text-bhor-text-muted"
             >
-              Out of Stock
+              {block.label}
             </button>
           ) : showActions && comingSoon ? (
             <div className="mt-3">

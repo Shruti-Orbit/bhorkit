@@ -1,6 +1,7 @@
-import { isOutOfStockProduct } from "@/src/utils/productState";
 import { PackageCheck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { shopCategoryLabel } from "@/src/data/shopCategories";
+import { purchaseBlock } from "@/src/utils/productState";
 import { AboutProductAccordion } from "./AboutProductAccordion";
 import { ProductPurchasePanel } from "./ProductPurchasePanel";
 
@@ -12,19 +13,24 @@ const trustPoints = ["Curated with Devotion", "Secure Packaging", "Patna Deliver
 
 export function ProductInfo({ product }: ProductInfoProps) {
   // Every call to action above the purchase panel depends on this. The panel
-  // switching to Out of Stock is not enough on its own: "Order Now" and
-  // "Reserve your kit" beside it would tell the customer the opposite.
-  const outOfStock = isOutOfStockProduct(product);
+  // switching state is not enough on its own: "Order Now" and "Reserve your
+  // kit" beside it would tell the customer the opposite.
+  const block = purchaseBlock(product);
+  // The chip names the product's own range, and the Ganesh-only line appears
+  // only on Ganesh products — so a Regular Pooja page never advertises a
+  // festival whose orders may be closed.
+  const ganesh = product.shopCategory === "ganesh-chaturthi";
+  const rangeLabel = shopCategoryLabel(product.shopCategory);
 
   return (
     <div className="flex flex-col gap-5 md:pb-4">
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="w-fit rounded-bhor-sm bg-bhor-primary-soft px-3 py-1 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-            {outOfStock ? "Ganesh Chaturthi" : "Ganesh Chaturthi · Order Now"}
+            {block ? rangeLabel : `${rangeLabel} · Order Now`}
           </p>
-          {outOfStock ? (
-            <p className="text-bhor-small font-bhor-bold text-bhor-error">Out of Stock</p>
+          {block ? (
+            <p className="text-bhor-small font-bhor-bold text-bhor-error">{block.label}</p>
           ) : product.badge ? (
             <p className="text-bhor-small font-bhor-bold text-bhor-gold">
               {product.badge.label === "Pre-Order" ? "Order Now" : product.badge.label}
@@ -36,11 +42,11 @@ export function ProductInfo({ product }: ProductInfoProps) {
           {product.name}
         </h1>
         <p className="mt-3 text-bhor-body leading-bhor-body text-bhor-text-muted">{product.subtitle}</p>
-        {outOfStock ? null : (
+        {!block && ganesh ? (
           <p className="mt-3 text-bhor-small font-bhor-semibold text-bhor-success">
             Reserve your kit in advance and receive it before Ganesh Chaturthi.
           </p>
-        )}
+        ) : null}
       </div>
 
       <div>

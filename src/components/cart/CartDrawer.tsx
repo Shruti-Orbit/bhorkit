@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, Minus, Plus, ReceiptText, ShieldCheck, Trash2, X } from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
+import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, freeHandlingThreshold, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
@@ -22,6 +23,11 @@ export function CartDrawer() {
     updateCartItem,
   } = useShop();
   const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
+  const ordering = useOrderingStatus();
+  // Only the store switch leaves closed items in a cart: a closed range's
+  // items are removed by the server. Checkout refuses either way; this keeps
+  // the button from promising an order that will be refused.
+  const storeClosed = ordering?.acceptingOrders === false;
 
   if (!cartDrawerOpen) {
     return null;
@@ -190,18 +196,33 @@ export function CartDrawer() {
             </div>
 
             <div className="border-t border-bhor-border bg-bhor-surface p-4">
-              <Link
-                href="/checkout"
-                onClick={() => {
-                  // Checking out the cart supersedes any earlier Buy Now.
-                  clearDirectCheckout();
-                  setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now");
-                  closeCartDrawer();
-                }}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
-              >
-                {hasPreOrderItems ? "Order Now" : "Checkout"}
-              </Link>
+              {storeClosed ? (
+                <>
+                  <p role="status" className="mb-3 text-center text-bhor-small font-bhor-semibold text-bhor-error">
+                    {ordering?.message}
+                  </p>
+                  <button
+                    type="button"
+                    disabled
+                    className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-5 text-bhor-button font-bhor-bold uppercase text-bhor-text-muted"
+                  >
+                    Orders Closed
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/checkout"
+                  onClick={() => {
+                    // Checking out the cart supersedes any earlier Buy Now.
+                    clearDirectCheckout();
+                    setCheckoutMode(hasPreOrderItems ? "scheduled" : "buy-now");
+                    closeCartDrawer();
+                  }}
+                  className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
+                >
+                  {hasPreOrderItems ? "Order Now" : "Checkout"}
+                </Link>
+              )}
             </div>
           </>
         )}

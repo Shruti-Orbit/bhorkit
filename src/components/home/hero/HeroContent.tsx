@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { Box, HandHeart, Truck } from "lucide-react";
 import type { HeroSlide } from "@/src/data/heroSlides";
+import { isRangeOpen } from "@/src/lib/api/ordering.api";
+import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 
 type HeroContentProps = {
   slide: HeroSlide;
@@ -27,6 +29,13 @@ const trustItems = [
 ];
 
 export function HeroContent({ slide }: HeroContentProps) {
+  const ordering = useOrderingStatus();
+  // An ordering call to action is only offered once the range is KNOWN to be
+  // taking orders. Until the status arrives it stays hidden, so the hero never
+  // briefly invites a pre-order that is closed; the explore button is always there.
+  const showPrimary =
+    !slide.primaryCtaRange || (ordering !== null && isRangeOpen(ordering, slide.primaryCtaRange));
+
   return (
     <div className="relative z-10 flex h-full max-w-[520px] flex-col justify-start px-5 pb-10 pt-10 min-[390px]:pt-12 sm:px-8 sm:pt-14 md:w-[42%] md:justify-center md:px-10 md:py-14 lg:px-14 xl:px-20">
       <p
@@ -51,12 +60,14 @@ export function HeroContent({ slide }: HeroContentProps) {
       <div
         className="mt-5 flex flex-col items-start gap-2.5 md:mt-7 md:flex-row md:flex-nowrap md:gap-3"
       >
-        <Link
-          href={slide.primaryHref}
-          className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-bhor-sm bg-bhor-primary px-3 text-bhor-badge font-bhor-semibold uppercase text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary min-[390px]:min-h-11 min-[390px]:px-4 min-[390px]:text-bhor-button-mobile md:gap-2 md:px-6 md:text-bhor-button"
-        >
-          {slide.primaryCta}
-        </Link>
+        {showPrimary ? (
+          <Link
+            href={slide.primaryHref}
+            className="inline-flex min-h-10 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-bhor-sm bg-bhor-primary px-3 text-bhor-badge font-bhor-semibold uppercase text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary min-[390px]:min-h-11 min-[390px]:px-4 min-[390px]:text-bhor-button-mobile md:gap-2 md:px-6 md:text-bhor-button"
+          >
+            {slide.primaryCta}
+          </Link>
+        ) : null}
         <Link
           href={slide.secondaryHref}
           className="inline-flex min-h-10 shrink-0 items-center justify-center whitespace-nowrap rounded-bhor-sm border border-bhor-border bg-bhor-surface px-3 text-bhor-badge font-bhor-semibold uppercase text-bhor-text transition-colors hover:border-bhor-primary hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary min-[390px]:min-h-11 min-[390px]:px-4 min-[390px]:text-bhor-button-mobile md:px-6 md:text-bhor-button"

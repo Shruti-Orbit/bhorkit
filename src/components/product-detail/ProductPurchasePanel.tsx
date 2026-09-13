@@ -1,10 +1,10 @@
 "use client";
 
-import { isOutOfStockProduct } from "@/src/utils/productState";
 import Link from "next/link";
 import { ArrowRight, Flame, MapPin, ShoppingCart } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
+import { purchaseBlock } from "@/src/utils/productState";
 
 type ProductPurchasePanelProps = {
   product: CollectionProduct;
@@ -12,7 +12,12 @@ type ProductPurchasePanelProps = {
 
 export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   const { addToCart, buyNow } = useShop();
-  const outOfStock = isOutOfStockProduct(product);
+  const block = purchaseBlock(product);
+  // The festival wording is only true of the Ganesh Chaturthi range. It used to
+  // appear on every product page, Regular Pooja included, which would have kept
+  // advertising Ganesh orders on exactly the pages that stay open when that
+  // range closes.
+  const ganesh = product.shopCategory === "ganesh-chaturthi";
 
   return (
     <section className="rounded-bhor-md border border-bhor-border bg-bhor-surface p-4">
@@ -21,33 +26,33 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         Patna Delivery
       </p>
       <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
-        Order delivery before Ganesh Chaturthi.
+        {ganesh ? "Order delivery before Ganesh Chaturthi." : "Delivered to your doorstep across Patna."}
       </p>
 
-      {/* The Ganesh Chaturthi "Order Now" promo belongs with the buy buttons:
-          beside an Out of Stock notice it would contradict it. */}
-      {outOfStock ? (
+      {/* Promotional copy belongs with the buy buttons: beside an Out of Stock
+          or Orders Closed notice it would contradict it. */}
+      {block ? (
         <div role="status" className="mt-5 rounded-bhor-md border border-bhor-border bg-bhor-cream p-4">
-          <p className="text-bhor-button font-bhor-bold uppercase text-bhor-error">Out of Stock</p>
-          <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted">
-            This kit isn&apos;t available to order right now. Please check back soon.
-          </p>
+          <p className="text-bhor-button font-bhor-bold uppercase text-bhor-error">{block.label}</p>
+          <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted">{block.message}</p>
         </div>
       ) : (
         <>
-          <div className="mt-5 rounded-bhor-sm bg-bhor-primary-soft p-3">
-            <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-              Ganesh Chaturthi · Order Now
-            </p>
-            <p className="mt-1 text-bhor-small font-bhor-semibold text-bhor-text">
-              Reserve your kit in advance and receive it before Ganesh Chaturthi.
-            </p>
-          </div>
+          {ganesh ? (
+            <div className="mt-5 rounded-bhor-sm bg-bhor-primary-soft p-3">
+              <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
+                Ganesh Chaturthi · Order Now
+              </p>
+              <p className="mt-1 text-bhor-small font-bhor-semibold text-bhor-text">
+                Reserve your kit in advance and receive it before Ganesh Chaturthi.
+              </p>
+            </div>
+          ) : null}
 
           <Link
             href="/checkout"
             onClick={() => buyNow(product, "scheduled")}
-            className="mt-3 block rounded-bhor-md border border-bhor-primary bg-bhor-primary p-4 text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
+            className={`${ganesh ? "mt-3" : "mt-5"} block rounded-bhor-md border border-bhor-primary bg-bhor-primary p-4 text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary`}
           >
             <span className="flex items-center justify-between gap-3">
               <span className="text-bhor-button font-bhor-bold uppercase">Order Now</span>
@@ -55,7 +60,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
             </span>
             <span className="mt-2 flex items-center gap-2 text-bhor-small font-bhor-semibold text-white/85">
               <Flame className="h-4 w-4 text-bhor-gold-light" aria-hidden />
-              Reserve your kit for Ganesh Chaturthi
+              {ganesh ? "Reserve your kit for Ganesh Chaturthi" : "Delivered to your doorstep in Patna"}
             </span>
           </Link>
 

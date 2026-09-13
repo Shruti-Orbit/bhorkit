@@ -1,6 +1,6 @@
 "use client";
 
-import { isOutOfStockProduct } from "@/src/utils/productState";
+import { purchaseBlock } from "@/src/utils/productState";
 import { useEffect, useState } from "react";
 import type { CollectionProduct } from "@/src/data/products";
 import { getProductDetail } from "@/src/lib/api/product.api";
@@ -47,11 +47,12 @@ export function useDirectCheckoutProduct(item: DirectCheckoutItem | null): Resol
         if (!detail) {
           setError("This product is no longer available.");
           setProduct(null);
-        } else if (isOutOfStockProduct(detail.product)) {
+        } else if (purchaseBlock(detail.product)) {
           // The product page disables Buy Now for these, so this is only reached
-          // through a selection saved before the product was deactivated. Stop
-          // here rather than letting the customer reach Pay and be refused.
-          setError("This product is currently out of stock.");
+          // through a selection saved before the product was deactivated or its
+          // range stopped taking orders. Stop here rather than letting the
+          // customer reach Pay and be refused.
+          setError(purchaseBlock(detail.product)?.message ?? "This product can't be ordered right now.");
           setProduct(null);
         } else {
           setError("");

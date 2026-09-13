@@ -57,6 +57,11 @@ export type CollectionProduct = {
     reviewCount: number;
   };
   availability: "preorder" | "available" | "unavailable";
+  /**
+   * Whether this product can be ordered right now, computed by the API from the
+   * admin's order-acceptance switches. Optional so data without it reads as open.
+   */
+  ordering?: { open: boolean; reason: "store" | "range" | null; message: string | null };
   stock: {
     readyStock: boolean;
   };
