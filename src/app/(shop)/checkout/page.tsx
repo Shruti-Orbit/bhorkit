@@ -28,6 +28,7 @@ export default function CheckoutPage() {
     clearDirectCheckout,
     directCheckoutItem,
     isLoggedIn,
+    refreshCart,
     refreshOrders,
     selectedAddressId,
   } = useShop();
@@ -54,6 +55,9 @@ export default function CheckoutPage() {
       // same Buy Now instead of the (unchanged) cart.
       clearDirectCheckout();
       void refreshOrders();
+    },
+    onCartChanged: () => {
+      void refreshCart();
     },
   });
 
