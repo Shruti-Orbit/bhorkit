@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ArrowRight, Heart } from "lucide-react";
 import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
-import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct } from "@/src/utils/productState";
+import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct, isOutOfStockProduct } from "@/src/utils/productState";
 import { looksLikeEmail, subscribeToLaunch } from "@/src/lib/api/notify.api";
 import { getBestEffortLocation } from "@/src/lib/geolocation";
 import { ApiClientError } from "@/src/lib/api/client";
@@ -36,6 +36,7 @@ export function ProductCard({
   const comingSoon = isComingSoonProduct(product);
   const preorder = isPreOrderProduct(product);
   const readyStock = isReadyStockProduct(product);
+  const outOfStock = isOutOfStockProduct(product);
   const [waitlistOpen, setWaitlistOpen] = useState(false);
   const [waitlistEmail, setWaitlistEmail] = useState("");
   const [waitlistMessage, setWaitlistMessage] = useState("");
@@ -92,7 +93,7 @@ export function ProductCard({
           alt={product.imageAlt}
           fill
           sizes="(max-width: 767px) 92vw, (max-width: 1279px) 25vw, 340px"
-          className="object-cover object-center transition-transform duration-500 group-hover:scale-[1.03]"
+          className={`object-cover object-center transition-transform duration-500 group-hover:scale-[1.03] ${outOfStock ? "opacity-60 grayscale" : ""}`}
         />
         <button
           type="button"
@@ -131,7 +132,13 @@ export function ProductCard({
           {product.description}
         </p>
         <div className={`mt-auto ${compact ? "pt-3" : "pt-4"}`}>
-          {product.badge ? (
+          {outOfStock ? (
+            // Replaces the product's own badge: "Pre-Order" beside a disabled
+            // button would contradict it.
+            <span className="inline-flex w-fit rounded-bhor-sm bg-bhor-error/10 px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide text-bhor-error">
+              Out of Stock
+            </span>
+          ) : product.badge ? (
             <span
               className={`inline-flex w-fit rounded-bhor-sm px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide ${badgeToneClass[product.badge.tone]}`}
             >
@@ -140,7 +147,18 @@ export function ProductCard({
           ) : null}
           <p className="mt-2 text-bhor-product font-bhor-bold text-bhor-text">{product.price}</p>
 
-          {showActions && comingSoon ? (
+          {showActions && outOfStock ? (
+            // Checked first: a deactivated product keeps its purchase state, so
+            // without this it would still get that state's buy button.
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              className="mt-3 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-4 text-bhor-caption font-bhor-bold uppercase text-bhor-text-muted"
+            >
+              Out of Stock
+            </button>
+          ) : showActions && comingSoon ? (
             <div className="mt-3">
               {waitlistMessage ? (
                 <p

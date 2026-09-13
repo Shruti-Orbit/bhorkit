@@ -1,3 +1,4 @@
+import { isOutOfStockProduct } from "@/src/utils/productState";
 import { PackageCheck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
 import { AboutProductAccordion } from "./AboutProductAccordion";
@@ -10,14 +11,21 @@ type ProductInfoProps = {
 const trustPoints = ["Curated with Devotion", "Secure Packaging", "Patna Delivery", "Secure Checkout"];
 
 export function ProductInfo({ product }: ProductInfoProps) {
+  // Every call to action above the purchase panel depends on this. The panel
+  // switching to Out of Stock is not enough on its own: "Order Now" and
+  // "Reserve your kit" beside it would tell the customer the opposite.
+  const outOfStock = isOutOfStockProduct(product);
+
   return (
     <div className="flex flex-col gap-5 md:pb-4">
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="w-fit rounded-bhor-sm bg-bhor-primary-soft px-3 py-1 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-            Ganesh Chaturthi · Order Now
+            {outOfStock ? "Ganesh Chaturthi" : "Ganesh Chaturthi · Order Now"}
           </p>
-          {product.badge ? (
+          {outOfStock ? (
+            <p className="text-bhor-small font-bhor-bold text-bhor-error">Out of Stock</p>
+          ) : product.badge ? (
             <p className="text-bhor-small font-bhor-bold text-bhor-gold">
               {product.badge.label === "Pre-Order" ? "Order Now" : product.badge.label}
             </p>
@@ -28,9 +36,11 @@ export function ProductInfo({ product }: ProductInfoProps) {
           {product.name}
         </h1>
         <p className="mt-3 text-bhor-body leading-bhor-body text-bhor-text-muted">{product.subtitle}</p>
-        <p className="mt-3 text-bhor-small font-bhor-semibold text-bhor-success">
-          Reserve your kit in advance and receive it before Ganesh Chaturthi.
-        </p>
+        {outOfStock ? null : (
+          <p className="mt-3 text-bhor-small font-bhor-semibold text-bhor-success">
+            Reserve your kit in advance and receive it before Ganesh Chaturthi.
+          </p>
+        )}
       </div>
 
       <div>

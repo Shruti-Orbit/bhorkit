@@ -1,5 +1,6 @@
 "use client";
 
+import { isOutOfStockProduct } from "@/src/utils/productState";
 import Image from "next/image";
 import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
@@ -41,20 +42,34 @@ export default function SavedItemsPage() {
             {savedItems.map((product) => (
               <article key={product.id} className="overflow-hidden rounded-bhor-lg border border-bhor-border bg-bhor-surface shadow-bhor-soft">
                 <Link href={product.href} className="relative block aspect-[4/3] bg-bhor-peach">
-                  <Image src={product.image} alt={product.imageAlt} fill sizes="(max-width: 767px) 100vw, 33vw" className="object-cover" />
+                  <Image src={product.image} alt={product.imageAlt} fill sizes="(max-width: 767px) 100vw, 33vw" className={`object-cover ${isOutOfStockProduct(product) ? "opacity-60 grayscale" : ""}`} />
                 </Link>
                 <div className="p-4">
                   <h2 className="line-clamp-2 text-bhor-product-mobile font-bhor-bold text-bhor-text">{product.name}</h2>
                   <p className="mt-2 text-bhor-product font-bhor-bold text-bhor-text">{product.price}</p>
                   <div className="mt-4 flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => addToCart(product)}
-                      className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-3 text-bhor-button-mobile font-bhor-bold uppercase text-white"
-                    >
-                      <ShoppingCart className="h-4 w-4" aria-hidden />
-                      Add to Cart
-                    </button>
+                    {isOutOfStockProduct(product) ? (
+                      // Kept in the list so the customer can see what they
+                      // saved and buy it once it is back; the heart still
+                      // lets them remove it.
+                      <button
+                        type="button"
+                        disabled
+                        aria-disabled="true"
+                        className="inline-flex min-h-10 flex-1 cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-3 text-bhor-button-mobile font-bhor-bold uppercase text-bhor-text-muted"
+                      >
+                        Out of Stock
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addToCart(product)}
+                        className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-3 text-bhor-button-mobile font-bhor-bold uppercase text-white"
+                      >
+                        <ShoppingCart className="h-4 w-4" aria-hidden />
+                        Add to Cart
+                      </button>
+                    )}
                     <button
                       type="button"
                       aria-label={`Remove ${product.name}`}

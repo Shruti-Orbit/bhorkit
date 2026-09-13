@@ -1,5 +1,6 @@
 "use client";
 
+import { isOutOfStockProduct } from "@/src/utils/productState";
 import {
   createContext,
   useCallback,
@@ -631,6 +632,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addToCart = useCallback((product: CollectionProduct, quantity = 1) => {
+    // Checked before the optimistic add. Otherwise an out-of-stock product
+    // would flash "Added to your cart" and then be taken back out when the
+    // server refuses it. The server refuses regardless; this only keeps the
+    // page honest when a button is reached through stale data.
+    if (isOutOfStockProduct(product)) {
+      setErrorMessage("This product is currently out of stock.");
+      return;
+    }
     setCartItems((items) => applyCartAdd(items, product, quantity));
     setSuccessMessage("Added to your cart");
     setCartDrawerOpen(true);

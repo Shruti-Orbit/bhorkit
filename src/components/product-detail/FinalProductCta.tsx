@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { ArrowRight, PackageCheck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { isOutOfStockProduct } from "@/src/utils/productState";
 
 type FinalProductCtaProps = {
   product: CollectionProduct;
 };
 
 export function FinalProductCta({ product }: FinalProductCtaProps) {
+  // A deactivated kit cannot be reserved, so this closing banner points to the
+  // rest of the range instead of repeating a call to buy it.
+  const outOfStock = isOutOfStockProduct(product);
+
   return (
     <section className="bg-bhor-cream px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-[1512px] overflow-hidden rounded-bhor-lg border border-bhor-border bg-bhor-surface shadow-bhor-soft md:grid-cols-[58%_42%]">
@@ -18,13 +23,15 @@ export function FinalProductCta({ product }: FinalProductCtaProps) {
             Bring Bappa Home With Love.
           </h2>
           <p className="mt-3 max-w-2xl text-bhor-body-mobile leading-bhor-body text-bhor-text-muted md:text-bhor-body">
-            Reserve {product.name} and keep your celebration simple, beautiful and thoughtfully prepared.
+            {outOfStock
+              ? `${product.name} is out of stock right now. Explore our other Ganesh Chaturthi kits.`
+              : `Reserve ${product.name} and keep your celebration simple, beautiful and thoughtfully prepared.`}
           </p>
           <Link
             href="/shop/ganesh-chaturthi"
             className="mt-6 inline-flex min-h-12 items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-6 text-bhor-button font-bhor-bold uppercase text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
           >
-            Order Now
+            {outOfStock ? "Explore Other Kits" : "Order Now"}
             <ArrowRight className="h-4 w-4" aria-hidden />
           </Link>
         </div>

@@ -1,3 +1,4 @@
+import { isOutOfStockProduct } from "@/src/utils/productState";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
@@ -74,7 +75,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
       "@type": "Offer",
       priceCurrency: "INR",
       price: product.price.replace(/[^\d]/g, ""),
-      availability: "https://schema.org/PreOrder",
+      // A deactivated kit must not be advertised to search engines as open
+      // for pre-order.
+      availability: isOutOfStockProduct(product)
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/PreOrder",
     },
   };
   const breadcrumbSchema = {
