@@ -15,10 +15,12 @@ export function ProductInfo({ product }: ProductInfoProps) {
       <div>
         <div className="flex flex-wrap items-center gap-3">
           <p className="w-fit rounded-bhor-sm bg-bhor-primary-soft px-3 py-1 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-            Ganesh Chaturthi · Pre-Order
+            Ganesh Chaturthi · Order Now
           </p>
           {product.badge ? (
-            <p className="text-bhor-small font-bhor-bold text-bhor-gold">{product.badge.label}</p>
+            <p className="text-bhor-small font-bhor-bold text-bhor-gold">
+              {product.badge.label === "Pre-Order" ? "Order Now" : product.badge.label}
+            </p>
           ) : null}
         </div>
 

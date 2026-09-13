@@ -84,7 +84,7 @@ export function CartDrawer() {
                   </span>
                   <div>
                     <h3 className="text-bhor-body font-bhor-bold text-bhor-text">
-                      {hasPreOrderItems ? "Ganesh Chaturthi Pre-Order" : "Delivery"}
+                      {hasPreOrderItems ? "Ganesh Chaturthi Order" : "Delivery"}
                     </h3>
                     <p className="text-bhor-small text-bhor-text-muted">
                       Shipment of {cartItems.reduce((total, item) => total + item.quantity, 0)} item
@@ -110,7 +110,7 @@ export function CartDrawer() {
                         </p>
                         {isPreOrderProduct(item.product) ? (
                           <span className="mt-1 inline-flex rounded-bhor-sm bg-bhor-primary-soft px-2 py-0.5 text-bhor-badge font-bhor-bold uppercase text-bhor-primary">
-                            Pre-Order
+                            Order Now
                           </span>
                         ) : null}
                         <p className="mt-1 text-bhor-small font-bhor-bold text-bhor-text">
@@ -200,7 +200,7 @@ export function CartDrawer() {
                 }}
                 className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
               >
-                {hasPreOrderItems ? "Confirm Pre-Order" : "Checkout"}
+                {hasPreOrderItems ? "Order Now" : "Checkout"}
               </Link>
             </div>
           </>

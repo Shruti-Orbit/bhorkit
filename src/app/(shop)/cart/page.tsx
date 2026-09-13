@@ -44,7 +44,7 @@ export default function CartPage() {
                       <h2 className="text-bhor-product font-bhor-semibold text-bhor-text">{item.product.name}</h2>
                       {isPreOrderProduct(item.product) ? (
                         <span className="mt-2 inline-flex rounded-bhor-sm bg-bhor-primary-soft px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase text-bhor-primary">
-                          Pre-Order
+                          Order Now
                         </span>
                       ) : null}
                       <p className="mt-1 text-bhor-small font-bhor-bold text-bhor-text">
@@ -99,7 +99,7 @@ export default function CartPage() {
               }}
               className="inline-flex min-h-12 w-full items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark"
             >
-              {hasPreOrderItems ? "Confirm Pre-Order" : "Checkout"}
+              {hasPreOrderItems ? "Order Now" : "Checkout"}
             </Link>
           ) : null}
         </div>

@@ -19,12 +19,12 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         Patna Delivery
       </p>
       <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
-        Pre-order delivery before Ganesh Chaturthi.
+        Order delivery before Ganesh Chaturthi.
       </p>
 
       <div className="mt-5 rounded-bhor-sm bg-bhor-primary-soft p-3">
         <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-          Ganesh Chaturthi · Pre-Order
+          Ganesh Chaturthi · Order Now
         </p>
         <p className="mt-1 text-bhor-small font-bhor-semibold text-bhor-text">
           Reserve your kit in advance and receive it before Ganesh Chaturthi.
@@ -37,7 +37,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
         className="mt-3 block rounded-bhor-md border border-bhor-primary bg-bhor-primary p-4 text-white transition-colors hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
       >
         <span className="flex items-center justify-between gap-3">
-          <span className="text-bhor-button font-bhor-bold uppercase">Pre-Order Now</span>
+          <span className="text-bhor-button font-bhor-bold uppercase">Order Now</span>
           <ArrowRight className="h-4 w-4" aria-hidden />
         </span>
         <span className="mt-2 flex items-center gap-2 text-bhor-small font-bhor-semibold text-white/85">

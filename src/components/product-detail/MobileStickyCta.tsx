@@ -22,7 +22,7 @@ export function MobileStickyCta({ product }: MobileStickyCtaProps) {
           onClick={() => buyNow(product, preorder ? "scheduled" : "buy-now")}
           className="inline-flex min-h-11 flex-1 items-center justify-center rounded-bhor-sm bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-bold uppercase text-white"
         >
-          {preorder ? "Pre-Order Now" : "Order Now"}
+          Order Now
         </Link>
       </div>
     </div>
