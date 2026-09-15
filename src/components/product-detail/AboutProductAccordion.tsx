@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Check, ChevronDown, ClipboardList, Info, Truck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { resolveKitGroups, type KitItem } from "@/src/lib/product/kitGroups";
 
 type AboutProductAccordionProps = {
   product: CollectionProduct;
@@ -10,6 +11,10 @@ type AboutProductAccordionProps = {
 
 export function AboutProductAccordion({ product }: AboutProductAccordionProps) {
   const [openSection, setOpenSection] = useState("");
+
+  // null for every kit that is not broken down by day — which is all of them
+  // but the Navratri subscription — and those keep the flat list below.
+  const kitGroups = resolveKitGroups(product);
 
   const sections = [
     {
@@ -21,22 +26,42 @@ export function AboutProductAccordion({ product }: AboutProductAccordionProps) {
           <p>{product.description}</p>
           <div>
             <p className="text-bhor-small font-bhor-bold text-bhor-text">What&apos;s inside your kit</p>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              {product.contents.map((item) => (
-                <div
-                  key={`${item.name}-${item.quantity}-${item.unit}`}
-                  className="flex items-start justify-between gap-3 rounded-bhor-sm bg-bhor-cream px-3 py-2"
-                >
-                  <span className="flex gap-2">
-                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-bhor-success" aria-hidden />
-                    <span>{item.name}</span>
-                  </span>
-                  <span className="shrink-0 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
-                    {item.quantity} {item.unit}
-                  </span>
-                </div>
-              ))}
-            </div>
+            {/* Stays a heading either way. Making it a third thing to open
+                would put two clicks between a shopper and an ingredient. */}
+            {kitGroups ? (
+              <div className="mt-3 divide-y divide-bhor-border rounded-bhor-sm border border-bhor-border">
+                {kitGroups.map((group) => (
+                  <details key={group.id} className="group/day">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 text-bhor-small font-bhor-semibold text-bhor-text focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary [&::-webkit-details-marker]:hidden">
+                      <span>
+                        <span className="mr-2 font-bhor-bold text-bhor-primary">
+                          {group.label}
+                        </span>
+                        {group.title}
+                      </span>
+                      <ChevronDown
+                        className="h-4 w-4 shrink-0 text-bhor-text-muted transition-transform group-open/day:rotate-180"
+                        aria-hidden
+                      />
+                    </summary>
+                    <div className="grid gap-2 px-3 pb-3 sm:grid-cols-2">
+                      {group.items.map((item, index) => (
+                        <KitItemChip key={`${group.id}-${item.name}-${index}`} item={item} />
+                      ))}
+                    </div>
+                  </details>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                {product.contents.map((item) => (
+                  <KitItemChip
+                    key={`${item.name}-${item.quantity}-${item.unit}`}
+                    item={item}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ),
@@ -130,5 +155,29 @@ export function AboutProductAccordion({ product }: AboutProductAccordionProps) {
         })}
       </div>
     </section>
+  );
+}
+
+/**
+ * One ingredient line. The same chip serves the flat list and the day-wise
+ * one, so a kit broken down by day looks like the kits that are not.
+ *
+ * The amount is dropped when there is none rather than rendered as a stray
+ * unit: the per-day quantities of the Navratri kit have not been decided, and
+ * "g" on its own says less than nothing.
+ */
+function KitItemChip({ item }: { item: KitItem }) {
+  return (
+    <div className="flex items-start justify-between gap-3 rounded-bhor-sm bg-bhor-cream px-3 py-2">
+      <span className="flex gap-2">
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-bhor-success" aria-hidden />
+        <span>{item.name}</span>
+      </span>
+      {item.quantity ? (
+        <span className="shrink-0 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
+          {item.quantity} {item.unit}
+        </span>
+      ) : null}
+    </div>
   );
 }

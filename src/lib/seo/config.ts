@@ -15,9 +15,9 @@ export const seoConfig = {
     youtube: "https://youtube.com/@bhorkit?si=tpya00V8zovz_uhd",
   },
   home: {
-    title: "BHORKIT | Ganesh Puja Kit in Patna | Ganesh Puja Samagri Online",
+    title: "Puja Kit in Patna | Complete Puja Needs Online – Bhorkit",
     description:
-      "Shop Ganesh Puja Kits and Ganesh Puja Samagri online in Patna. Get complete puja essentials, Durva and more for a hassle-free Ganpati Puja at home.",
+      "Shop Puja Kit in Patna online with Bhorkit. Get essential puja samagri and ritual items in one place, conveniently packed and delivered to your doorstep.",
     socialTitle: "Puja Kit in Patna | Complete Puja Needs Online – Bhorkit",
     socialDescription:
       "Shop Puja Kit in Patna online with Bhorkit. Get essential puja samagri and ritual items in one place, conveniently packed and delivered to your doorstep.",

@@ -173,13 +173,6 @@ export const faqs: FaqItem[] = [
     ),
   },
   {
-    id: "ganesh-chaturthi-puja-kits-online",
-    question: "Does BhorKit offer Ganesh Chaturthi Puja Kits online?",
-    answer: p(
-      "Yes. BhorKit offers curated Ganesh Chaturthi Puja Kits online to make preparing for Ganesh Chaturthi more convenient. The contents are listed on the relevant product page.",
-    ),
-  },
-  {
     id: "why-pre-orders",
     question: "Why does BhorKit offer pre-orders?",
     answer: p(
