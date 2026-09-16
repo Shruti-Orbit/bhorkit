@@ -10,13 +10,15 @@ import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddres
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
 import { FirstOrderGiftSection } from "@/src/components/checkout/FirstOrderGiftSection";
 import { CouponField } from "@/src/components/checkout/CouponField";
+import { PaymentMethodSection } from "@/src/components/checkout/PaymentMethodSection";
 import type { AppliedCoupon } from "@/src/lib/api/coupon.api";
+import { getPaymentOptions, type PaymentMode, type PaymentOptions } from "@/src/lib/api/order.api";
 import { getCheckoutGiftState, type CheckoutGiftState } from "@/src/lib/api/gift.api";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { useDirectCheckoutProduct } from "@/src/lib/checkout/useDirectCheckoutProduct";
-import { calculateCouponDiscount, formatCurrency, parsePrice } from "@/src/utils/discount";
+import { calculateCouponDiscount, calculateHandlingCharge, formatCurrency, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CheckoutPage() {
@@ -40,6 +42,9 @@ export default function CheckoutPage() {
   const [coupon, setCoupon] = useState<AppliedCoupon | null>(null);
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliverySlotId, setDeliverySlotId] = useState("");
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>("online");
+  const [paymentOptions, setPaymentOptions] = useState<PaymentOptions | null>(null);
+  const [paymentOptionsLoading, setPaymentOptionsLoading] = useState(false);
 
   // A Buy Now selection takes precedence over the cart for this page only —
   // the cart itself is left untouched and is still there afterwards.
@@ -56,6 +61,8 @@ export default function CheckoutPage() {
       // same Buy Now instead of the (unchanged) cart.
       clearDirectCheckout();
       void refreshOrders();
+      // A pay-on-delivery order empties the cart on the server as it is placed.
+      void refreshCart();
     },
     onCartChanged: () => {
       void refreshCart();
@@ -92,6 +99,55 @@ export default function CheckoutPage() {
       isActive = false;
     };
   }, [isLoggedIn]);
+
+  // Asked of the server whenever what is being bought changes: whether every
+  // item allows pay on delivery, and what it would cost, are decided there.
+  const cartSignature = cartItems.map((line) => `${line.product.id}:${line.quantity}`).join(",");
+  const directProductId = directCheckoutItem?.productId;
+  const directQuantity = directCheckoutItem?.quantity;
+  const couponCode = coupon?.code;
+  useEffect(() => {
+    let isActive = true;
+
+    if (!isLoggedIn) {
+      queueMicrotask(() => {
+        if (!isActive) return;
+        setPaymentOptions(null);
+        setPaymentOptionsLoading(false);
+      });
+      return () => {
+        isActive = false;
+      };
+    }
+
+    queueMicrotask(() => {
+      if (isActive) setPaymentOptionsLoading(true);
+    });
+    getPaymentOptions({
+      ...(directProductId ? { productId: directProductId, quantity: directQuantity ?? 1 } : {}),
+      ...(couponCode ? { couponCode } : {}),
+    })
+      .then((result) => {
+        if (isActive) setPaymentOptions(result);
+      })
+      .catch(() => {
+        // Online payment still works; pay on delivery is simply not offered.
+        if (isActive) setPaymentOptions(null);
+      })
+      .finally(() => {
+        if (isActive) setPaymentOptionsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [isLoggedIn, cartSignature, directProductId, directQuantity, couponCode]);
+
+  // Pay on delivery can stop being available while it is selected — a coupon or
+  // a quantity change can take the order over the limit — so the choice falls
+  // back to online rather than offering an order the server would refuse.
+  const effectivePaymentMode: PaymentMode =
+    paymentMode === "pay_on_delivery" && paymentOptions?.payOnDelivery.available ? "pay_on_delivery" : "online";
 
   const selectGift = useCallback((giftId: string) => setSelectedGiftId(giftId), []);
 
@@ -145,9 +201,23 @@ export default function CheckoutPage() {
   const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
   // The button says what the summary says. Both are previews — the amount
   // Razorpay is asked for comes from the server's own pricing.
+  // Pay on delivery: no online discount, plus the fee the server reported. Still
+  // a preview — the order is priced again on the server when it is placed.
+  const baseSubtotal = isDirect ? direct.totals?.subtotal ?? 0 : cartSubtotal;
+  const baseHandling = isDirect ? direct.totals?.handlingCharge ?? 0 : calculateHandlingCharge(cartSubtotal);
+  const codFeeRupees = paymentOptions ? paymentOptions.payOnDelivery.feePaise / 100 : 0;
+  const codTotals =
+    effectivePaymentMode === "pay_on_delivery"
+      ? {
+          subtotal: baseSubtotal,
+          discount: 0,
+          handlingCharge: baseHandling,
+          total: baseSubtotal + baseHandling + codFeeRupees,
+        }
+      : null;
   const payableTotal = Math.max(
     0,
-    (isDirect ? direct.totals?.total ?? 0 : cartTotal) - (summaryCoupon?.discount ?? 0),
+    (codTotals ? codTotals.total : isDirect ? direct.totals?.total ?? 0 : cartTotal) - (summaryCoupon?.discount ?? 0),
   );
 
   // The selected address must still be deliverable. The server enforces this
@@ -179,6 +249,7 @@ export default function CheckoutPage() {
       deliveryMode,
       ...(giftState?.eligible && selectedGiftId ? { giftId: selectedGiftId } : {}),
       ...(coupon ? { couponCode: coupon.code } : {}),
+      paymentMode: effectivePaymentMode,
       deliveryDate,
       deliverySlotId,
       // Sends only the id and quantity; the server prices it.
@@ -289,6 +360,15 @@ export default function CheckoutPage() {
                 />
               ) : null}
 
+              {isLoggedIn ? (
+                <PaymentMethodSection
+                  value={effectivePaymentMode}
+                  onChange={setPaymentMode}
+                  options={paymentOptions}
+                  loading={paymentOptionsLoading}
+                />
+              ) : null}
+
             </>
           )}
         </section>
@@ -297,7 +377,11 @@ export default function CheckoutPage() {
           <div className="space-y-4 xl:sticky xl:top-6 xl:self-start">
             <OrderSummary
               items={summaryItems}
-              {...(isDirect && direct.totals ? { totals: direct.totals } : {})}
+              {...(codTotals
+                ? { totals: codTotals, payOnDeliveryFee: codFeeRupees }
+                : isDirect && direct.totals
+                  ? { totals: direct.totals }
+                  : {})}
               coupon={summaryCoupon}
               couponControl={
                 isLoggedIn ? (
@@ -361,7 +445,9 @@ export default function CheckoutPage() {
 
             <p className="flex items-center justify-center gap-2 text-bhor-caption font-bhor-medium text-bhor-text-muted">
               <ShieldCheck className="h-4 w-4 text-bhor-success" aria-hidden />
-              UPI · Cards · Net Banking · Wallets
+              {effectivePaymentMode === "pay_on_delivery"
+                ? "Pay by UPI QR or cash when your order arrives"
+                : "UPI · Cards · Net Banking · Wallets"}
             </p>
           </div>
         ) : null}
@@ -371,7 +457,9 @@ export default function CheckoutPage() {
 
   function payButtonLabel() {
     if (storeClosed) return "Orders Closed";
-    if (phase === "creating") return "Starting secure payment…";
+    if (phase === "creating") {
+      return effectivePaymentMode === "pay_on_delivery" ? "Placing your order…" : "Starting secure payment…";
+    }
     if (phase === "awaiting_payment") return "Complete payment in the window";
     if (phase === "verifying") return "Confirming your payment…";
     if (phase === "resuming") return "Checking payment status…";
@@ -380,6 +468,8 @@ export default function CheckoutPage() {
     if (selectedUndeliverable) return "Delivery Unavailable at This Pincode";
     if (!deliveryDate || !deliverySlotId) return "Select Delivery Date & Slot";
     if (isPreOrder && !policyAccepted) return "Accept Pre-Order Policy";
-    return `Pay ${formatCurrency(payableTotal)}`;
+    return effectivePaymentMode === "pay_on_delivery"
+      ? `Place Order · ${formatCurrency(payableTotal)}`
+      : `Pay ${formatCurrency(payableTotal)}`;
   }
 }

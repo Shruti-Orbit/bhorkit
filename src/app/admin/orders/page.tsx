@@ -14,7 +14,8 @@ const STATUSES = [
   "awaiting_payment", "confirmed", "processing", "packed",
   "shipped", "out_for_delivery", "delivered", "cancelled", "payment_failed",
 ];
-const PAYMENT_STATUSES = ["created", "attempted", "paid", "failed", "cancelled", "refunded"];
+// "due" finds pay-on-delivery orders whose payment is still to collect.
+const PAYMENT_STATUSES = ["created", "attempted", "paid", "due", "failed", "cancelled", "refunded"];
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<BackendOrder[]>([]);

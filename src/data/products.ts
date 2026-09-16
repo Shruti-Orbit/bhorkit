@@ -57,6 +57,8 @@ export type CollectionProduct = {
     reviewCount: number;
   };
   availability: "preorder" | "available" | "unavailable";
+  /** Whether this product may be ordered with payment on delivery. Set by an admin. */
+  codAvailable?: boolean;
   /**
    * Whether this product can be ordered right now, computed by the API from the
    * admin's order-acceptance switches. Optional so data without it reads as open.

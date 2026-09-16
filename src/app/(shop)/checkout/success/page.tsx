@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { CheckCircle2, Clock, Download, Loader2, XCircle } from "lucide-react";
 import { getInvoiceUrl, getOrder, reconcileOrder, type BackendOrder } from "@/src/lib/api/order.api";
 import { formatPaise } from "@/src/utils/money";
-import { deliveryLabel, formatOrderStatus, paymentMethodLabel } from "@/src/utils/order";
+import { deliveryLabel, paymentSummary } from "@/src/utils/order";
 
 export default function CheckoutSuccessPage() {
   return (
@@ -35,7 +35,8 @@ function SuccessContent() {
 
     getOrder(orderId)
       .then(async (fetched) => {
-        if (fetched.payment.status === "paid") return fetched;
+        // Nothing to reconcile for pay on delivery: no online payment is in flight.
+        if (fetched.payment.status === "paid" || fetched.payment.mode === "pay_on_delivery") return fetched;
         const reconciled = await reconcileOrder(orderId, "status").catch(() => null);
         return reconciled?.order ?? fetched;
       })
@@ -76,33 +77,33 @@ function SuccessContent() {
   }
 
   const paid = order.payment.status === "paid";
+  const codDue = order.payment.mode === "pay_on_delivery" && order.payment.status === "due";
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-10 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-2xl space-y-5">
         <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center shadow-bhor-soft">
-          {paid ? (
+          {paid || codDue ? (
             <CheckCircle2 className="mx-auto h-14 w-14 text-bhor-success" aria-hidden />
           ) : (
             <Clock className="mx-auto h-14 w-14 text-bhor-gold" aria-hidden />
           )}
           <h1 className="mt-4 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text md:text-bhor-h3">
-            {paid ? "Your order is confirmed 🪔" : "We're confirming your payment"}
+            {paid ? "Your order is confirmed 🪔" : codDue ? "Your order is placed 🪔" : "We're confirming your payment"}
           </h1>
           <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">
             {paid
               ? "Thank you for choosing BHORKIT. A confirmation email with your invoice is on its way."
-              : "Your payment is still being processed. This page updates once it's confirmed — you can safely close it, we'll email you either way."}
+              : codDue
+                ? `Please keep ${formatPaise(order.pricing.total)} ready and pay by UPI QR or cash when your order arrives. Your invoice will be emailed as soon as the payment is received.`
+                : "Your payment is still being processed. This page updates once it's confirmed — you can safely close it, we'll email you either way."}
           </p>
 
           <dl className="mt-6 grid gap-3 rounded-bhor-md bg-bhor-primary-soft p-4 text-left sm:grid-cols-2">
             <Field label="Order ID" value={order.orderNumber} />
-            <Field label="Total" value={formatPaise(order.pricing.total)} />
+            <Field label={codDue ? "To Pay on Delivery" : "Total"} value={formatPaise(order.pricing.total)} />
             <Field label="Delivery" value={deliveryLabel(order)} />
-            <Field
-              label="Payment"
-              value={paid ? paymentMethodLabel(order.payment.method) : formatOrderStatus(order.status)}
-            />
+            <Field label="Payment" value={paymentSummary(order)} />
           </dl>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">

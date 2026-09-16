@@ -12,7 +12,10 @@ export type OrderStatus =
   | "cancelled"
   | "payment_failed";
 
-export type PaymentStatus = "created" | "attempted" | "paid" | "failed" | "cancelled" | "refunded";
+/** `due`: a pay-on-delivery order whose payment is still to be collected. */
+export type PaymentStatus = "created" | "attempted" | "paid" | "failed" | "cancelled" | "refunded" | "due";
+
+export type PaymentMode = "online" | "pay_on_delivery";
 
 export type DeliveryMode = "standard" | "scheduled";
 
@@ -49,18 +52,27 @@ export type BackendOrder = {
   pricing: {
     subtotal: number;
     discount: number;
+    couponCode?: string | null;
+    couponDiscount?: number;
     handlingCharge: number;
+    /** Pay-on-delivery fee, paise. 0 for online orders. */
+    codFee?: number;
     total: number;
     currency: string;
   };
   delivery: { mode: DeliveryMode; date: string; slotId: string; slotLabel: string };
   payment: {
+    /** Absent from responses made before pay on delivery existed, which were all online. */
+    mode?: PaymentMode;
     status: PaymentStatus;
     method: string | null;
-    razorpayOrderId: string;
+    /** Null for pay-on-delivery orders, which have no Razorpay order. */
+    razorpayOrderId: string | null;
     razorpayPaymentId: string | null;
     paidAt: string | null;
     failureReason: string | null;
+    /** How a pay-on-delivery order was paid, once it has been. */
+    collectedVia?: "upi_qr" | "cash" | null;
   };
   status: OrderStatus;
   timeline: { status: OrderStatus; at: string; note?: string }[];
@@ -85,6 +97,7 @@ export type DeliveryOptions = {
 };
 
 export type CheckoutSession = {
+  paymentMode: "online";
   orderId: string;
   orderNumber: string;
   amount: number;
@@ -94,6 +107,31 @@ export type CheckoutSession = {
   expiresAt: string;
   customer: { name: string; email: string };
   contact: string;
+};
+
+/** A pay-on-delivery order, placed — nothing to pay now, so no payment sheet. */
+export type CodPlacement = {
+  paymentMode: "pay_on_delivery";
+  orderId: string;
+  orderNumber: string;
+  amount: number;
+  currency: string;
+  order: BackendOrder;
+};
+
+export type CheckoutResult = CheckoutSession | CodPlacement;
+
+export type PaymentOptions = {
+  online: { available: boolean };
+  payOnDelivery: {
+    available: boolean;
+    /** Why it can't be used, when it can't. */
+    reason: string | null;
+    feePaise: number;
+    maxOrderPaise: number;
+    /** What this order would cost paid on delivery — no online discount, fee included. */
+    totalPaise: number;
+  };
 };
 
 /**
@@ -108,6 +146,21 @@ export async function getDeliveryOptions(mode: DeliveryMode, date?: string, prod
   if (date) params.set("date", date);
   if (productId) params.set("productId", productId);
   const response = await apiGet<DeliveryOptions>(`/orders/delivery-options?${params.toString()}`);
+  return response.data;
+}
+
+/**
+ * Which payment methods this checkout can use, and what pay on delivery costs.
+ * The server resolves the cart (or the Buy Now product) and its prices itself;
+ * the parameters only say which of the two it is and which coupon is applied.
+ */
+export async function getPaymentOptions(params: { productId?: string; quantity?: number; couponCode?: string }) {
+  const search = new URLSearchParams();
+  if (params.productId) search.set("productId", params.productId);
+  if (params.quantity) search.set("quantity", String(params.quantity));
+  if (params.couponCode) search.set("couponCode", params.couponCode);
+  const qs = search.toString();
+  const response = await apiGet<PaymentOptions>(`/orders/payment-options${qs ? `?${qs}` : ""}`);
   return response.data;
 }
 
@@ -126,10 +179,12 @@ export type CreateCheckoutInput = {
   giftId?: string;
   /** The applied coupon code. Never a percentage and never an amount. */
   couponCode?: string;
+  /** How the customer pays. The server re-checks pay on delivery before accepting it. */
+  paymentMode?: PaymentMode;
 };
 
 export async function createCheckout(input: CreateCheckoutInput) {
-  const response = await apiPost<CheckoutSession, CreateCheckoutInput>("/orders/checkout", input);
+  const response = await apiPost<CheckoutResult, CreateCheckoutInput>("/orders/checkout", input);
   return response.data;
 }
 

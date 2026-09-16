@@ -9,6 +9,7 @@ import {
   verifyPayment,
   type BackendOrder,
   type DeliveryMode,
+  type PaymentMode,
 } from "@/src/lib/api/order.api";
 import { openRazorpayCheckout, type RazorpayFailureResponse } from "@/src/lib/razorpay";
 
@@ -46,6 +47,8 @@ type StartCheckoutInput = {
    * percentage up again and recomputes the discount when it prices the order.
    */
   couponCode?: string;
+  /** How the customer pays. Pay on delivery places the order without opening Razorpay. */
+  paymentMode?: PaymentMode;
 };
 
 function readPendingOrderId() {
@@ -169,6 +172,15 @@ export function useCheckout(
         // Server-side: prices the cart, creates the Razorpay order, returns
         // the amount to charge. Nothing about the amount comes from here.
         const session = await createCheckout(input);
+
+        // Pay on delivery: the order is placed and nothing is paid now, so there
+        // is no payment sheet to open and nothing to resume later.
+        if (session.paymentMode === "pay_on_delivery") {
+          inFlight.current = false;
+          settleConfirmed(session.order);
+          return;
+        }
+
         writePendingOrderId(session.orderId);
 
         if (!mounted.current) return;

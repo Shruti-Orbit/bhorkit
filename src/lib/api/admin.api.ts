@@ -1,5 +1,5 @@
 import { apiDelete, apiGet, apiPatch, apiPost, apiPut, getApiUrl } from "@/src/lib/api/client";
-import type { BackendOrder, OrderStatus } from "@/src/lib/api/order.api";
+import type { BackendOrder, OrderStatus, PaymentStatus } from "@/src/lib/api/order.api";
 import type { CollectionProduct } from "@/src/data/products";
 
 // Every one of these calls hits an endpoint that re-verifies the caller's
@@ -48,13 +48,17 @@ export type AdminDashboard = {
 
 export type AdminPaymentView = {
   provider: string;
+  mode: "online" | "pay_on_delivery";
   status: string;
   method: string | null;
-  razorpayOrderId: string;
+  /** Null for pay-on-delivery orders. */
+  razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
   paidAmountPaise: number | null;
   paidAt: string | null;
   failureReason: string | null;
+  /** Pay-on-delivery orders only: how, and by whom, the payment was taken. */
+  collection: { via: "upi_qr" | "cash" | null; collectedBy: string | null; collectedAt: string | null; note: string | null } | null;
   attempts: { razorpayPaymentId: string | null; status: string; code: string; description: string; at: string }[];
 };
 
@@ -109,6 +113,14 @@ export async function createProduct(body: Record<string, unknown>) {
 
 export async function updateProduct(id: string, body: Record<string, unknown>) {
   return (await apiPatch<AdminProduct, Record<string, unknown>>(`/admin/products/${encodeURIComponent(id)}`, body)).data;
+}
+
+/** Whether this product may be ordered with payment on delivery. */
+export async function setProductCod(id: string, codAvailable: boolean) {
+  return (await apiPatch<AdminProduct, { codAvailable: boolean }>(
+    `/admin/products/${encodeURIComponent(id)}/cod`,
+    { codAvailable },
+  )).data;
 }
 
 export async function setProductActive(id: string, active: boolean) {
@@ -363,4 +375,56 @@ export async function updateIngredient(id: string, input: Partial<IngredientInpu
 
 export async function deleteIngredient(id: string) {
   await apiDelete<{ removed: boolean }>(`/admin/ingredients/${id}`);
+}
+
+// --- pay on delivery ---
+
+export type AdminCodSettings = {
+  enabled: boolean;
+  /** Paise. */
+  feePaise: number;
+  /** Paise — the most that can be collected at the door, fee included. */
+  maxOrderPaise: number;
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export async function getCodSettings() {
+  return (await apiGet<{ settings: AdminCodSettings }>("/admin/cod/settings")).data.settings;
+}
+
+export async function saveCodSettings(input: { enabled?: boolean; feePaise?: number; maxOrderPaise?: number }) {
+  return (await apiPut<{ settings: AdminCodSettings }, typeof input>("/admin/cod/settings", input)).data.settings;
+}
+
+/** A pay-on-delivery order's collection state, as the admin panel draws it. */
+export type CodCollectionView = {
+  paymentStatus: PaymentStatus;
+  amountPaise: number;
+  /** The QR to show, while one is live and the payment is still due. */
+  qr: { imageUrl: string; amountPaise: number; expiresAt: string } | null;
+  collectedVia: "upi_qr" | "cash" | null;
+  collectedAt: string | null;
+  order: BackendOrder;
+};
+
+/** Creates — or re-shows — the UPI QR for collecting this order. */
+export async function startCodQr(orderId: string) {
+  return (await apiPost<CodCollectionView, Record<string, never>>(
+    `/admin/orders/${encodeURIComponent(orderId)}/cod/qr`,
+    {},
+  )).data;
+}
+
+/** Current collection state. The server also asks Razorpay, in case the webhook is slow. */
+export async function getCodCollection(orderId: string) {
+  return (await apiGet<CodCollectionView>(`/admin/orders/${encodeURIComponent(orderId)}/cod`)).data;
+}
+
+/** Records a cash payment: the order is marked paid and the invoice is emailed. */
+export async function recordCodCash(orderId: string, note: string) {
+  return (await apiPost<CodCollectionView & { changed: boolean }, { note: string }>(
+    `/admin/orders/${encodeURIComponent(orderId)}/cod/cash`,
+    { note },
+  )).data;
 }

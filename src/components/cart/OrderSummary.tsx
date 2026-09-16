@@ -67,9 +67,15 @@ type OrderSummaryProps = {
    * no control at all.
    */
   couponControl?: ReactNode;
+  /**
+   * Set for a pay-on-delivery checkout: the fee, in rupees. Its presence also
+   * hides the online-payment discount, which pay on delivery does not get. The
+   * `totals` passed with it must already reflect both.
+   */
+  payOnDeliveryFee?: number;
 };
 
-export function OrderSummary({ items, totals, coupon, couponControl }: OrderSummaryProps = {}) {
+export function OrderSummary({ items, totals, coupon, couponControl, payOnDeliveryFee }: OrderSummaryProps = {}) {
   const { cartSubtotal, cartTotal, handlingCharge, memberDiscount } = useShop();
 
   const subtotal = totals?.subtotal ?? cartSubtotal;
@@ -136,10 +142,12 @@ export function OrderSummary({ items, totals, coupon, couponControl }: OrderSumm
           <span>Subtotal</span>
           <span>{formatCurrency(subtotal)}</span>
         </div>
-        <div className="flex justify-between gap-4 text-bhor-success">
-          <span>Online Payment Discount (10%)</span>
-          <span>-{formatCurrency(discount)}</span>
-        </div>
+        {payOnDeliveryFee === undefined ? (
+          <div className="flex justify-between gap-4 text-bhor-success">
+            <span>Online Payment Discount (10%)</span>
+            <span>-{formatCurrency(discount)}</span>
+          </div>
+        ) : null}
         {coupon ? (
           <div className="flex justify-between gap-4 text-bhor-success">
             <span>
@@ -152,6 +160,12 @@ export function OrderSummary({ items, totals, coupon, couponControl }: OrderSumm
           <span>Handling Charge</span>
           <span>{handling === 0 ? "Free" : formatCurrency(handling)}</span>
         </div>
+        {payOnDeliveryFee !== undefined ? (
+          <div className="flex justify-between gap-4 text-bhor-text-muted">
+            <span>Pay on Delivery Fee</span>
+            <span>{payOnDeliveryFee === 0 ? "Free" : formatCurrency(payOnDeliveryFee)}</span>
+          </div>
+        ) : null}
         {handling > 0 ? (
           <p className="text-bhor-caption font-bhor-medium text-bhor-text-muted">
             Free handling on orders above ₹999.

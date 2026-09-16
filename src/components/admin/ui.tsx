@@ -81,6 +81,8 @@ const STATUS_TONES: Record<string, string> = {
   created: "bg-bhor-cream text-bhor-text-muted",
   attempted: "bg-bhor-peach text-bhor-primary-dark",
   refunded: "bg-bhor-cream text-bhor-text-muted",
+  // Pay on delivery, still to collect.
+  due: "bg-bhor-peach text-bhor-primary-dark",
 };
 
 export function formatStatus(status: string) {

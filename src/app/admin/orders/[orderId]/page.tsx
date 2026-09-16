@@ -11,6 +11,7 @@ import {
   adminInvoiceUrl, getOrder, markRefunded, updateOrderStatus, type AdminOrderDetail,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
+import { CodCollectionPanel } from "@/src/components/admin/CodCollectionPanel";
 import type { OrderStatus } from "@/src/lib/api/order.api";
 import { formatPaise } from "@/src/utils/money";
 import { deliveryLabel, formatOrderDate } from "@/src/utils/order";
@@ -36,6 +37,13 @@ export default function AdminOrderDetailPage() {
       })
       .catch(() => setState("error"));
   }, [orderId]);
+
+  // Reloads the order in place, without the loading screen, so an open
+  // collection dialog — and its "Paid" confirmation — stays on screen.
+  const refresh = useCallback(() => {
+    getOrder(orderId).then(setDetail).catch(() => undefined);
+  }, [orderId]);
+  const notify = useCallback((message: string, tone: "success" | "error") => setToast({ message, tone }), []);
 
   // Deferred a tick rather than called straight from the effect body: `load`
   // flips state to "loading" immediately, which counts as a synchronous
@@ -159,6 +167,7 @@ export default function AdminOrderDetailPage() {
               <Row label="Subtotal" value={formatPaise(order.pricing.subtotal)} />
               <Row label="Discount" value={`-${formatPaise(order.pricing.discount)}`} />
               <Row label="Handling" value={order.pricing.handlingCharge === 0 ? "Free" : formatPaise(order.pricing.handlingCharge)} />
+              {order.pricing.codFee ? <Row label="Pay on delivery fee" value={formatPaise(order.pricing.codFee)} /> : null}
               <div className="flex justify-between border-t border-bhor-border pt-2 text-bhor-product font-bhor-bold text-bhor-text">
                 <span>Total</span><span>{formatPaise(order.pricing.total)}</span>
               </div>
@@ -224,14 +233,20 @@ export default function AdminOrderDetailPage() {
               <div className="flex justify-between gap-3">
                 <span className="text-bhor-text-muted">Status</span><StatusBadge status={payment.status} />
               </div>
-              <Row label="Gateway" value="Razorpay" />
+              <Row label="Mode" value={payment.mode === "pay_on_delivery" ? "Pay on delivery" : "Online"} />
+              {payment.collection?.via ? (
+                <Row label="Collected via" value={payment.collection.via === "cash" ? "Cash" : "UPI QR"} />
+              ) : null}
+              {payment.collection?.note ? <Row label="Note" value={payment.collection.note} /> : null}
               <Row label="Method" value={payment.method ?? "—"} />
               <Row label="Paid" value={payment.paidAmountPaise != null ? formatPaise(payment.paidAmountPaise) : "—"} />
               <Row label="Paid at" value={payment.paidAt ? formatOrderDate(payment.paidAt) : "—"} />
-              <div className="pt-1">
-                <p className="text-bhor-caption text-bhor-text-muted">Razorpay order</p>
-                <p className="break-all text-bhor-caption text-bhor-text">{payment.razorpayOrderId}</p>
-              </div>
+              {payment.razorpayOrderId ? (
+                <div className="pt-1">
+                  <p className="text-bhor-caption text-bhor-text-muted">Razorpay order</p>
+                  <p className="break-all text-bhor-caption text-bhor-text">{payment.razorpayOrderId}</p>
+                </div>
+              ) : null}
               {payment.razorpayPaymentId ? (
                 <div>
                   <p className="text-bhor-caption text-bhor-text-muted">Payment id</p>
@@ -257,8 +272,19 @@ export default function AdminOrderDetailPage() {
                   </ul>
                 </div>
               ) : null}
+              {payment.mode === "pay_on_delivery" && order.status !== "cancelled" ? (
+                <CodCollectionPanel
+                  orderId={order.id}
+                  amountPaise={order.pricing.total}
+                  due={payment.status === "due"}
+                  onPaid={refresh}
+                  onNotify={notify}
+                />
+              ) : null}
               <p className="border-t border-bhor-border pt-2 text-bhor-caption text-bhor-text-muted">
-                Payment records are read-only. They&apos;re written only by Razorpay&apos;s verified callback and webhook.
+                {payment.mode === "pay_on_delivery"
+                  ? "A pay-on-delivery order is marked paid only by a verified Razorpay QR payment or by recording cash above. It can be marked Delivered once paid."
+                  : "Payment records are read-only. They're written only by Razorpay's verified callback and webhook."}
               </p>
             </div>
           </Card>

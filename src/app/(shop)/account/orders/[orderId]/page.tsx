@@ -15,8 +15,9 @@ import {
   fulfilmentSteps,
   isOrderCancelled,
   isOrderPaid,
+  isPayOnDelivery,
   isPreOrder,
-  paymentMethodLabel,
+  paymentSummary,
 } from "@/src/utils/order";
 
 export default function OrderDetailPage() {
@@ -100,7 +101,7 @@ export default function OrderDetailPage() {
           <p className="mt-2 text-bhor-small text-bhor-text-muted">
             Order Date: {formatOrderDate(order.createdAt)} · Payment:{" "}
             <span className={cancelled ? "text-bhor-error" : "text-bhor-success"}>
-              {paid ? `Paid · ${paymentMethodLabel(order.payment.method)}` : formatOrderStatus(order.status)}
+              {paymentSummary(order)}
             </span>
           </p>
         </div>
@@ -171,18 +172,27 @@ export default function OrderDetailPage() {
             <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Price Breakdown</h2>
             <div className="mt-4 space-y-3 text-bhor-small">
               <Row label="Subtotal" value={formatPaise(order.pricing.subtotal)} />
-              <Row
-                label="Online Payment Discount (10%)"
-                value={`-${formatPaise(order.pricing.discount)}`}
-              />
+              {order.pricing.discount > 0 ? (
+                <Row
+                  label="Online Payment Discount (10%)"
+                  value={`-${formatPaise(order.pricing.discount)}`}
+                />
+              ) : null}
               <Row
                 label="Handling Charge"
                 value={
                   order.pricing.handlingCharge === 0 ? "Free" : formatPaise(order.pricing.handlingCharge)
                 }
               />
+              {order.pricing.codFee ? (
+                <Row label="Pay on Delivery Fee" value={formatPaise(order.pricing.codFee)} />
+              ) : null}
               <div className="border-t border-bhor-border pt-3">
-                <Row label={paid ? "Total Paid" : "Total"} value={formatPaise(order.pricing.total)} strong />
+                <Row
+                  label={paid ? "Total Paid" : isPayOnDelivery(order) && !cancelled ? "To Pay on Delivery" : "Total"}
+                  value={formatPaise(order.pricing.total)}
+                  strong
+                />
               </div>
             </div>
             {paid ? (

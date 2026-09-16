@@ -7,7 +7,7 @@ import {
   Card, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, PageHeader, Pagination, Toast, inputClass,
 } from "@/src/components/admin/ui";
 import {
-  deleteProduct, listProducts, setProductActive, type AdminPageMeta, type AdminProduct,
+  deleteProduct, listProducts, setProductActive, setProductCod, type AdminPageMeta, type AdminProduct,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
 
@@ -43,6 +43,25 @@ export default function AdminProductsPage() {
     const timer = window.setTimeout(load, 250);
     return () => window.clearTimeout(timer);
   }, [load]);
+
+  async function toggleCod(product: AdminProduct) {
+    setBusy(true);
+    try {
+      const next = !product.codAvailable;
+      const updated = await setProductCod(product.id, next);
+      setProducts((current) =>
+        current.map((item) => (item.id === product.id ? { ...item, codAvailable: updated.codAvailable ?? next } : item)),
+      );
+      setToast({
+        message: next ? `Pay on delivery turned on for ${product.name}.` : `Pay on delivery turned off for ${product.name}.`,
+        tone: "success",
+      });
+    } catch (error) {
+      setToast({ message: error instanceof ApiClientError ? error.message : "Couldn't update pay on delivery.", tone: "error" });
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function toggleActive(product: AdminProduct) {
     setBusy(true);
@@ -136,10 +155,10 @@ export default function AdminProductsPage() {
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] text-bhor-small">
+              <table className="w-full min-w-[900px] text-bhor-small">
                 <thead>
                   <tr className="border-b border-bhor-border text-left">
-                    <Th>Product</Th><Th>SKU</Th><Th>Category</Th><Th>Price</Th><Th>Availability</Th><Th />
+                    <Th>Product</Th><Th>SKU</Th><Th>Category</Th><Th>Price</Th><Th>Availability</Th><Th>COD</Th><Th />
                   </tr>
                 </thead>
                 <tbody>
@@ -162,6 +181,23 @@ export default function AdminProductsPage() {
                         >
                           {product.availability}
                         </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={Boolean(product.codAvailable)}
+                          aria-label={`Pay on delivery for ${product.name}`}
+                          disabled={busy}
+                          onClick={() => void toggleCod(product)}
+                          className={`whitespace-nowrap rounded-bhor-sm px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase disabled:opacity-50 ${
+                            product.codAvailable
+                              ? "bg-bhor-primary-soft text-bhor-primary"
+                              : "border border-bhor-border text-bhor-text-muted"
+                          }`}
+                        >
+                          {product.codAvailable ? "COD On" : "COD Off"}
+                        </button>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">

@@ -35,6 +35,17 @@ export function isOrderPaid(order: BackendOrder) {
   return order.payment.status === "paid";
 }
 
+export function isPayOnDelivery(order: BackendOrder) {
+  return order.payment.mode === "pay_on_delivery";
+}
+
+/** One line for how an order is paid, shared by the order pages. */
+export function paymentSummary(order: BackendOrder) {
+  if (order.payment.status === "paid") return `Paid · ${paymentMethodLabel(order.payment.method)}`;
+  if (isPayOnDelivery(order) && order.payment.status === "due") return "Pay on delivery";
+  return formatOrderStatus(order.status);
+}
+
 export function isPreOrder(order: BackendOrder) {
   return order.delivery.mode === "scheduled";
 }
@@ -65,6 +76,7 @@ export function paymentMethodLabel(method: string | null) {
   if (!method) return "Online";
   const labels: Record<string, string> = {
     upi: "UPI",
+    cash: "Cash",
     card: "Card",
     netbanking: "Net Banking",
     wallet: "Wallet",
