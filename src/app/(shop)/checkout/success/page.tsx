@@ -95,7 +95,7 @@ function SuccessContent() {
             {paid
               ? "Thank you for choosing BHORKIT. A confirmation email with your invoice is on its way."
               : codDue
-                ? `Please keep ${formatPaise(order.pricing.total)} ready and pay by UPI QR or cash when your order arrives. Your invoice will be emailed as soon as the payment is received.`
+                ? `A confirmation with your invoice is on its way to your email. Please keep ${formatPaise(order.pricing.total)} ready and pay by UPI QR or cash when your order arrives — we'll email the paid invoice once the payment is received.`
                 : "Your payment is still being processed. This page updates once it's confirmed — you can safely close it, we'll email you either way."}
           </p>
 

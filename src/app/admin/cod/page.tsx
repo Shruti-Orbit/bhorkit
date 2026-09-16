@@ -156,7 +156,11 @@ export default function AdminCodSettingsPage() {
             An order can use it only when every item allows it.
           </li>
           <li>At the door, open the order and tap <strong>Show UPI QR</strong>. It turns green once the payment reaches your Razorpay account.</li>
-          <li>For cash, tap <strong>Cash received</strong>. Either way the customer&apos;s invoice is emailed automatically.</li>
+          <li>For cash, tap <strong>Cash received</strong>.</li>
+          <li>
+            The customer is emailed a confirmation with the invoice (marked payment due) as soon as the order is
+            placed, and the paid invoice once you collect the payment.
+          </li>
           <li>An order can be marked Delivered only after its payment is collected.</li>
           <li>UPI QR needs QR Codes enabled on your Razorpay account and the <code>qr_code.credited</code> webhook event.</li>
         </ul>
