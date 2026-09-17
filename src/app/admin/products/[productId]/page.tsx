@@ -39,6 +39,15 @@ function toAdvanced(product: Partial<AdminProduct>): AdvancedContent {
       name: line.name,
       unit: line.unit,
     })),
+    contentGroups: (product.contentGroups ?? []).map((group) => ({
+      id: group.id,
+      label: group.label,
+      title: group.title,
+      items: (group.items ?? []).map((item) => ({
+        ingredientId: item.ingredientId,
+        quantity: item.quantity ?? "",
+      })),
+    })),
     howToUse: product.howToUse ?? [],
     story: { ...EMPTY_ADVANCED.story, ...(product.story ?? {}) },
     packaging: { ...EMPTY_ADVANCED.packaging, ...(product.packaging ?? {}) },
@@ -133,6 +142,21 @@ export default function AdminProductFormPage() {
       contents: advanced.contents
         .filter((line) => line.ingredientId && line.quantity.trim())
         .map((line) => ({ ingredientId: line.ingredientId, quantity: line.quantity.trim() })),
+      // Same rule for the day-wise breakdown: complete lines only, and a day
+      // with nothing in it is not saved at all.
+      contentGroups: advanced.contentGroups
+        .map((group) => ({
+          id: group.id,
+          label: group.label.trim(),
+          title: group.title.trim() || group.label.trim(),
+          items: group.items
+            .filter((item) => item.ingredientId)
+            .map((item) => ({
+              ingredientId: item.ingredientId,
+              ...(item.quantity.trim() ? { quantity: item.quantity.trim() } : {}),
+            })),
+        }))
+        .filter((group) => group.label && group.items.length > 0),
       sku: core.sku.trim(),
       slug: core.slug.trim(),
       name: core.name.trim(),

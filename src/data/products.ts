@@ -32,6 +32,24 @@ export type ProductImage = {
   alt: string;
 };
 
+/** One line of a day in a multi-day kit: which ingredient, and how much that day. */
+export type ProductContentGroupItem = {
+  ingredientId: string;
+  quantity?: string;
+};
+
+/**
+ * A named part of a kit — one day of a nine-day subscription, one stage of
+ * anything else. Set per product in the admin panel; names and units are read
+ * from the product's own `contents`, never repeated here.
+ */
+export type ProductContentGroup = {
+  id: string;
+  label: string;
+  title: string;
+  items: ProductContentGroupItem[];
+};
+
 export type CollectionProduct = {
   id: string;
   sku: string;
@@ -84,6 +102,8 @@ export type CollectionProduct = {
     description: string;
   }[];
   contents: ProductContentItem[];
+  /** Day-wise breakdown of the kit. Absent for ordinary kits, which stay a flat list. */
+  contentGroups?: ProductContentGroup[];
   story: {
     eyebrow: string;
     title: string;

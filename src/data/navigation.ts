@@ -47,7 +47,9 @@ export const navigation: NavigationItem[] = [
     href: "/collections/festivals",
   },
   {
-    label: "Coming Soon",
+    // Navratri kits take pre-orders now; the path is unchanged so older links
+    // and the festival collections keep working.
+    label: "Navratri 2026",
     href: "/pre-order",
     badge: "New",
   },

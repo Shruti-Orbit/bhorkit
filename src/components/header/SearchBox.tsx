@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { productHref } from "@/src/utils/productLink";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -62,7 +63,7 @@ export function SearchBox() {
     const item = results[index];
     if (!item) return;
     close();
-    router.push(item.product.href);
+    router.push(productHref(item.product));
   }
 
   function goToFullResults(rawQuery: string) {
@@ -163,7 +164,7 @@ export function SearchBox() {
                     <li key={result.product.id}>
                       <Link
                         id={`search-result-${index}`}
-                        href={result.product.href}
+                        href={productHref(result.product)}
                         onClick={close}
                         onMouseEnter={() => setActiveIndex(index)}
                         className={`flex items-center gap-3 rounded-bhor-sm p-2 transition-colors ${
@@ -287,7 +288,7 @@ function SearchSuggestions({
             {recentlyViewed.map((product) => (
               <li key={product.id}>
                 <Link
-                  href={product.href}
+                  href={productHref(product)}
                   onClick={onNavigate}
                   className="flex items-center gap-3 rounded-bhor-sm p-2 hover:bg-bhor-cream"
                 >

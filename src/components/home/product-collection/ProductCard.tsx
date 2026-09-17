@@ -8,6 +8,7 @@ import type { CollectionProduct, ProductBadgeTone } from "@/src/data/products";
 import { useShop } from "@/src/context/ShopContext";
 import { isComingSoonProduct, isPreOrderProduct, isReadyStockProduct, isOutOfStockProduct, isOrderingClosed, purchaseBlock } from "@/src/utils/productState";
 import { looksLikeEmail, subscribeToLaunch } from "@/src/lib/api/notify.api";
+import { productHref } from "@/src/utils/productLink";
 import { getBestEffortLocation } from "@/src/lib/geolocation";
 import { ApiClientError } from "@/src/lib/api/client";
 
@@ -89,7 +90,7 @@ export function ProductCard({
       }`}
     >
       <Link
-        href={product.href}
+        href={productHref(product)}
         className="relative block aspect-[4/3] overflow-hidden bg-bhor-peach focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-bhor-primary"
       >
         <Image
@@ -122,7 +123,7 @@ export function ProductCard({
           }`}
         >
           <Link
-            href={product.href}
+            href={productHref(product)}
             className="text-bhor-text transition-colors hover:text-bhor-primary"
           >
             {product.name}
@@ -233,7 +234,7 @@ export function ProductCard({
             </button>
           ) : showActions && preorder ? (
             <Link
-              href={product.href}
+              href={productHref(product)}
               className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-bhor-sm bg-bhor-primary px-4 text-bhor-caption font-bhor-bold uppercase text-white hover:bg-bhor-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary"
             >
               Pre-Order

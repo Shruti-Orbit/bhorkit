@@ -21,9 +21,20 @@ import type { AdminIngredient } from "@/src/lib/api/admin.api";
 
 export type ContentLine = { ingredientId: string; quantity: string; name?: string; unit?: string };
 
+/** One line of a day: which of the kit's ingredients, and how much of it that day. */
+export type ContentGroupLine = { ingredientId: string; quantity: string };
+/** One day (or stage) of a multi-day kit. */
+export type ContentGroup = { id: string; label: string; title: string; items: ContentGroupLine[] };
+
+/** Days are keyed by an id of their own, so reordering or renaming one keeps its identity. */
+function newGroupId() {
+  return `day-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export type AdvancedContent = {
   highlights: { title: string; description: string }[];
   contents: ContentLine[];
+  contentGroups: ContentGroup[];
   howToUse: { title: string; description: string }[];
   story: { eyebrow: string; title: string; description: string; image: string; imageAlt: string };
   packaging: { title: string; points: string[]; image: string; imageAlt: string };
@@ -42,6 +53,7 @@ export type AdvancedContent = {
 export const EMPTY_ADVANCED: AdvancedContent = {
   highlights: [],
   contents: [],
+  contentGroups: [],
   howToUse: [],
   story: { eyebrow: "", title: "", description: "", image: "", imageAlt: "" },
   packaging: { title: "", points: [], image: "", imageAlt: "" },
@@ -165,6 +177,17 @@ export function AdvancedContentForm({
   // cannot be added twice.
   const chosen = new Set(value.contents.map((line) => line.ingredientId));
 
+  // The day-wise breakdown is built from the kit list above: a day can only
+  // contain something the kit contains, which is what keeps every name and unit
+  // coming from the inventory.
+  const kitIds = new Set(value.contents.map((line) => line.ingredientId).filter(Boolean));
+  const kitOptions = value.contents
+    .filter((line) => line.ingredientId)
+    .map((line) => ({
+      id: line.ingredientId,
+      name: ingredients.find((item) => item.id === line.ingredientId)?.name ?? "Unnamed ingredient",
+    }));
+
   return (
     <div className="space-y-3">
       <Section
@@ -218,6 +241,114 @@ export function AdvancedContentForm({
             <AddButton
               label="Add ingredient"
               onClick={() => set("contents", [...value.contents, { ingredientId: "", quantity: "" }])}
+            />
+          </div>
+        )}
+      </Section>
+
+      <Section
+        title="Day-wise breakdown"
+        hint="For multi-day kits, like a nine-day Navratri subscription. Each day lists items from the kit contents above; leave it empty for ordinary kits."
+        count={value.contentGroups.length}
+      >
+        {value.contents.length === 0 ? (
+          <p className="text-sm text-slate-600">
+            Add the kit contents above first — every day is built from them.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {value.contentGroups.map((group, groupIndex) => {
+              const editGroup = (patch: Partial<ContentGroup>) =>
+                set("contentGroups", value.contentGroups.map((item, i) => (i === groupIndex ? { ...item, ...patch } : item)));
+              // An ingredient already on this day is not offered again, so a day
+              // cannot list the same thing twice.
+              const usedHere = new Set(group.items.map((item) => item.ingredientId));
+              const strays = group.items.filter((item) => item.ingredientId && !kitIds.has(item.ingredientId));
+
+              return (
+                <div key={group.id} className="rounded-lg border border-slate-200 p-3">
+                  <div className="grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)_auto] sm:items-end">
+                    <Field label="Label">
+                      <input
+                        value={group.label}
+                        onChange={(event) => editGroup({ label: event.target.value })}
+                        placeholder="Day 1"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Title">
+                      <input
+                        value={group.title}
+                        onChange={(event) => editGroup({ title: event.target.value })}
+                        placeholder="Shubh Aarambh"
+                        className={inputClass}
+                      />
+                    </Field>
+                    <RemoveButton
+                      label={`Remove ${group.label || "day"}`}
+                      onClick={() => set("contentGroups", value.contentGroups.filter((_, i) => i !== groupIndex))}
+                    />
+                  </div>
+
+                  <div className="mt-3 space-y-2">
+                    {group.items.map((item, itemIndex) => {
+                      const stray = Boolean(item.ingredientId) && !kitIds.has(item.ingredientId);
+                      const editItem = (patch: Partial<ContentGroupLine>) =>
+                        editGroup({ items: group.items.map((line, i) => (i === itemIndex ? { ...line, ...patch } : line)) });
+
+                      return (
+                        <div key={itemIndex} className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_130px_auto] sm:items-center">
+                          <select
+                            value={item.ingredientId}
+                            onChange={(event) => editItem({ ingredientId: event.target.value })}
+                            aria-label={`Item for ${group.label || "this day"}`}
+                            className={`${inputClass} ${stray ? "border-rose-500" : ""}`}
+                          >
+                            <option value="">Choose from the kit contents…</option>
+                            {kitOptions
+                              .filter((option) => option.id === item.ingredientId || !usedHere.has(option.id))
+                              .map((option) => (
+                                <option key={option.id} value={option.id}>{option.name}</option>
+                              ))}
+                            {stray ? <option value={item.ingredientId}>No longer in the kit contents</option> : null}
+                          </select>
+                          <input
+                            value={item.quantity}
+                            onChange={(event) => editItem({ quantity: event.target.value })}
+                            placeholder={unitFor(item.ingredientId) ? `Amount (${unitFor(item.ingredientId)})` : "Amount"}
+                            aria-label={`Amount for ${group.label || "this day"}`}
+                            className={inputClass}
+                          />
+                          <RemoveButton
+                            label="Remove item"
+                            onClick={() => editGroup({ items: group.items.filter((_, i) => i !== itemIndex) })}
+                          />
+                        </div>
+                      );
+                    })}
+                    <AddButton
+                      label="Add item"
+                      onClick={() => editGroup({ items: [...group.items, { ingredientId: "", quantity: "" }] })}
+                    />
+                  </div>
+
+                  {strays.length > 0 ? (
+                    <p className="mt-2 text-xs font-medium text-rose-700">
+                      {strays.length === 1 ? "An item on this day is" : "Items on this day are"} no longer in the kit
+                      contents. Add {strays.length === 1 ? "it" : "them"} back above, or remove {strays.length === 1 ? "it" : "them"} here — saving is refused otherwise.
+                    </p>
+                  ) : null}
+                </div>
+              );
+            })}
+            <AddButton
+              label="Add day"
+              onClick={() =>
+                set("contentGroups", [
+                  ...value.contentGroups,
+                  { id: newGroupId(), label: `Day ${value.contentGroups.length + 1}`, title: "", items: [] },
+                ])
+              }
             />
           </div>
         )}

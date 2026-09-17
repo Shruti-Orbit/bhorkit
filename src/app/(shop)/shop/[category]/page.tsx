@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ShopListing } from "@/src/components/shop/ShopListing";
-import { withNavratriComingSoonPresentation } from "@/src/data/navratriComingSoon";
 import { findShopCategory, shopCategories } from "@/src/data/shopCategories";
 import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 import { seoConfig } from "@/src/lib/seo/config";
@@ -43,24 +42,17 @@ export default async function ShopCategoryPage({ params }: Params) {
   if (!category) notFound();
 
   const products = await getProductsByShopCategory(category.slug);
-  const isNavratriUpcoming = category.slug === "navratri-upcoming";
-  const listingProducts = isNavratriUpcoming
-    ? withNavratriComingSoonPresentation(products)
-    : products;
 
   return (
     <ShopListing
       eyebrow={category.eyebrow}
-      title={isNavratriUpcoming ? "NAVRATRI 2026" : category.title}
+      title={category.title}
       sections={[
         {
           key: category.slug,
-          title: isNavratriUpcoming ? "NAVRATRI 2026" : category.listingTitle,
-          description: isNavratriUpcoming ? "Coming Soon" : undefined,
-          href: isNavratriUpcoming ? "/pre-order" : `/shop/${category.slug}`,
-          products: listingProducts,
-          tone: isNavratriUpcoming ? "muted" : undefined,
-          variant: isNavratriUpcoming ? "upcoming" : undefined,
+          title: category.listingTitle,
+          href: `/shop/${category.slug}`,
+          products,
         },
       ]}
     />

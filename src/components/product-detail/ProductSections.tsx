@@ -1,5 +1,4 @@
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
-import { withNavratriComingSoonPresentation } from "@/src/data/navratriComingSoon";
 import type { CollectionProduct } from "@/src/data/products";
 import { RecentlyViewedProducts } from "./RecentlyViewedProducts";
 
@@ -16,9 +15,6 @@ export function ProductSections({
   product,
   relatedProducts,
 }: ProductSectionsProps) {
-  const navratriProductsWithComingSoonImages =
-    withNavratriComingSoonPresentation(navratriUpcomingProducts);
-
   return (
     <>
       <section className="mx-auto max-w-[1512px] px-4 py-10 sm:px-6 lg:px-8">
@@ -45,12 +41,11 @@ export function ProductSections({
       ) : null}
 
       <ProductCollection
-        title="NAVRATRI 2026"
-        description="Coming Soon"
+        title="Navratri 2026"
+        description="Pre-order your Navratri puja kits for delivery across Patna."
         href="/pre-order"
-        products={navratriProductsWithComingSoonImages}
+        products={navratriUpcomingProducts}
         tone="muted"
-        variant="upcoming"
       />
 
       <RecentlyViewedProducts

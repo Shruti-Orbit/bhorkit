@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { MasterDetailedPage } from "@/src/components/product-detail/MasterDetailedPage";
 import { getProductDetail } from "@/src/lib/api/product.api";
 import { seoConfig } from "@/src/lib/seo/config";
+import { productHref } from "@/src/utils/productLink";
 
 type ProductPageProps = {
   params: Promise<{
@@ -102,7 +103,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
         "@type": "ListItem",
         position: 3,
         name: product.name,
-        item: product.href,
+        item: productHref(product),
       },
     ],
   };

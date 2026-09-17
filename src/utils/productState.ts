@@ -1,4 +1,5 @@
 import type { CollectionProduct } from "@/src/data/products";
+import { parsePrice } from "@/src/utils/discount";
 
 export function isPreOrderProduct(product: CollectionProduct) {
   return product.purchaseState === "PRE_ORDER";
@@ -34,7 +35,7 @@ export function isOrderingClosed(product: Pick<CollectionProduct, "ordering">) {
 }
 
 export type PurchaseBlock = {
-  kind: "out-of-stock" | "orders-closed";
+  kind: "out-of-stock" | "orders-closed" | "no-price";
   label: string;
   message: string;
 };
@@ -47,12 +48,24 @@ export type PurchaseBlock = {
  * reopens. Coming Soon is not a block — Notify Me is not an order — so cards
  * that show it handle that state before asking this.
  */
-export function purchaseBlock(product: Pick<CollectionProduct, "availability" | "ordering">): PurchaseBlock | null {
+export function purchaseBlock(
+  product: Pick<CollectionProduct, "availability" | "ordering" | "price">,
+): PurchaseBlock | null {
   if (isOutOfStockProduct(product)) {
     return {
       kind: "out-of-stock",
       label: "Out of Stock",
       message: "This kit isn't available to order right now. Please check back soon.",
+    };
+  }
+  // A kit whose price has not been set yet — a range carries a placeholder there
+  // before it launches. The server refuses a zero-total order at checkout, so the
+  // card says so up front rather than offering a button that cannot work.
+  if (parsePrice(product.price) <= 0) {
+    return {
+      kind: "no-price",
+      label: "Coming Soon",
+      message: "Pricing for this kit isn't available yet.",
     };
   }
   if (isOrderingClosed(product)) {

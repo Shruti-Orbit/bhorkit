@@ -42,10 +42,10 @@ export const shopCategories: ShopCategory[] = [
   },
   {
     slug: "navratri-upcoming",
-    label: "Navratri Upcoming",
+    label: "Navratri 2026",
     blurb: "Nine nights of devotion, packed with care.",
-    eyebrow: "Navratri Upcoming",
-    title: "Navratri Upcoming Collection",
+    eyebrow: "Navratri 2026",
+    title: "Navratri 2026 Collection",
     listingTitle: "Navratri Products",
   },
   {

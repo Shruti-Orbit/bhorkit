@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
-import { withNavratriComingSoonPresentation } from "@/src/data/navratriComingSoon";
 import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 import { seoConfig } from "@/src/lib/seo/config";
 
@@ -19,18 +18,14 @@ export const metadata: Metadata = {
 
 export default async function PreOrderPage() {
   const navratriUpcomingProducts = await getProductsByShopCategory("navratri-upcoming");
-  const navratriProductsWithComingSoonImages =
-    withNavratriComingSoonPresentation(navratriUpcomingProducts);
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream">
       <ProductCollection
-        title="NAVRATRI 2026"
-        description="Coming Soon"
+        title="Navratri 2026"
+        description="Pre-order your Navratri puja kits for delivery across Patna."
         href="/pre-order"
-        products={navratriProductsWithComingSoonImages}
-        tone="muted"
-        variant="upcoming"
+        products={navratriUpcomingProducts}
       />
     </main>
   );

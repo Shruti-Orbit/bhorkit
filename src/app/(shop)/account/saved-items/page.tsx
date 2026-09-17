@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Heart, ShoppingCart } from "lucide-react";
 import { AccountSectionCard, AccountShell } from "@/src/components/account/AccountShell";
 import { useShop } from "@/src/context/ShopContext";
+import { productHref } from "@/src/utils/productLink";
 
 export default function SavedItemsPage() {
   const { addToCart, savedItems, toggleSavedItem } = useShop();
@@ -41,7 +42,7 @@ export default function SavedItemsPage() {
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {savedItems.map((product) => (
               <article key={product.id} className="overflow-hidden rounded-bhor-lg border border-bhor-border bg-bhor-surface shadow-bhor-soft">
-                <Link href={product.href} className="relative block aspect-[4/3] bg-bhor-peach">
+                <Link href={productHref(product)} className="relative block aspect-[4/3] bg-bhor-peach">
                   <Image src={product.image} alt={product.imageAlt} fill sizes="(max-width: 767px) 100vw, 33vw" className={`object-cover ${purchaseBlock(product) ? "opacity-60 grayscale" : ""}`} />
                 </Link>
                 <div className="p-4">
