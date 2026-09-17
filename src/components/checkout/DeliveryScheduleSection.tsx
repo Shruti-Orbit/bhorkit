@@ -12,6 +12,8 @@ type Props = {
   /** Set for a Buy Now, so the window is computed for that product rather
    *  than for whatever happens to be in the cart. */
   directProductId?: string;
+  /** Set for a custom box, whose window the server knows without a product. */
+  customBox?: boolean;
   onDateChange: (date: string) => void;
   onSlotChange: (slotId: string) => void;
 };
@@ -36,9 +38,9 @@ type LoadedOptions = {
  * reject, and slots that have already passed today simply aren't listed.
  */
 export function DeliveryScheduleSection({
-  mode, date, slotId, directProductId, onDateChange, onSlotChange,
+  mode, date, slotId, directProductId, customBox = false, onDateChange, onSlotChange,
 }: Props) {
-  const requestKey = `${mode}|${date}|${directProductId ?? ""}`;
+  const requestKey = `${mode}|${date}|${directProductId ?? ""}|${customBox ? "custom" : ""}`;
   const [loaded, setLoaded] = useState<LoadedOptions | null>(null);
 
   // Loading is derived by comparing what we have against what's currently
@@ -53,7 +55,7 @@ export function DeliveryScheduleSection({
   useEffect(() => {
     let active = true;
 
-    getDeliveryOptions(mode, date || undefined, directProductId)
+    getDeliveryOptions(mode, date || undefined, directProductId, customBox)
       .then((result) => {
         if (!active) return;
         setLoaded({ key: requestKey, options: result, error: "" });
@@ -78,7 +80,7 @@ export function DeliveryScheduleSection({
     // onDateChange is a setter whose identity changes every render; including
     // it would re-fetch forever.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, date, directProductId, requestKey]);
+  }, [mode, date, directProductId, customBox, requestKey]);
 
   // A slot that's no longer offered for the chosen date must not stay selected
   // — otherwise the customer submits a window the server will reject.

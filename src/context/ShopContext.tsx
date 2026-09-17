@@ -40,6 +40,7 @@ import {
   updateAddress as updateAddressApi,
 } from "@/src/lib/api/address.api";
 import { getOrders as getOrdersApi, type BackendOrder } from "@/src/lib/api/order.api";
+import { clearCustomCheckout, customBoxActions } from "@/src/lib/customization/customBoxStore";
 import {
   calculateHandlingCharge,
   calculateMemberDiscount,
@@ -618,6 +619,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     // one that was already merged into the account we're signing out of.
     setCartItems([]);
     window.localStorage.removeItem(cartStorageKey);
+    // A custom box built on this device is cleared for the same reason.
+    customBoxActions.clear();
+    clearCustomCheckout();
     setAuthModalOpen(false);
     setSuccessMessage("Logged out");
     void logoutFromBackend().catch(() => undefined);
@@ -674,6 +678,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     setDirectCheckoutItem(selection);
     writeDirectCheckout(selection);
     setCheckoutModeState(mode);
+    // A Buy Now replaces a custom box checkout started in this tab.
+    clearCustomCheckout();
   }, []);
 
   // Called when the customer chooses cart checkout instead, and once a direct
@@ -682,6 +688,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const clearDirectCheckout = useCallback(() => {
     setDirectCheckoutItem(null);
     writeDirectCheckout(null);
+    // The same goes for a custom box checkout: every caller means "check out
+    // the cart from here on" (or has just finished an order).
+    clearCustomCheckout();
   }, []);
 
   // The server drops anything that can no longer be bought — deleted or

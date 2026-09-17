@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Download, Loader2 } from "lucide-react";
 import { AccountSectionCard, AccountShell } from "@/src/components/account/AccountShell";
+import { CustomBoxContents } from "@/src/components/order/CustomBoxContents";
 import { useShop } from "@/src/context/ShopContext";
 import { getInvoiceUrl, getOrder, type BackendOrder } from "@/src/lib/api/order.api";
 import { formatPaise } from "@/src/utils/money";
@@ -161,6 +162,7 @@ export default function OrderDetailPage() {
                     <p className="text-bhor-text-muted">
                       Qty {item.quantity} × {formatPaise(item.unitPrice)}
                     </p>
+                    <CustomBoxContents item={item} />
                   </div>
                   <p className="shrink-0 font-bhor-bold text-bhor-text">{formatPaise(item.lineTotal)}</p>
                 </div>

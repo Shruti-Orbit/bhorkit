@@ -8,6 +8,7 @@ import {
   reconcileOrder,
   verifyPayment,
   type BackendOrder,
+  type CustomBoxRequest,
   type DeliveryMode,
   type PaymentMode,
 } from "@/src/lib/api/order.api";
@@ -36,6 +37,8 @@ type StartCheckoutInput = {
   deliverySlotId: string;
   /** Set for a Buy Now; omitted for a cart checkout. */
   directItem?: { productId: string; quantity: number };
+  /** Set for a Customize Order box, instead of `directItem`. */
+  customBox?: CustomBoxRequest;
   /**
    * The first-order gift card the customer clicked. Passed straight through —
    * the server decides whether this customer may choose at all, and ignores or
@@ -81,7 +84,7 @@ function messageFrom(error: unknown, fallback: string) {
 export function useCheckout(
   options: {
     onOrderConfirmed?: (order: BackendOrder) => void;
-    /** Called when the server refused to start because the cart changed underneath the page. */
+    /** Called when the server refused to start because the cart (or custom box) changed underneath the page. */
     onCartChanged?: () => void;
   } = {},
 ) {
@@ -267,7 +270,10 @@ export function useCheckout(
         // The server removed something while pricing the cart — an item was
         // deactivated or deleted. Its message already says so; refreshing makes
         // the summary on this page match what a retry will actually charge.
-        if (startError instanceof ApiClientError && startError.code === "CART_CHANGED") {
+        if (
+          startError instanceof ApiClientError &&
+          (startError.code === "CART_CHANGED" || startError.code === "CUSTOM_BOX_CHANGED")
+        ) {
           onCartChanged?.();
         }
       }

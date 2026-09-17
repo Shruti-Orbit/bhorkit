@@ -428,3 +428,71 @@ export async function recordCodCash(orderId: string, note: string) {
     { note },
   )).data;
 }
+
+
+// --- customization ---
+
+export type AdminCustomizationItem = {
+  ingredientId: string;
+  /** Null when the inventory row behind it has been removed. */
+  name: string | null;
+  stockUnit: string | null;
+  stock: number | null;
+  packAmount: number;
+  packUnit: string;
+  /** e.g. "5 g". */
+  packLabel: string;
+  /** Paise. Admin-only — customers never receive it. */
+  pricePaise: number;
+  active: boolean;
+  updatedAt: string;
+};
+
+export type AdminCustomization = {
+  enabled: boolean;
+  minItems: number;
+  codEnabled: boolean;
+  items: AdminCustomizationItem[];
+  /** Inventory rows not offered yet. */
+  available: { id: string; name: string; unit: string; stock: number }[];
+  updatedAt: string | null;
+  updatedBy: string | null;
+};
+
+export type CustomizationItemInput = {
+  ingredientId: string;
+  packAmount: number;
+  packUnit: string;
+  pricePaise: number;
+  active: boolean;
+};
+
+export async function getCustomization() {
+  return (await apiGet<{ customization: AdminCustomization; units: string[] }>("/admin/customization")).data;
+}
+
+export async function saveCustomizationSettings(input: { enabled?: boolean; minItems?: number; codEnabled?: boolean }) {
+  return (await apiPut<{ customization: AdminCustomization }, typeof input>("/admin/customization/settings", input))
+    .data.customization;
+}
+
+export async function addCustomizationItem(input: CustomizationItemInput) {
+  return (await apiPost<{ customization: AdminCustomization }, CustomizationItemInput>("/admin/customization/items", input))
+    .data.customization;
+}
+
+export async function updateCustomizationItem(
+  ingredientId: string,
+  input: Partial<Omit<CustomizationItemInput, "ingredientId">>,
+) {
+  return (await apiPatch<{ customization: AdminCustomization }, typeof input>(
+    `/admin/customization/items/${encodeURIComponent(ingredientId)}`,
+    input,
+  )).data.customization;
+}
+
+export async function removeCustomizationItem(ingredientId: string) {
+  return (await apiDelete<{ customization: AdminCustomization }>(
+    `/admin/customization/items/${encodeURIComponent(ingredientId)}`,
+  )).data.customization;
+}

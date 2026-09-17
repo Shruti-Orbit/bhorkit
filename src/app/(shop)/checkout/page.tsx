@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Lock, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, PackageOpen, ShieldCheck } from "lucide-react";
 import { OrderSummary, type SummaryItem } from "@/src/components/cart/OrderSummary";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
@@ -12,7 +12,14 @@ import { FirstOrderGiftSection } from "@/src/components/checkout/FirstOrderGiftS
 import { CouponField } from "@/src/components/checkout/CouponField";
 import { PaymentMethodSection } from "@/src/components/checkout/PaymentMethodSection";
 import type { AppliedCoupon } from "@/src/lib/api/coupon.api";
-import { getPaymentOptions, type PaymentMode, type PaymentOptions } from "@/src/lib/api/order.api";
+import {
+  getCustomBoxPaymentOptions,
+  getPaymentOptions,
+  type PaymentMode,
+  type PaymentOptions,
+} from "@/src/lib/api/order.api";
+import { customBoxActions, useCustomCheckoutActive } from "@/src/lib/customization/customBoxStore";
+import { useCustomBoxCheckout } from "@/src/lib/checkout/useCustomBoxCheckout";
 import { getCheckoutGiftState, type CheckoutGiftState } from "@/src/lib/api/gift.api";
 import { useShop } from "@/src/context/ShopContext";
 import { useCheckout } from "@/src/lib/checkout/useCheckout";
@@ -49,16 +56,22 @@ export default function CheckoutPage() {
   // A Buy Now selection takes precedence over the cart for this page only —
   // the cart itself is left untouched and is still there afterwards.
   const direct = useDirectCheckoutProduct(directCheckoutItem);
-  const isDirect = Boolean(directCheckoutItem);
+  // A Customize Order box, when this tab's checkout was started from there. It
+  // takes precedence over a Buy Now; the cart is untouched either way.
+  const isCustom = useCustomCheckoutActive();
+  const custom = useCustomBoxCheckout(isCustom);
+  const isDirect = !isCustom && Boolean(directCheckoutItem);
 
   // Pre-order carts deliver in the Ganesh Chaturthi window; everything else
   // uses the standard next-14-days window. The server enforces the same rule.
   const deliveryMode = checkoutMode === "buy-now" ? "standard" : "scheduled";
 
   const { phase, error, notice, isBusy, startCheckout } = useCheckout({
-    onOrderConfirmed: () => {
+    onOrderConfirmed: (order) => {
+      // A custom box that has been ordered is spent.
+      if (order.source === "custom") customBoxActions.clear();
       // The selection is spent — without this a refresh would re-offer the
-      // same Buy Now instead of the (unchanged) cart.
+      // same Buy Now (or custom box) instead of the (unchanged) cart.
       clearDirectCheckout();
       void refreshOrders();
       // A pay-on-delivery order empties the cart on the server as it is placed.
@@ -66,6 +79,7 @@ export default function CheckoutPage() {
     },
     onCartChanged: () => {
       void refreshCart();
+      custom.refresh();
     },
   });
 
@@ -103,13 +117,16 @@ export default function CheckoutPage() {
   // Asked of the server whenever what is being bought changes: whether every
   // item allows pay on delivery, and what it would cost, are decided there.
   const cartSignature = cartItems.map((line) => `${line.product.id}:${line.quantity}`).join(",");
-  const directProductId = directCheckoutItem?.productId;
-  const directQuantity = directCheckoutItem?.quantity;
+  const directProductId = isDirect ? directCheckoutItem?.productId : undefined;
+  const directQuantity = isDirect ? directCheckoutItem?.quantity : undefined;
   const couponCode = coupon?.code;
+  const customReady = custom.ready;
+  const customSelection = custom.selection;
   useEffect(() => {
     let isActive = true;
 
-    if (!isLoggedIn) {
+    // A custom box is asked about only once it is known to be orderable.
+    if (!isLoggedIn || (isCustom && !customReady)) {
       queueMicrotask(() => {
         if (!isActive) return;
         setPaymentOptions(null);
@@ -123,10 +140,13 @@ export default function CheckoutPage() {
     queueMicrotask(() => {
       if (isActive) setPaymentOptionsLoading(true);
     });
-    getPaymentOptions({
-      ...(directProductId ? { productId: directProductId, quantity: directQuantity ?? 1 } : {}),
-      ...(couponCode ? { couponCode } : {}),
-    })
+    const request = isCustom
+      ? getCustomBoxPaymentOptions(customSelection, couponCode)
+      : getPaymentOptions({
+          ...(directProductId ? { productId: directProductId, quantity: directQuantity ?? 1 } : {}),
+          ...(couponCode ? { couponCode } : {}),
+        });
+    request
       .then((result) => {
         if (isActive) setPaymentOptions(result);
       })
@@ -141,7 +161,7 @@ export default function CheckoutPage() {
     return () => {
       isActive = false;
     };
-  }, [isLoggedIn, cartSignature, directProductId, directQuantity, couponCode]);
+  }, [isLoggedIn, cartSignature, directProductId, directQuantity, couponCode, isCustom, customReady, customSelection]);
 
   // Pay on delivery can stop being available while it is selected — a coupon or
   // a quantity change can take the order over the limit — so the choice falls
@@ -161,7 +181,18 @@ export default function CheckoutPage() {
    * Display only. The server re-prices every line from the catalogue when the
    * order is created, so nothing here can influence what is charged.
    */
-  const summaryItems: SummaryItem[] = isDirect
+  const summaryItems: SummaryItem[] = isCustom
+    ? custom.totals
+      ? [{
+          id: "custom-box",
+          name: "Customized Puja Box",
+          quantity: 1,
+          unitPrice: custom.totals.subtotal,
+          lineTotal: custom.totals.subtotal,
+          badge: `${custom.itemCount} items`,
+        }]
+      : []
+    : isDirect
     ? direct.product
       ? [{
           id: direct.product.id,
@@ -193,18 +224,26 @@ export default function CheckoutPage() {
         code: coupon.code,
         discountPercent: coupon.discountPercent,
         discount: calculateCouponDiscount(
-          isDirect ? direct.totals?.subtotal ?? 0 : cartSubtotal,
+          isCustom ? custom.totals?.subtotal ?? 0 : isDirect ? direct.totals?.subtotal ?? 0 : cartSubtotal,
           coupon.discountPercent,
         ),
       }
     : null;
-  const hasItems = isDirect ? Boolean(direct.product) : cartItems.length > 0;
+  const hasItems = isCustom ? Boolean(custom.totals) : isDirect ? Boolean(direct.product) : cartItems.length > 0;
   // The button says what the summary says. Both are previews — the amount
   // Razorpay is asked for comes from the server's own pricing.
   // Pay on delivery: no online discount, plus the fee the server reported. Still
   // a preview — the order is priced again on the server when it is placed.
-  const baseSubtotal = isDirect ? direct.totals?.subtotal ?? 0 : cartSubtotal;
-  const baseHandling = isDirect ? direct.totals?.handlingCharge ?? 0 : calculateHandlingCharge(cartSubtotal);
+  const baseSubtotal = isCustom
+    ? custom.totals?.subtotal ?? 0
+    : isDirect
+      ? direct.totals?.subtotal ?? 0
+      : cartSubtotal;
+  const baseHandling = isCustom
+    ? custom.totals?.handlingCharge ?? 0
+    : isDirect
+      ? direct.totals?.handlingCharge ?? 0
+      : calculateHandlingCharge(cartSubtotal);
   const codFeeRupees = paymentOptions ? paymentOptions.payOnDelivery.feePaise / 100 : 0;
   const codTotals =
     effectivePaymentMode === "pay_on_delivery"
@@ -217,7 +256,13 @@ export default function CheckoutPage() {
       : null;
   const payableTotal = Math.max(
     0,
-    (codTotals ? codTotals.total : isDirect ? direct.totals?.total ?? 0 : cartTotal) - (summaryCoupon?.discount ?? 0),
+    (codTotals
+      ? codTotals.total
+      : isCustom
+        ? custom.totals?.total ?? 0
+        : isDirect
+          ? direct.totals?.total ?? 0
+          : cartTotal) - (summaryCoupon?.discount ?? 0),
   );
 
   // The selected address must still be deliverable. The server enforces this
@@ -234,6 +279,7 @@ export default function CheckoutPage() {
   const canPay =
     isLoggedIn &&
     hasItems &&
+    (!isCustom || custom.ready) &&
     Boolean(selectedAddressId) &&
     !selectedUndeliverable &&
     Boolean(deliveryDate) &&
@@ -252,19 +298,26 @@ export default function CheckoutPage() {
       paymentMode: effectivePaymentMode,
       deliveryDate,
       deliverySlotId,
-      // Sends only the id and quantity; the server prices it.
-      ...(directCheckoutItem
-        ? {
-            directItem: {
-              productId: directCheckoutItem.productId,
-              quantity: directCheckoutItem.quantity,
-            },
-          }
-        : {}),
+      // Sends only ids and quantities; the server prices everything.
+      ...(isCustom
+        ? { customBox: custom.selection }
+        : directCheckoutItem
+          ? {
+              directItem: {
+                productId: directCheckoutItem.productId,
+                quantity: directCheckoutItem.quantity,
+              },
+            }
+          : {}),
     });
   }
 
-  const showEmptyState = isDirect ? Boolean(direct.error) : cartItems.length === 0;
+  const showEmptyState = isCustom
+    ? Boolean(custom.error)
+    : isDirect
+      ? Boolean(direct.error)
+      : cartItems.length === 0;
+  const selectionLoading = (isDirect && direct.isLoading) || (isCustom && custom.isLoading);
 
   return (
     <main className="flex flex-1 flex-col bg-bhor-cream px-4 py-8 sm:px-6 lg:px-8">
@@ -280,7 +333,7 @@ export default function CheckoutPage() {
             </p>
           </div>
 
-          {isDirect && direct.isLoading ? (
+          {selectionLoading ? (
             <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
               <p className="flex items-center justify-center gap-2 text-bhor-small text-bhor-text-muted">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
@@ -290,19 +343,71 @@ export default function CheckoutPage() {
           ) : showEmptyState ? (
             <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
               <p className="text-bhor-body font-bhor-semibold text-bhor-text">
-                {direct.error || "Your cart is empty."}
+                {isCustom ? custom.error : direct.error || "Your cart is empty."}
               </p>
-              <Link
-                href={isDirect ? "/shop" : "/"}
-                onClick={isDirect ? clearDirectCheckout : undefined}
-                className="mt-5 inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
-              >
-                Continue Shopping
-              </Link>
+              <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href={isCustom ? "/customize" : isDirect ? "/shop" : "/"}
+                  onClick={isDirect ? clearDirectCheckout : undefined}
+                  className="inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
+                >
+                  {isCustom ? "Edit Your Box" : "Continue Shopping"}
+                </Link>
+                {isCustom ? (
+                  <Link
+                    href="/cart"
+                    onClick={clearDirectCheckout}
+                    className="inline-flex min-h-11 items-center justify-center rounded-bhor-sm border border-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-bhor-primary"
+                  >
+                    Go to Cart
+                  </Link>
+                ) : null}
+              </div>
             </div>
           ) : (
             <>
               <CheckoutAuth />
+
+              {isCustom && custom.totals ? (
+                <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="flex items-center gap-2 text-bhor-product font-bhor-bold text-bhor-text">
+                      <PackageOpen className="h-5 w-5 text-bhor-gold" aria-hidden />
+                      Your Custom Puja Box
+                    </h2>
+                    <div className="flex flex-wrap gap-4">
+                      <Link href="/customize" className="text-bhor-caption font-bhor-bold uppercase text-bhor-primary">
+                        Edit box
+                      </Link>
+                      <Link
+                        href="/cart"
+                        onClick={clearDirectCheckout}
+                        className="text-bhor-caption font-bhor-bold uppercase text-bhor-text-muted hover:text-bhor-primary"
+                      >
+                        Checkout cart instead
+                      </Link>
+                    </div>
+                  </div>
+                  {custom.occasion ? (
+                    <p className="mt-2 text-bhor-small text-bhor-text-muted">
+                      For <span className="font-bhor-semibold text-bhor-text">{custom.occasion}</span>
+                    </p>
+                  ) : null}
+                  <ul className="mt-4 grid gap-x-6 sm:grid-cols-2">
+                    {custom.lines.map((line) => (
+                      <li
+                        key={line.ingredientId}
+                        className="flex items-center justify-between gap-3 border-b border-bhor-border py-2 text-bhor-small"
+                      >
+                        <span className="min-w-0 truncate font-bhor-semibold text-bhor-text">{line.name}</span>
+                        <span className="shrink-0 text-bhor-text-muted">
+                          {line.pack} × {line.quantity}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
 
               {isDirect && direct.product ? (
                 <section className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5 shadow-bhor-soft">
@@ -346,7 +451,8 @@ export default function CheckoutPage() {
                   mode={deliveryMode}
                   date={deliveryDate}
                   slotId={deliverySlotId}
-                  {...(directCheckoutItem ? { directProductId: directCheckoutItem.productId } : {})}
+                  {...(isDirect && directCheckoutItem ? { directProductId: directCheckoutItem.productId } : {})}
+                  customBox={isCustom}
                   onDateChange={setDeliveryDate}
                   onSlotChange={setDeliverySlotId}
                 />
@@ -379,9 +485,11 @@ export default function CheckoutPage() {
               items={summaryItems}
               {...(codTotals
                 ? { totals: codTotals, payOnDeliveryFee: codFeeRupees }
-                : isDirect && direct.totals
-                  ? { totals: direct.totals }
-                  : {})}
+                : isCustom && custom.totals
+                  ? { totals: custom.totals }
+                  : isDirect && direct.totals
+                    ? { totals: direct.totals }
+                    : {})}
               coupon={summaryCoupon}
               couponControl={
                 isLoggedIn ? (

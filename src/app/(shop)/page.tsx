@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Hero } from "@/src/components/home/hero/Hero";
 import { HomeBannerStrip } from "@/src/components/home/banner-strip/HomeBannerStrip";
+import { CustomizeBanner } from "@/src/components/home/customize/CustomizeBanner";
 import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
@@ -107,6 +108,8 @@ export default async function Home() {
         products={regularPoojaKitsWithSeoAlt}
         variant="regular"
       />
+
+      <CustomizeBanner />
 
       <PreOrderBanner {...navratriPromotion} />
       <ProductCollection

@@ -7,6 +7,7 @@ const publicStaticRoutes = [
   "/",
   "/shop",
   "/puja-kits",
+  "/customize",
   "/pre-order",
   "/support",
   "/faq",

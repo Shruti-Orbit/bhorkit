@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import type { ReactNode } from "react";
+import { PackageOpen } from "lucide-react";
 import { formatCurrency } from "@/src/utils/discount";
 import { useShop } from "@/src/context/ShopContext";
 
@@ -29,8 +30,9 @@ export type SummaryCoupon = {
 export type SummaryItem = {
   id: string;
   name: string;
-  image: string;
-  imageAlt: string;
+  /** Omitted for a custom puja box, which is drawn as an icon. */
+  image?: string;
+  imageAlt?: string;
   quantity: number;
   /** Price of one, for the "2 × ₹699" line. */
   unitPrice: number;
@@ -102,14 +104,18 @@ export function OrderSummary({ items, totals, coupon, couponControl, payOnDelive
         <ul className="mt-4 space-y-3 border-b border-bhor-border pb-4">
           {items.map((item) => (
             <li key={item.id} className="flex items-start gap-3">
-              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-bhor-sm bg-bhor-peach">
-                <Image
-                  src={item.image}
-                  alt={item.imageAlt}
-                  fill
-                  sizes="56px"
-                  className="object-cover object-center"
-                />
+              <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-bhor-sm bg-bhor-peach">
+                {item.image ? (
+                  <Image
+                    src={item.image}
+                    alt={item.imageAlt ?? ""}
+                    fill
+                    sizes="56px"
+                    className="object-cover object-center"
+                  />
+                ) : (
+                  <PackageOpen className="h-6 w-6 text-bhor-primary" aria-hidden />
+                )}
               </div>
 
               <div className="min-w-0 flex-1">

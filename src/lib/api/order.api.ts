@@ -25,9 +25,31 @@ export type OrderItem = {
   name: string;
   slug: string;
   image: string;
+  shopCategory?: string;
   unitPrice: number;
   quantity: number;
   lineTotal: number;
+  /**
+   * Present on a custom puja box: what is inside it. Item prices are sent only
+   * to the admin panel.
+   */
+  customization?: {
+    occasion: string | null;
+    lines: {
+      ingredientId: string;
+      name: string;
+      pack: string;
+      quantity: number;
+      unitPrice?: number;
+      lineTotal?: number;
+    }[];
+  };
+};
+
+/** A custom box as checkout sends it: item ids and counts, never a price. */
+export type CustomBoxRequest = {
+  items: { ingredientId: string; quantity: number }[];
+  occasion?: string;
 };
 
 export type OrderAddress = {
@@ -46,8 +68,8 @@ export type BackendOrder = {
   id: string;
   orderNumber: string;
   items: OrderItem[];
-  /** "direct" = bought straight from a product page, never via the cart. */
-  source: "cart" | "direct";
+  /** "direct" = bought straight from a product page; "custom" = a Customize Order box. Neither uses the cart. */
+  source: "cart" | "direct" | "custom";
   address: OrderAddress;
   pricing: {
     subtotal: number;
@@ -141,10 +163,11 @@ export type PaymentOptions = {
  * than the cart. It is only a pointer — the server reads the product and its
  * range from the catalogue, so it cannot be used to claim a friendlier window.
  */
-export async function getDeliveryOptions(mode: DeliveryMode, date?: string, productId?: string) {
+export async function getDeliveryOptions(mode: DeliveryMode, date?: string, productId?: string, customBox?: boolean) {
   const params = new URLSearchParams({ mode });
   if (date) params.set("date", date);
   if (productId) params.set("productId", productId);
+  if (customBox) params.set("custom", "1");
   const response = await apiGet<DeliveryOptions>(`/orders/delivery-options?${params.toString()}`);
   return response.data;
 }
@@ -164,6 +187,15 @@ export async function getPaymentOptions(params: { productId?: string; quantity?:
   return response.data;
 }
 
+/** The same, for a custom box — which the server prices from its own item list. */
+export async function getCustomBoxPaymentOptions(customBox: CustomBoxRequest, couponCode?: string) {
+  const response = await apiPost<PaymentOptions, { customBox: CustomBoxRequest; couponCode?: string }>(
+    "/orders/payment-options",
+    { customBox, ...(couponCode ? { couponCode } : {}) },
+  );
+  return response.data;
+}
+
 export type CreateCheckoutInput = {
   addressId: string;
   deliveryMode: DeliveryMode;
@@ -175,6 +207,8 @@ export type CreateCheckoutInput = {
    * influence the amount charged. Omit it to check out the persistent cart.
    */
   directItem?: { productId: string; quantity: number };
+  /** A Customize Order box. Not combined with `directItem`. */
+  customBox?: CustomBoxRequest;
   /** Which first-order gift card was chosen, when one was offered. */
   giftId?: string;
   /** The applied coupon code. Never a percentage and never an amount. */

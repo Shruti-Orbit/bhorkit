@@ -38,6 +38,11 @@ export const navigation: NavigationItem[] = [
     href: "/puja-kits",
   },
   {
+    // One builder for any puja: the customer fills their own box.
+    label: "Customize Order",
+    href: "/customize",
+  },
+  {
     label: "Festival Collections",
     href: "/collections/festivals",
   },

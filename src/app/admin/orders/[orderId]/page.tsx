@@ -12,6 +12,7 @@ import {
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
 import { CodCollectionPanel } from "@/src/components/admin/CodCollectionPanel";
+import { CustomBoxContents } from "@/src/components/order/CustomBoxContents";
 import type { OrderStatus } from "@/src/lib/api/order.api";
 import { formatPaise } from "@/src/utils/money";
 import { deliveryLabel, formatOrderDate } from "@/src/utils/order";
@@ -105,7 +106,9 @@ export default function AdminOrderDetailPage() {
     <div>
       <PageHeader
         title={`Order ${order.orderNumber}`}
-        description={`Placed ${formatOrderDate(order.createdAt)} · ${order.source === "direct" ? "Buy Now" : "Cart"}`}
+        description={`Placed ${formatOrderDate(order.createdAt)} · ${
+          order.source === "direct" ? "Buy Now" : order.source === "custom" ? "Customize Order" : "Cart"
+        }`}
         action={
           <div className="flex flex-wrap gap-2">
             <Link href="/admin/orders" className="min-h-10 rounded-bhor-sm border border-bhor-border px-4 py-2 text-bhor-button-mobile font-bhor-bold uppercase text-bhor-text">
@@ -153,11 +156,12 @@ export default function AdminOrderDetailPage() {
             <div className="divide-y divide-bhor-border">
               {order.items.map((item) => (
                 <div key={item.productId} className="flex flex-wrap justify-between gap-3 px-4 py-3 text-bhor-small">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-bhor-semibold text-bhor-text">{item.name}</p>
                     <p className="text-bhor-caption text-bhor-text-muted">
                       SKU {item.sku} · Qty {item.quantity} × {formatPaise(item.unitPrice)}
                     </p>
+                    <CustomBoxContents item={item} showPrices />
                   </div>
                   <p className="font-bhor-semibold text-bhor-text">{formatPaise(item.lineTotal)}</p>
                 </div>
