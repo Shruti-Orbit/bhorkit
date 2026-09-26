@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPatch, apiPost, apiPut, getApiUrl } from "@/src/lib/api/client";
+import { apiDelete, apiGet, apiPatch, apiPost, apiPut, apiUpload, getApiUrl } from "@/src/lib/api/client";
 import type { BackendOrder, OrderStatus, PaymentStatus } from "@/src/lib/api/order.api";
 import type { CollectionProduct } from "@/src/data/products";
 
@@ -129,6 +129,58 @@ export async function setProductActive(id: string, active: boolean) {
 
 export async function deleteProduct(id: string) {
   return (await apiDelete<{ id: string }>(`/admin/products/${encodeURIComponent(id)}`)).data;
+}
+
+// --- product images ---
+
+/** One uploaded asset, as the API returns it. */
+export type UploadedProductImage = {
+  /** Delivery URL, ready to render and to store on the product. */
+  src: string;
+  /** Cloudinary identity. Must be stored with the URL or the asset can never be freed. */
+  publicId: string;
+  width: number;
+  height: number;
+  format: string;
+  bytes: number;
+};
+
+/** How many files one request may carry — mirrors MAX_FILES_PER_UPLOAD on the server. */
+export const MAX_FILES_PER_UPLOAD = 12;
+
+/**
+ * Uploads product images through the API.
+ *
+ * The browser never talks to Cloudinary: the file goes to our own server, which
+ * holds the API secret and signs the upload. That is the whole reason this is a
+ * server endpoint rather than a direct browser upload — an unsigned upload preset
+ * would have to be public, and a signed one would need the secret in the bundle.
+ *
+ * `slug` only decides which Cloudinary folder the asset lands in, so it is
+ * optional: a product being created does not have one yet.
+ */
+export async function uploadProductImages(files: File[], slug?: string) {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  if (slug?.trim()) form.append("slug", slug.trim());
+
+  return (await apiUpload<UploadedProductImage[]>("/admin/products/images", form)).data;
+}
+
+/**
+ * Deletes an asset that was uploaded but is not going to be saved.
+ *
+ * Only needed for that case. An image already saved on a product is freed by
+ * removing it and saving — the API compares what was stored against what is
+ * being stored and deletes the difference, so the panel does not have to
+ * orchestrate it.
+ */
+export async function deleteProductImage(publicId: string) {
+  return (
+    await apiDelete<{ publicId: string }>(
+      `/admin/products/images?publicId=${encodeURIComponent(publicId)}`,
+    )
+  ).data;
 }
 
 // --- categories ---

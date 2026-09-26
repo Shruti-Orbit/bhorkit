@@ -1,7 +1,9 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
+import Image from "next/image";
+import { Check, PackageOpen } from "lucide-react";
 import type { CustomizationItem } from "@/src/lib/api/customization.api";
+import { itemImageFor } from "@/src/lib/customization/itemImages";
 import { QuantityStepper } from "./QuantityStepper";
 
 type CustomizeItemTileProps = {
@@ -15,81 +17,89 @@ type CustomizeItemTileProps = {
   onQuantity: (quantity: number) => void;
 };
 
+/** The item's photo on a paper-cream plate, or a plain placeholder when there is none. */
+export function ItemPhoto({ name, className = "", sizes }: { name: string; className?: string; sizes: string }) {
+  const src = itemImageFor(name);
+  return (
+    <span className={`relative block overflow-hidden bg-[#F6EEE3] ${className}`}>
+      {src ? (
+        <Image src={src} alt="" fill sizes={sizes} className="object-cover" />
+      ) : (
+        <span className="absolute inset-0 flex items-center justify-center text-bhor-gold/70">
+          <PackageOpen className="h-1/3 w-1/3" strokeWidth={1.4} aria-hidden />
+        </span>
+      )}
+    </span>
+  );
+}
+
 /**
- * One item the customer can put in their box. The whole card is the "add"
- * control until it is in the box; then it shows how many, with a stepper.
+ * One item the customer can put in their box, laid out like a store shelf
+ * card: photo, name, pack, and an Add button that becomes a stepper.
  * No price is shown — the box is priced as a whole.
  */
 export function CustomizeItemTile({ item, quantity, maxQuantity, boxFull, onAdd, onQuantity }: CustomizeItemTileProps) {
   const selected = quantity > 0;
-  const initial = item.name.trim().charAt(0).toUpperCase() || "•";
-
-  const body = (
-    <>
-      <span
-        aria-hidden
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bhor-display text-bhor-product font-bhor-semibold transition-colors ${
-          selected ? "bg-bhor-primary text-white" : "bg-bhor-peach text-bhor-primary"
-        }`}
-      >
-        {initial}
-      </span>
-      <span className="mt-3 line-clamp-2 min-h-[2.5em] text-bhor-small font-bhor-semibold leading-bhor-heading text-bhor-text">
-        {item.name}
-      </span>
-      <span className="mt-1.5 inline-flex w-fit items-center rounded-full border border-bhor-border bg-bhor-cream px-2.5 py-0.5 text-bhor-caption font-bhor-medium text-bhor-text-muted">
-        {item.pack}
-      </span>
-    </>
-  );
-
-  if (!item.inStock) {
-    return (
-      <div
-        aria-disabled="true"
-        className="flex h-full flex-col rounded-bhor-md border border-dashed border-bhor-border bg-bhor-cream p-3 opacity-70 sm:p-4"
-      >
-        {body}
-        <span className="mt-auto pt-3">
-          <span className="inline-flex min-h-9 w-full items-center justify-center rounded-bhor-sm bg-bhor-border/60 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
-            Out of stock
-          </span>
-        </span>
-      </div>
-    );
-  }
-
-  if (selected) {
-    return (
-      <div className="relative flex h-full flex-col rounded-bhor-md border border-bhor-primary bg-bhor-primary-soft/35 p-3 shadow-bhor-soft ring-1 ring-bhor-primary sm:p-4">
-        <span
-          aria-hidden
-          className="absolute right-2.5 top-2.5 flex h-6 w-6 items-center justify-center rounded-full bg-bhor-primary text-white"
-        >
-          <Check className="h-3.5 w-3.5" />
-        </span>
-        {body}
-        <div className="mt-auto pt-3">
-          <QuantityStepper name={item.name} quantity={quantity} max={maxQuantity} onChange={onQuantity} />
-        </div>
-      </div>
-    );
-  }
+  const soldOut = !item.inStock;
 
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      disabled={boxFull}
-      className="group flex h-full w-full flex-col rounded-bhor-md border border-bhor-border bg-bhor-surface p-3 text-left transition duration-200 hover:-translate-y-0.5 hover:border-bhor-primary/60 hover:shadow-bhor-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 sm:p-4"
+    <article
+      className={`group flex h-full flex-col overflow-hidden rounded-xl border bg-white transition-shadow duration-200 ${
+        selected
+          ? "border-bhor-primary/60 shadow-[0_0_0_1px_rgb(169_22_74/0.35)]"
+          : "border-[#ECE3D8] hover:shadow-[0_8px_24px_-12px_rgb(36_26_28/0.25)]"
+      }`}
     >
-      {body}
-      <span className="mt-auto pt-3">
-        <span className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-bhor-sm border border-bhor-primary text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary transition-colors group-hover:bg-bhor-primary group-hover:text-white group-disabled:group-hover:bg-transparent group-disabled:group-hover:text-bhor-primary">
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-          Add <span className="sr-only">{item.name} to your box</span>
-        </span>
-      </span>
-    </button>
+      <div className="relative">
+        <ItemPhoto
+          name={item.name}
+          sizes="(min-width: 1280px) 240px, (min-width: 640px) 30vw, 45vw"
+          className={`aspect-square w-full [&_img]:transition-transform [&_img]:duration-500 ${
+            soldOut ? "grayscale" : "group-hover:[&_img]:scale-105"
+          }`}
+        />
+        {soldOut ? (
+          <span className="absolute inset-0 flex items-center justify-center bg-white/45">
+            <span className="rounded-md bg-bhor-text/85 px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide text-white">
+              Out of stock
+            </span>
+          </span>
+        ) : null}
+        {selected ? (
+          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded-md bg-bhor-primary px-1.5 py-0.5 text-bhor-badge font-bhor-bold text-white shadow-sm">
+            <Check className="h-3 w-3" strokeWidth={3} aria-hidden />
+            In box
+          </span>
+        ) : null}
+      </div>
+
+      <div className="flex flex-1 flex-col px-3 pb-3 pt-2.5">
+        <h3 className={`line-clamp-2 text-bhor-small font-bhor-semibold capitalize leading-snug ${soldOut ? "text-bhor-text-muted" : "text-bhor-text"}`}>
+          {item.name}
+        </h3>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+          <span className="text-bhor-caption text-bhor-text-muted">{item.pack}</span>
+          {soldOut ? (
+            <span
+              aria-disabled="true"
+              className="inline-flex h-8 min-w-[72px] items-center justify-center rounded-lg border border-[#E3D9CD] text-bhor-caption font-bhor-bold uppercase text-bhor-text-muted/70"
+            >
+              Add
+            </span>
+          ) : selected ? (
+            <QuantityStepper compact name={item.name} quantity={quantity} max={maxQuantity} onChange={onQuantity} />
+          ) : (
+            <button
+              type="button"
+              onClick={onAdd}
+              disabled={boxFull}
+              className="inline-flex h-8 min-w-[72px] items-center justify-center rounded-lg border border-bhor-primary bg-bhor-primary-soft/40 px-4 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary transition-colors hover:bg-bhor-primary hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-bhor-primary disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-bhor-primary-soft/40 disabled:hover:text-bhor-primary"
+            >
+              Add <span className="sr-only">{item.name} to your box</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </article>
   );
 }

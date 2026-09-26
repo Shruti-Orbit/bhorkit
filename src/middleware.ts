@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { apiBaseUrl } from "@/src/lib/api/config";
 
 /**
  * Route-level gate for /admin, and for the terms-acceptance requirement.
@@ -15,7 +16,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * anyone can actually have.
  */
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000/api/v1").replace(/\/$/, "");
+// Shared with the API client rather than resolved again here. The two used to
+// disagree — this fell back to localhost while the client hardcoded the
+// production host — so in production the gate called a machine that was not
+// there, and failed silently on every /admin request.
+const API_BASE = apiBaseUrl;
 const SESSION_COOKIE = process.env.NEXT_PUBLIC_SESSION_COOKIE ?? "bhorkit_session";
 
 /**

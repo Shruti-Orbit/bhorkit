@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { ChevronDown, Plus, Trash2 } from "lucide-react";
 import { Field, inputClass } from "@/src/components/admin/ui";
+import { ImageField, type PendingUploads } from "@/src/components/admin/product/ImageUploader";
 import type { AdminIngredient } from "@/src/lib/api/admin.api";
 
 /**
@@ -36,8 +37,23 @@ export type AdvancedContent = {
   contents: ContentLine[];
   contentGroups: ContentGroup[];
   howToUse: { title: string; description: string }[];
-  story: { eyebrow: string; title: string; description: string; image: string; imageAlt: string };
-  packaging: { title: string; points: string[]; image: string; imageAlt: string };
+  story: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    image: string;
+    imageAlt: string;
+    /** Cloudinary id for the story image; sent on save so the asset can be freed. */
+    imagePublicId?: string;
+  };
+  packaging: {
+    title: string;
+    points: string[];
+    image: string;
+    imageAlt: string;
+    /** Cloudinary id for the packaging image. */
+    imagePublicId?: string;
+  };
   faqs: { question: string; answer: string }[];
   reviews: { customerName: string; rating: number; date: string; verified: boolean; content: string }[];
   delivery: {
@@ -162,10 +178,16 @@ export function AdvancedContentForm({
   value,
   onChange,
   ingredients,
+  slug,
+  pendingUploads,
 }: {
   value: AdvancedContent;
   onChange: (next: AdvancedContent) => void;
   ingredients: AdminIngredient[];
+  /** Only decides which Cloudinary folder an upload lands in. */
+  slug?: string;
+  /** Shared with the rest of the form, so unsaved uploads are tracked in one place. */
+  pendingUploads: PendingUploads;
 }) {
   const set = <K extends keyof AdvancedContent>(key: K, next: AdvancedContent[K]) =>
     onChange({ ...value, [key]: next });
@@ -413,7 +435,15 @@ export function AdvancedContentForm({
               <textarea rows={3} value={value.story.description} onChange={(e) => set("story", { ...value.story, description: e.target.value })} className={`${inputClass} resize-y`} />
             </Field>
           </div>
-          <Field label="Image URL"><input value={value.story.image} onChange={(e) => set("story", { ...value.story, image: e.target.value })} className={inputClass} /></Field>
+          <div className="sm:col-span-2">
+            <ImageField
+              label="Story image"
+              value={{ src: value.story.image, publicId: value.story.imagePublicId }}
+              slug={slug}
+              pending={pendingUploads}
+              onChange={(next) => set("story", { ...value.story, image: next.src, imagePublicId: next.publicId })}
+            />
+          </div>
           <Field label="Image description"><input value={value.story.imageAlt} onChange={(e) => set("story", { ...value.story, imageAlt: e.target.value })} className={inputClass} /></Field>
         </div>
       </Section>
@@ -421,8 +451,16 @@ export function AdvancedContentForm({
       <Section title="Packaging" hint="How the kit arrives." count={value.packaging.points.length}>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Title"><input value={value.packaging.title} onChange={(e) => set("packaging", { ...value.packaging, title: e.target.value })} className={inputClass} /></Field>
-          <Field label="Image URL"><input value={value.packaging.image} onChange={(e) => set("packaging", { ...value.packaging, image: e.target.value })} className={inputClass} /></Field>
           <Field label="Image description"><input value={value.packaging.imageAlt} onChange={(e) => set("packaging", { ...value.packaging, imageAlt: e.target.value })} className={inputClass} /></Field>
+          <div className="sm:col-span-2">
+            <ImageField
+              label="Packaging image"
+              value={{ src: value.packaging.image, publicId: value.packaging.imagePublicId }}
+              slug={slug}
+              pending={pendingUploads}
+              onChange={(next) => set("packaging", { ...value.packaging, image: next.src, imagePublicId: next.publicId })}
+            />
+          </div>
           <div className="sm:col-span-2">
             <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Packaging points</p>
             <StringList

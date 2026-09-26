@@ -1,3 +1,5 @@
+import { apiBaseUrl } from "@/src/lib/api/config";
+
 type ApiResponse<TData, TMeta = unknown> = {
   success: boolean;
   message: string;
@@ -8,8 +10,6 @@ type ApiResponse<TData, TMeta = unknown> = {
     details?: unknown;
   };
 };
-
-const apiBaseUrl = "https://api.bhorkit.com/api/v1";
 
 export function getApiUrl(path: string) {
   return `${apiBaseUrl}${path}`;
@@ -82,17 +82,38 @@ export async function apiDelete<TData, TMeta = unknown>(
   });
 }
 
+/**
+ * Posts multipart form data — file uploads.
+ *
+ * Separate from apiPost because that one JSON-encodes the body and pins
+ * `Content-Type: application/json`. Both are wrong here, and the Content-Type in
+ * particular has to be left off entirely: the browser generates it along with the
+ * MIME boundary that separates the parts, and setting it by hand produces a
+ * header with no boundary, which the server cannot parse. Everything after the
+ * request — the not-every-response-is-JSON handling, the error shape — is shared.
+ */
+export async function apiUpload<TData, TMeta = unknown>(
+  path: string,
+  body: FormData,
+  init?: RequestInit,
+) {
+  return apiRequest<TData, TMeta>(path, { ...init, method: "POST", body });
+}
+
 async function apiRequest<TData, TMeta = unknown>(
   path: string,
   init?: RequestInit,
 ) {
+  // The browser sets Content-Type (with its boundary) for FormData bodies.
+  const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     cache: "no-store",
     credentials: "include",
     headers: {
       Accept: "application/json",
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...init?.headers,
     },
   });

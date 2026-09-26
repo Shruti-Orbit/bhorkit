@@ -27,9 +27,22 @@ export type ProductReview = {
   content: string;
 };
 
+/**
+ * One image on a product.
+ *
+ * `src` is what gets rendered. `publicId` identifies the same asset in
+ * Cloudinary and is carried through the admin form untouched so the API can
+ * replace or delete the asset on save — a delivery URL cannot be turned back
+ * into an asset id reliably.
+ *
+ * Absent on images that predate Cloudinary, whose `src` is a path into this
+ * project's public/ tree. Absent therefore means "the API does not manage this
+ * file", not "not set yet".
+ */
 export type ProductImage = {
   src: string;
   alt: string;
+  publicId?: string;
 };
 
 /** One line of a day in a multi-day kit: which ingredient, and how much that day. */
@@ -67,6 +80,8 @@ export type CollectionProduct = {
   href: string;
   image: string;
   imageAlt: string;
+  /** Cloudinary id for `image`. See ProductImage for why it travels with the URL. */
+  imagePublicId?: string;
   badge?: ProductBadge;
   purchaseState: ProductPurchaseState;
   images: ProductImage[];
@@ -110,6 +125,8 @@ export type CollectionProduct = {
     description: string;
     image: string;
     imageAlt: string;
+    /** Cloudinary id for `story.image`. */
+    imagePublicId?: string;
   };
   howToUse: {
     title: string;
@@ -120,6 +137,8 @@ export type CollectionProduct = {
     points: string[];
     image: string;
     imageAlt: string;
+    /** Cloudinary id for `packaging.image`. */
+    imagePublicId?: string;
   };
   faqs: ProductFaq[];
   reviews: ProductReview[];

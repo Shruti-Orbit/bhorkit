@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Plus, Trash2 } from "lucide-react";
 import {
   Card, ErrorState, Field, LoadingState, PageHeader, Toast, inputClass,
 } from "@/src/components/admin/ui";
@@ -14,14 +13,18 @@ import {
 import {
   AdvancedContentForm, EMPTY_ADVANCED, type AdvancedContent,
 } from "@/src/components/admin/product/AdvancedContentForm";
+import {
+  ImageField, ImageGalleryField, usePendingUploads,
+} from "@/src/components/admin/product/ImageUploader";
 import { shopCategories } from "@/src/data/shopCategories";
-import type { ShopCategorySlug } from "@/src/data/products";
+import type { ProductImage, ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError } from "@/src/lib/api/client";
 
 const AVAILABILITY = ["available", "preorder", "unavailable"];
 const PURCHASE_STATES = ["READY_STOCK", "PRE_ORDER", "COMING_SOON"];
 
-type ImageRow = { src: string; alt: string };
+/** Mirrors MAX_PRODUCT_IMAGES in the backend product model. */
+const MAX_GALLERY_IMAGES = 24;
 
 /**
  * Every field the backend requires, with defaults good enough to create a
@@ -76,11 +79,14 @@ export default function AdminProductFormPage() {
 
   const [core, setCore] = useState({
     id: "", sku: "", slug: "", name: "", subtitle: "", description: "",
-    price: "", image: "", imageAlt: "", href: "",
+    price: "", image: "", imageAlt: "", imagePublicId: "" as string | undefined, href: "",
     availability: "available", purchaseState: "READY_STOCK",
     shopCategory: "regular-pooja" as ShopCategorySlug, sortOrder: 0, readyStock: true,
   });
-  const [images, setImages] = useState<ImageRow[]>([]);
+  const [images, setImages] = useState<ProductImage[]>([]);
+  // Assets uploaded in this sitting that no product references yet. Shared by
+  // every image slot on the form, and emptied once a save makes them real.
+  const pendingUploads = usePendingUploads();
   const [advanced, setAdvanced] = useState<AdvancedContent>(EMPTY_ADVANCED);
   const [ingredients, setIngredients] = useState<AdminIngredient[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -121,7 +127,7 @@ export default function AdminProductFormPage() {
     setCore({
       id: product.id, sku: product.sku, slug: product.slug, name: product.name,
       subtitle: product.subtitle, description: product.description, price: product.price,
-      image: product.image, imageAlt: product.imageAlt, href: product.href,
+      image: product.image, imageAlt: product.imageAlt, imagePublicId: product.imagePublicId, href: product.href,
       availability: product.availability, purchaseState: product.purchaseState,
       shopCategory: product.shopCategory, sortOrder: product.sortOrder,
       readyStock: product.stock?.readyStock ?? true,
@@ -165,6 +171,9 @@ export default function AdminProductFormPage() {
       price: core.price.trim(),
       image: core.image.trim(),
       imageAlt: core.imageAlt.trim(),
+      // Travels with the URL: it is the only handle the API can use to free the
+      // asset when this image is later replaced or removed.
+      ...(core.imagePublicId ? { imagePublicId: core.imagePublicId } : {}),
       // Kept consistent with the slug so the storefront link never dangles.
       href: core.href.trim() || `/products/${core.slug.trim()}`,
       availability: core.availability,
@@ -172,7 +181,13 @@ export default function AdminProductFormPage() {
       shopCategory: core.shopCategory,
       sortOrder: Number(core.sortOrder) || 0,
       stock: { readyStock: core.readyStock },
-      images: images.filter((image) => image.src.trim()),
+      images: images
+        .filter((image) => image.src.trim())
+        .map((image) => ({
+          src: image.src,
+          alt: image.alt.trim() || core.imageAlt.trim() || core.name.trim(),
+          ...(image.publicId ? { publicId: image.publicId } : {}),
+        })),
     };
     // The id is immutable: orders reference it, so it's set once at creation.
     if (isNew) body.id = core.id.trim() || core.slug.trim();
@@ -181,10 +196,14 @@ export default function AdminProductFormPage() {
     try {
       if (isNew) {
         const created = await createProduct(body);
+        // Saved, so every uploaded asset is now referenced by a product and is
+        // no longer something to clean up if the admin removes it.
+        pendingUploads.clear();
         setToast({ message: "Product created.", tone: "success" });
         router.replace(`/admin/products/${encodeURIComponent(created.id)}`);
       } else {
         const updated = await updateProduct(productId, body);
+        pendingUploads.clear();
         hydrate(updated);
         setToast({ message: "Product saved.", tone: "success" });
       }
@@ -268,57 +287,38 @@ export default function AdminProductFormPage() {
             </div>
           </Card>
 
+          {/* Images are uploaded, not typed. A path pointing at a file in the
+              frontend repo meant adding a product needed a developer and a
+              deploy, and a typo produced a broken image with nothing to catch
+              it. Both the URL and the Cloudinary publicId are held here and sent
+              on save — the id is what lets the API free the asset when the image
+              is later replaced or removed. */}
           <Card className="p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-bhor-small font-bhor-bold text-bhor-text">Images</h2>
-              <button
-                type="button"
-                onClick={() => setImages((rows) => [...rows, { src: "", alt: "" }])}
-                className="inline-flex min-h-9 items-center gap-1 rounded-bhor-sm border border-bhor-primary px-3 text-bhor-caption font-bhor-bold uppercase text-bhor-primary"
-              >
-                <Plus className="h-3.5 w-3.5" aria-hidden /> Add image
-              </button>
+            <h2 className="mb-3 text-bhor-small font-bhor-bold text-bhor-text">Images</h2>
+            <div className="space-y-4">
+              <ImageField
+                label="Main image"
+                hint="Shown on the shop listing, the cart and the order confirmation."
+                value={{ src: core.image, publicId: core.imagePublicId }}
+                slug={core.slug}
+                pending={pendingUploads}
+                onChange={(next) =>
+                  setCore((current) => ({ ...current, image: next.src, imagePublicId: next.publicId }))
+                }
+              />
+              <Field label="Main image alt">
+                <input value={core.imageAlt} onChange={(e) => field("imageAlt", e.target.value)} className={inputClass} />
+              </Field>
+              <div className="border-t border-bhor-border pt-4">
+                <ImageGalleryField
+                  value={images}
+                  slug={core.slug}
+                  pending={pendingUploads}
+                  max={MAX_GALLERY_IMAGES}
+                  onChange={setImages}
+                />
+              </div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Main image path"><input value={core.image} onChange={(e) => field("image", e.target.value)} placeholder="/images/slider/slider-1.png" className={inputClass} /></Field>
-              <Field label="Main image alt"><input value={core.imageAlt} onChange={(e) => field("imageAlt", e.target.value)} className={inputClass} /></Field>
-            </div>
-            {images.length === 0 ? (
-              <p className="mt-3 text-bhor-caption text-bhor-text-muted">No gallery images yet.</p>
-            ) : (
-              <ul className="mt-3 space-y-2">
-                {images.map((image, index) => (
-                  <li key={index} className="flex flex-wrap items-end gap-2">
-                    <div className="min-w-[180px] flex-1">
-                      <Field label={`Image ${index + 1} path`}>
-                        <input
-                          value={image.src}
-                          onChange={(e) => setImages((rows) => rows.map((row, i) => (i === index ? { ...row, src: e.target.value } : row)))}
-                          className={inputClass}
-                        />
-                      </Field>
-                    </div>
-                    <div className="min-w-[160px] flex-1">
-                      <Field label="Alt text">
-                        <input
-                          value={image.alt}
-                          onChange={(e) => setImages((rows) => rows.map((row, i) => (i === index ? { ...row, alt: e.target.value } : row)))}
-                          className={inputClass}
-                        />
-                      </Field>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setImages((rows) => rows.filter((_, i) => i !== index))}
-                      aria-label={`Remove image ${index + 1}`}
-                      className="mb-1 rounded-bhor-sm p-2 text-bhor-error"
-                    >
-                      <Trash2 className="h-4 w-4" aria-hidden />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
           </Card>
 
           <Card className="p-4">
@@ -334,7 +334,13 @@ export default function AdminProductFormPage() {
             </p>
             {showAdvanced ? (
               <div className="mt-4">
-                <AdvancedContentForm value={advanced} onChange={setAdvanced} ingredients={ingredients} />
+                <AdvancedContentForm
+                  value={advanced}
+                  onChange={setAdvanced}
+                  ingredients={ingredients}
+                  slug={core.slug}
+                  pendingUploads={pendingUploads}
+                />
               </div>
             ) : null}
           </Card>

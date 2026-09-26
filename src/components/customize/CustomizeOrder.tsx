@@ -1,9 +1,20 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, PackageOpen, RefreshCw, Search, ShoppingBag, Sparkles, X } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronRight,
+  Info,
+  PackageOpen,
+  RefreshCw,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  X,
+} from "lucide-react";
 import { useShop } from "@/src/context/ShopContext";
 import { ApiClientError } from "@/src/lib/api/client";
 import {
@@ -20,7 +31,7 @@ import {
 } from "@/src/lib/customization/customBoxStore";
 import { formatPaise } from "@/src/utils/money";
 import { CustomBoxPanel, type BoxPanelLine } from "./CustomBoxPanel";
-import { CustomizeItemTile } from "./CustomizeItemTile";
+import { CustomizeItemTile, ItemPhoto } from "./CustomizeItemTile";
 
 type CatalogState =
   | { status: "loading" }
@@ -204,10 +215,10 @@ export function CustomizeOrder() {
   };
 
   return (
-    <main className={`flex flex-1 flex-col bg-bhor-cream ${showBuilder ? "pb-28 lg:pb-0" : ""}`}>
+    <main className={`flex flex-1 flex-col bg-[#FAF6F0] ${showBuilder ? "pb-28 lg:pb-0" : ""}`}>
       <Hero minItems={catalog?.enabled ? minItems : 0} />
 
-      <section className="px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <section className="px-4 pb-10 pt-5 sm:px-6 lg:px-8 lg:pb-14 lg:pt-6">
         <div className="mx-auto max-w-[1512px]">
           {catalogState.status === "loading" ? (
             <LoadingGrid />
@@ -223,7 +234,7 @@ export function CustomizeOrder() {
                     setCatalogState({ status: "loading" });
                     setReloadKey((key) => key + 1);
                   }}
-                  className="inline-flex min-h-11 items-center gap-2 rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
+                  className="inline-flex h-11 items-center gap-2 rounded-lg bg-bhor-primary px-5 text-bhor-button font-bhor-bold text-white transition-colors hover:bg-bhor-primary-dark"
                 >
                   <RefreshCw className="h-4 w-4" aria-hidden />
                   Try again
@@ -245,64 +256,70 @@ export function CustomizeOrder() {
               action={<ShopLink />}
             />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start">
-              <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-4 shadow-bhor-soft sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Choose your items</h2>
-                    <p className="mt-0.5 text-bhor-caption text-bhor-text-muted">
-                      {allItems.length} items · tap to add, then set how many
-                    </p>
-                  </div>
-                  <label className="relative block sm:w-72">
-                    <span className="sr-only">Search items</span>
-                    <Search
-                      className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bhor-text-muted"
-                      aria-hidden
-                    />
-                    <input
-                      type="search"
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search items"
-                      className="min-h-11 w-full rounded-bhor-sm border border-bhor-border bg-bhor-cream pl-9 pr-9 text-bhor-small text-bhor-text outline-none transition-colors placeholder:text-bhor-text-muted/70 focus:border-bhor-primary"
-                    />
-                    {query ? (
-                      <button
-                        type="button"
-                        onClick={() => setQuery("")}
-                        aria-label="Clear search"
-                        className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-bhor-text-muted hover:bg-bhor-border/50"
-                      >
-                        <X className="h-4 w-4" aria-hidden />
-                      </button>
-                    ) : null}
-                  </label>
-                </div>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start xl:gap-6">
+              <div className="min-w-0">
+                {/* Toolbar: stays in reach while scrolling a long shelf. */}
+                <div className="sticky top-0 z-30 -mx-4 border-b border-[#ECE3D8] bg-[#FAF6F0]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:mx-0 lg:rounded-xl lg:border lg:bg-white lg:px-4">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <h2 className="text-bhor-product font-bhor-bold text-bhor-text">Choose your items</h2>
+                      <p className="text-bhor-caption text-bhor-text-muted">
+                        {allItems.length} items · tap to add, then set how many
+                      </p>
+                    </div>
 
-                <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Show">
-                  {([
-                    ["all", `All items (${allItems.length})`],
-                    ["selected", `In your box (${itemCount})`],
-                  ] as const).map(([value, label]) => (
-                    <button
-                      key={value}
-                      type="button"
-                      aria-pressed={filter === value}
-                      onClick={() => setFilter(value)}
-                      className={`min-h-9 rounded-full px-4 text-bhor-caption font-bhor-bold transition-colors ${
-                        filter === value
-                          ? "bg-bhor-primary text-white"
-                          : "border border-bhor-border bg-bhor-cream text-bhor-text-muted hover:border-bhor-primary/50 hover:text-bhor-primary"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <label className="relative block sm:w-72">
+                        <span className="sr-only">Search items</span>
+                        <Search
+                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-bhor-text-muted"
+                          aria-hidden
+                        />
+                        <input
+                          type="search"
+                          value={query}
+                          onChange={(event) => setQuery(event.target.value)}
+                          placeholder="Search for haldi, diya, agarbatti…"
+                          className="h-10 w-full rounded-lg border border-[#E3D9CD] bg-white pl-9 pr-9 text-bhor-small text-bhor-text outline-none transition-colors placeholder:text-bhor-text-muted/60 focus:border-bhor-primary focus:ring-2 focus:ring-bhor-primary/15 [&::-webkit-search-cancel-button]:hidden"
+                        />
+                        {query ? (
+                          <button
+                            type="button"
+                            onClick={() => setQuery("")}
+                            aria-label="Clear search"
+                            className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-bhor-text-muted hover:bg-[#F4EDE4]"
+                          >
+                            <X className="h-4 w-4" aria-hidden />
+                          </button>
+                        ) : null}
+                      </label>
+
+                      <div className="flex gap-2" role="group" aria-label="Show">
+                        {([
+                          ["all", `All items (${allItems.length})`],
+                          ["selected", `In your box (${itemCount})`],
+                        ] as const).map(([value, label]) => (
+                          <button
+                            key={value}
+                            type="button"
+                            aria-pressed={filter === value}
+                            onClick={() => setFilter(value)}
+                            className={`h-10 flex-1 whitespace-nowrap rounded-lg border px-3.5 text-bhor-caption font-bhor-semibold transition-colors sm:flex-none ${
+                              filter === value
+                                ? "border-bhor-primary bg-bhor-primary-soft/50 text-bhor-primary"
+                                : "border-[#E3D9CD] bg-white text-bhor-text hover:border-bhor-primary/50"
+                            }`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {pickableCount < minItems ? (
-                  <p className="mt-4 flex items-start gap-2 rounded-bhor-sm border border-bhor-border bg-bhor-peach px-3 py-2 text-bhor-caption font-bhor-semibold text-bhor-primary-dark">
+                  <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#F0DDB5] bg-[#FFF8E8] px-3 py-2.5 text-bhor-caption font-bhor-semibold text-[#7A5410]">
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                     Only {pickableCount} items are in stock right now, and a box needs at least {minItems}. Please check
                     back soon.
@@ -310,15 +327,16 @@ export function CustomizeOrder() {
                 ) : null}
 
                 {boxFull ? (
-                  <p className="mt-4 rounded-bhor-sm bg-bhor-cream px-3 py-2 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
+                  <p className="mt-4 flex items-start gap-2 rounded-lg border border-[#E3D9CD] bg-white px-3 py-2.5 text-bhor-caption font-bhor-semibold text-bhor-text-muted">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                     Your box holds the most items it can ({maxItems}). Remove one to add another.
                   </p>
                 ) : null}
 
                 {visibleItems.length === 0 ? (
-                  <div className="mt-6 flex flex-col items-center rounded-bhor-md border border-dashed border-bhor-border bg-bhor-cream px-4 py-12 text-center">
-                    <Search className="h-6 w-6 text-bhor-text-muted" aria-hidden />
-                    <p className="mt-3 text-bhor-small font-bhor-semibold text-bhor-text">
+                  <div className="mt-4 flex flex-col items-center rounded-xl border border-[#ECE3D8] bg-white px-4 py-14 text-center">
+                    <Search className="h-7 w-7 text-bhor-text-muted/60" aria-hidden />
+                    <p className="mt-3 text-bhor-small font-bhor-bold text-bhor-text">
                       {filter === "selected" && itemCount === 0 ? "Nothing in your box yet" : "No items match"}
                     </p>
                     <p className="mt-1 text-bhor-caption text-bhor-text-muted">
@@ -328,7 +346,7 @@ export function CustomizeOrder() {
                     </p>
                   </div>
                 ) : (
-                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                  <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
                     {visibleItems.map((item) => (
                       <li key={item.id} className="min-w-0">
                         <CustomizeItemTile
@@ -345,7 +363,7 @@ export function CustomizeOrder() {
                 )}
               </div>
 
-              <aside className="hidden lg:sticky lg:top-6 lg:block">
+              <aside className="hidden lg:sticky lg:top-4 lg:block">
                 <CustomBoxPanel headingId="custom-box-heading" {...panelProps} />
               </aside>
             </div>
@@ -354,29 +372,52 @@ export function CustomizeOrder() {
       </section>
 
       {showBuilder ? (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-bhor-border bg-bhor-surface/95 px-4 py-3 shadow-bhor-soft backdrop-blur lg:hidden">
-          <div className="mx-auto flex max-w-xl items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
-                {itemCount} of {minItems} items
-              </p>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-bhor-cream ring-1 ring-inset ring-bhor-border">
-                <div
-                  className={`h-full rounded-full transition-[width] duration-300 ${remaining === 0 && itemCount > 0 ? "bg-bhor-success" : "bg-bhor-primary"}`}
-                  style={{ width: `${minItems > 0 ? Math.min(100, Math.round((itemCount / minItems) * 100)) : 0}%` }}
-                />
-              </div>
-            </div>
+        <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden">
+          {itemCount > 0 ? (
             <button
               type="button"
               onClick={() => setSheetOpen(true)}
-              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-bhor-sm bg-bhor-primary px-4 text-bhor-button-mobile font-bhor-bold uppercase text-white"
+              className="mx-auto flex w-full max-w-xl items-center gap-3 rounded-xl bg-bhor-primary px-3 py-2.5 text-left text-white shadow-[0_12px_28px_-10px_rgb(127_18_56/0.7)]"
             >
-              <ShoppingBag className="h-4 w-4" aria-hidden />
-              View box
-              {itemCount > 0 && totalPaise !== null ? <span className="font-bhor-semibold normal-case">· {formatPaise(totalPaise)}</span> : null}
+              <span className="flex -space-x-3" aria-hidden>
+                {panelLines.slice(0, 3).map((line) => (
+                  <ItemPhoto
+                    key={line.id}
+                    name={line.name ?? ""}
+                    sizes="36px"
+                    className="h-9 w-9 rounded-lg ring-2 ring-bhor-primary"
+                  />
+                ))}
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-bhor-small font-bhor-bold">
+                  {itemCount} item{itemCount === 1 ? "" : "s"}
+                  {totalPaise !== null ? <span className="tabular-nums"> · {formatPaise(totalPaise)}</span> : null}
+                </span>
+                <span className="block text-bhor-caption text-white/80">
+                  {remaining > 0 ? `Add ${remaining} more to checkout` : "Ready for checkout"}
+                </span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1 text-bhor-small font-bhor-bold">
+                View box
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </span>
             </button>
-          </div>
+          ) : (
+            <div className="mx-auto flex max-w-xl items-center gap-3 rounded-xl border border-[#ECE3D8] bg-white px-4 py-3 shadow-[0_12px_28px_-14px_rgb(36_26_28/0.4)]">
+              <ShoppingBag className="h-5 w-5 shrink-0 text-bhor-primary" aria-hidden />
+              <p className="flex-1 text-bhor-caption font-bhor-semibold text-bhor-text">
+                Pick at least {minItems} items to build your box
+              </p>
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                className="shrink-0 text-bhor-caption font-bhor-bold text-bhor-primary"
+              >
+                View box
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
 
@@ -386,11 +427,11 @@ export function CustomizeOrder() {
             type="button"
             aria-label="Close your box"
             onClick={() => setSheetOpen(false)}
-            className="absolute inset-0 h-full w-full cursor-default bg-bhor-text/50"
+            className="absolute inset-0 h-full w-full cursor-default bg-black/50"
           />
-          <div className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-bhor-lg bg-bhor-surface pb-[env(safe-area-inset-bottom)] shadow-bhor-soft">
+          <div className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-2xl bg-white pb-[env(safe-area-inset-bottom)]">
             <div className="flex justify-center pt-2" aria-hidden>
-              <span className="h-1.5 w-12 rounded-full bg-bhor-border" />
+              <span className="h-1 w-10 rounded-full bg-[#DDD2C5]" />
             </div>
             <CustomBoxPanel headingId="custom-box-sheet-heading" onClose={() => setSheetOpen(false)} {...panelProps} />
           </div>
@@ -408,35 +449,35 @@ function Hero({ minItems }: { minItems: number }) {
   ];
 
   return (
-    <section className="px-4 pt-6 sm:px-6 lg:px-8">
-      <div className="relative mx-auto max-w-[1512px] overflow-hidden rounded-bhor-lg bg-bhor-primary px-5 py-8 shadow-bhor-soft sm:px-10 sm:py-10">
-        <div aria-hidden className="absolute inset-0 bg-bhor-primary-dark opacity-20" />
-        <div aria-hidden className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border border-white/10" />
-        <div aria-hidden className="pointer-events-none absolute -right-2 -top-10 h-44 w-44 rounded-full border border-bhor-gold-light/30" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-28 right-28 hidden h-60 w-60 rounded-full bg-bhor-gold-light/10 sm:block" />
+    <section className="px-4 pt-4 sm:px-6 lg:px-8 lg:pt-6">
+      <div className="relative mx-auto max-w-[1512px] overflow-hidden rounded-2xl bg-[#2A1512]">
+        <Image
+          src="/images/customize/hero.webp"
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1512px) 1512px, 100vw"
+          className="object-cover object-[70%_40%]"
+        />
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-r from-[#1E0E0B]/95 via-[#1E0E0B]/70 to-[#1E0E0B]/10" />
 
-        <div className="relative z-10 max-w-2xl">
-          <p className="inline-flex items-center gap-2 text-bhor-small font-bhor-bold uppercase tracking-wide text-bhor-gold-light">
-            <Sparkles className="h-4 w-4" aria-hidden />
-            Customize Order
-          </p>
+        <div className="relative z-10 max-w-xl px-5 py-8 sm:px-10 sm:py-12 lg:py-14">
+          <p className="text-bhor-caption font-bhor-bold uppercase tracking-[0.18em] text-bhor-gold-light">Customize Order</p>
           <h1 className="mt-2 font-bhor-display text-bhor-h2-mobile font-bhor-semibold leading-bhor-heading text-white md:text-bhor-h2">
             Build your own puja box
           </h1>
-          <p className="mt-3 text-bhor-body-mobile leading-bhor-body text-white/85 md:text-bhor-body">
+          <p className="mt-3 text-bhor-body-mobile leading-bhor-body text-white/80 md:text-bhor-body">
             Pick exactly the samagri your puja needs — for any puja, any occasion. We pack it fresh and deliver it to
             your door.
           </p>
-          <ol className="mt-5 flex flex-wrap gap-2">
+          <ol className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-bhor-caption font-bhor-semibold text-white/90">
             {steps.map((step, index) => (
-              <li
-                key={step}
-                className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-bhor-caption font-bhor-semibold text-white ring-1 ring-white/15"
-              >
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-bhor-gold-light text-bhor-badge font-bhor-bold text-bhor-primary-dark">
+              <li key={step} className="inline-flex items-center gap-2">
+                <span className="flex h-5 w-5 items-center justify-center rounded-full border border-bhor-gold-light/70 text-bhor-badge font-bhor-bold text-bhor-gold-light">
                   {index + 1}
                 </span>
                 {step}
+                {index < steps.length - 1 ? <ChevronRight className="h-3.5 w-3.5 text-white/40" aria-hidden /> : null}
               </li>
             ))}
           </ol>
@@ -448,16 +489,25 @@ function Hero({ minItems }: { minItems: number }) {
 
 function LoadingGrid() {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]" aria-busy="true" aria-label="Loading items">
-      <div className="rounded-bhor-lg border border-bhor-border bg-bhor-surface p-5">
-        <div className="h-5 w-48 animate-pulse rounded bg-bhor-cream" />
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }, (_, index) => (
-            <div key={index} className="h-44 animate-pulse rounded-bhor-md bg-bhor-cream" />
+    <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:gap-6" aria-busy="true" aria-label="Loading items">
+      <div>
+        <div className="h-16 animate-pulse rounded-xl bg-white" />
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 10 }, (_, index) => (
+            <div key={index} className="overflow-hidden rounded-xl border border-[#ECE3D8] bg-white">
+              <div className="aspect-square animate-pulse bg-[#F4EDE4]" />
+              <div className="space-y-2 p-3">
+                <div className="h-3.5 w-3/4 animate-pulse rounded bg-[#F4EDE4]" />
+                <div className="flex justify-between pt-2">
+                  <div className="h-3 w-10 animate-pulse rounded bg-[#F4EDE4]" />
+                  <div className="h-8 w-[72px] animate-pulse rounded-lg bg-[#F4EDE4]" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
       </div>
-      <div className="hidden h-96 animate-pulse rounded-bhor-lg border border-bhor-border bg-bhor-surface lg:block" />
+      <div className="hidden h-96 animate-pulse rounded-xl border border-[#ECE3D8] bg-white lg:block" />
     </div>
   );
 }
@@ -474,8 +524,8 @@ function StatusCard({
   action: ReactNode;
 }) {
   return (
-    <div className="mx-auto flex max-w-xl flex-col items-center rounded-bhor-lg border border-bhor-border bg-bhor-surface px-6 py-12 text-center shadow-bhor-soft">
-      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-bhor-cream">{icon}</span>
+    <div className="mx-auto flex max-w-xl flex-col items-center rounded-xl border border-[#ECE3D8] bg-white px-6 py-12 text-center">
+      <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#F6EEE3]">{icon}</span>
       <h2 className="mt-4 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text">{title}</h2>
       <p className="mt-2 text-bhor-small leading-bhor-body text-bhor-text-muted">{message}</p>
       <div className="mt-6">{action}</div>
@@ -487,7 +537,7 @@ function ShopLink() {
   return (
     <Link
       href="/puja-kits"
-      className="inline-flex min-h-11 items-center justify-center rounded-bhor-sm bg-bhor-primary px-5 text-bhor-button font-bhor-bold uppercase text-white"
+      className="inline-flex h-11 items-center justify-center rounded-lg bg-bhor-primary px-5 text-bhor-button font-bhor-bold text-white transition-colors hover:bg-bhor-primary-dark"
     >
       Browse puja kits
     </Link>
