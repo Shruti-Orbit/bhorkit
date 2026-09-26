@@ -13,6 +13,8 @@ export type BoxPanelLine = {
   name: string | null;
   pack: string;
   quantity: number;
+  /** The item's photo, or null when it has none or the catalogue is still loading. */
+  image: string | null;
 };
 
 type CustomBoxPanelProps = {
@@ -181,7 +183,7 @@ export function CustomBoxPanel({
             {lines.map((line) => (
               <li key={line.id} className="flex items-center gap-3 py-2.5">
                 <ItemPhoto
-                  name={line.name ?? ""}
+                  src={line.image}
                   sizes="48px"
                   className="h-12 w-12 shrink-0 rounded-lg border border-[#ECE3D8]"
                 />

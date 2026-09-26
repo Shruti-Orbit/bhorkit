@@ -3,7 +3,6 @@
 import Image from "next/image";
 import { Check, PackageOpen } from "lucide-react";
 import type { CustomizationItem } from "@/src/lib/api/customization.api";
-import { itemImageFor } from "@/src/lib/customization/itemImages";
 import { QuantityStepper } from "./QuantityStepper";
 
 type CustomizeItemTileProps = {
@@ -17,9 +16,16 @@ type CustomizeItemTileProps = {
   onQuantity: (quantity: number) => void;
 };
 
-/** The item's photo on a paper-cream plate, or a plain placeholder when there is none. */
-export function ItemPhoto({ name, className = "", sizes }: { name: string; className?: string; sizes: string }) {
-  const src = itemImageFor(name);
+/**
+ * The item's photo on a paper-cream plate, or a plain placeholder when there is
+ * none.
+ *
+ * Takes the URL the API supplied rather than deriving one from the item's name.
+ * The old version matched the name against a hardcoded word list to pick a file
+ * out of public/images/customize, which meant a rename silently swapped an
+ * item's photo and a new item had none until someone shipped a frontend change.
+ */
+export function ItemPhoto({ src, className = "", sizes }: { src: string | null; className?: string; sizes: string }) {
   return (
     <span className={`relative block overflow-hidden bg-[#F6EEE3] ${className}`}>
       {src ? (
@@ -52,7 +58,7 @@ export function CustomizeItemTile({ item, quantity, maxQuantity, boxFull, onAdd,
     >
       <div className="relative">
         <ItemPhoto
-          name={item.name}
+          src={item.image}
           sizes="(min-width: 1280px) 240px, (min-width: 640px) 30vw, 45vw"
           className={`aspect-square w-full [&_img]:transition-transform [&_img]:duration-500 ${
             soldOut ? "grayscale" : "group-hover:[&_img]:scale-105"

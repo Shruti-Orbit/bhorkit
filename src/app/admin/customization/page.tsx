@@ -8,8 +8,11 @@ import {
 } from "@/src/components/admin/ui";
 import {
   addCustomizationItem, getCustomization, removeCustomizationItem, saveCustomizationSettings,
-  updateCustomizationItem, type AdminCustomization, type AdminCustomizationItem,
+  updateCustomizationItem, type AdminCustomization, type AdminCustomizationItem, type CustomizationImage,
 } from "@/src/lib/api/admin.api";
+import {
+  ImageField, customizationImageApi, usePendingUploads,
+} from "@/src/components/admin/product/ImageUploader";
 import { ApiClientError } from "@/src/lib/api/client";
 import { formatPaise } from "@/src/utils/money";
 
@@ -66,6 +69,11 @@ export default function AdminCustomizationPage() {
   const [editingId, setEditingId] = useState("");
   const [editDraft, setEditDraft] = useState<ItemDraft>({ packAmount: "", packUnit: "g", price: "" });
   const [removing, setRemoving] = useState<AdminCustomizationItem | null>(null);
+  // The photo chosen for the item being added, before that item exists.
+  const [addImage, setAddImage] = useState<CustomizationImage | null>(null);
+  // Assets uploaded in this sitting that no item references yet, so one
+  // abandoned mid-form does not sit in Cloudinary forever.
+  const pendingUploads = usePendingUploads();
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<{ message: string; tone: "success" | "error" }>({ message: "", tone: "success" });
 
@@ -133,11 +141,37 @@ export default function AdminCustomizationPage() {
         packUnit: addDraft.packUnit,
         pricePaise: addPrice,
         active: true,
+        // Only sent when one was chosen: an item may perfectly well start
+        // without a photo, and the storefront renders a placeholder for it.
+        ...(addImage ? { image: addImage } : {}),
       }),
       `${picked?.name ?? "Item"} added`,
       "Couldn't add that item.",
     );
-    if (ok) setAddDraft(BLANK_ADD);
+    if (ok) {
+      // Saved, so the uploaded asset is now referenced by an item and is no
+      // longer something to clean up.
+      pendingUploads.clear();
+      setAddDraft(BLANK_ADD);
+      setAddImage(null);
+    }
+  }
+
+  /**
+   * Changes one item's photo, saving straight away.
+   *
+   * Not folded into the edit form: adding a photo is a one-click job and should
+   * not mean opening an editor and re-confirming the pack size and price.
+   * `null` clears it, which the API reads as "remove the photo" — distinct from
+   * the field being absent, which every other edit here sends.
+   */
+  async function saveItemImage(item: AdminCustomizationItem, next: CustomizationImage | null) {
+    const ok = await run(
+      () => updateCustomizationItem(item.ingredientId, { image: next }),
+      next ? `${item.name ?? "Item"} photo updated` : `${item.name ?? "Item"} photo removed`,
+      "Couldn't save that photo.",
+    );
+    if (ok) pendingUploads.clear();
   }
 
   // --- edit ---
@@ -308,6 +342,22 @@ export default function AdminCustomizationPage() {
                   </select>
                 </Field>
               </div>
+              {/* The photo belongs to this customization item, not to the
+                  inventory row behind it — the same ingredient can be a stock
+                  record in the warehouse and a shelf card on the Customize page,
+                  and only the second one wants a picture. */}
+              <div className="sm:col-span-2">
+                <ImageField
+                  label="Item photo (optional)"
+                  hint="Shown on the Customize Order page. Square images look best. JPEG, PNG, WebP or AVIF, up to 5MB."
+                  value={{ src: addImage?.src ?? "", publicId: addImage?.publicId }}
+                  pending={pendingUploads}
+                  api={customizationImageApi}
+                  onChange={(next) =>
+                    setAddImage(next.src && next.publicId ? { src: next.src, publicId: next.publicId } : null)
+                  }
+                />
+              </div>
               <PackFields draft={addDraft} units={units} onChange={(patch) => setAddDraft((draft) => ({ ...draft, ...patch }))} />
               <Field label="Price per pack (₹)">
                 <input
@@ -398,6 +448,22 @@ export default function AdminCustomizationPage() {
                     </form>
                   ) : (
                     <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                      {/* Saves on change rather than waiting for the edit form:
+                          adding a photo is a one-click job and should not mean
+                          re-confirming the pack size and price. */}
+                      {!missing ? (
+                        <ImageField
+                          label={`Photo for ${item.name}`}
+                          compact
+                          value={{ src: item.image?.src ?? "", publicId: item.image?.publicId }}
+                          pending={pendingUploads}
+                          api={customizationImageApi}
+                          onChange={(next) =>
+                            void saveItemImage(item, next.src && next.publicId ? { src: next.src, publicId: next.publicId } : null)
+                          }
+                        />
+                      ) : null}
+
                       <div className="min-w-[12rem] flex-1">
                         <p className={`text-bhor-small font-bhor-semibold ${missing ? "text-bhor-error" : "text-bhor-text"}`}>
                           {missing ? "Removed from inventory" : item.name}

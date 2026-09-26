@@ -13,6 +13,16 @@ export type CustomizationItem = {
   /** What one pack holds, e.g. "5 g" or "1 kg". */
   pack: string;
   inStock: boolean;
+  /**
+   * The item's photo, or null when the admin has not uploaded one.
+   *
+   * The storefront used to work this out itself, matching the item's NAME
+   * against a hardcoded word list to pick a file out of public/images/customize.
+   * That meant renaming an ingredient silently changed its photo, a new item had
+   * none until a developer shipped one, and the list had to be kept in step with
+   * the inventory by hand. The server now says which photo an item has.
+   */
+  image: string | null;
 };
 
 export type CustomizationCatalog = {

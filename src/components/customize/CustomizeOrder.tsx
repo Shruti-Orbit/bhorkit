@@ -184,6 +184,7 @@ export function CustomizeOrder() {
       name: item?.name ?? (catalog ? "Unavailable item" : null),
       pack: item?.pack ?? "",
       quantity: line.quantity,
+      image: item?.image ?? null,
     };
   });
 
@@ -383,7 +384,7 @@ export function CustomizeOrder() {
                 {panelLines.slice(0, 3).map((line) => (
                   <ItemPhoto
                     key={line.id}
-                    name={line.name ?? ""}
+                    src={line.image}
                     sizes="36px"
                     className="h-9 w-9 rounded-lg ring-2 ring-bhor-primary"
                   />

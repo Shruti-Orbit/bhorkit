@@ -497,7 +497,21 @@ export type AdminCustomizationItem = {
   /** Paise. Admin-only — customers never receive it. */
   pricePaise: number;
   active: boolean;
+  /**
+   * The item's photo, or null when none has been uploaded.
+   *
+   * Belongs to the customization item, not to the inventory row behind it: the
+   * ingredient is a stock record several unrelated features read, while this is
+   * a shop-window decision about one place the item is merchandised.
+   */
+  image: CustomizationImage | null;
   updatedAt: string;
+};
+
+/** A customization item's photo. The publicId is what lets the API free the asset. */
+export type CustomizationImage = {
+  src: string;
+  publicId: string;
 };
 
 export type AdminCustomization = {
@@ -517,6 +531,13 @@ export type CustomizationItemInput = {
   packUnit: string;
   pricePaise: number;
   active: boolean;
+  /**
+   * The item's photo. On an update this field has three meanings, and they are
+   * not the same: an object sets it, `null` clears it, and leaving the field out
+   * entirely leaves whatever is stored alone — which is what an edit that only
+   * changes the price must send, or it would delete the photo.
+   */
+  image?: CustomizationImage | null;
 };
 
 export async function getCustomization() {
@@ -541,6 +562,34 @@ export async function updateCustomizationItem(
     `/admin/customization/items/${encodeURIComponent(ingredientId)}`,
     input,
   )).data.customization;
+}
+
+/**
+ * Uploads one customization item photo through the API.
+ *
+ * The browser never talks to Cloudinary: the file goes to our own server, which
+ * holds the API secret and signs the upload. Same validation, size ceiling and
+ * content sniffing as product images — one image service serves both.
+ */
+export async function uploadCustomizationImage(file: File) {
+  const form = new FormData();
+  form.append("files", file);
+  return (await apiUpload<CustomizationImage>("/admin/customization/images", form)).data;
+}
+
+/**
+ * Deletes a photo that was uploaded but is not going to be saved on an item.
+ *
+ * Only for that case. A photo already on an item is freed by changing or
+ * removing the item — the API compares what was stored against what is being
+ * stored and deletes the difference.
+ */
+export async function deleteCustomizationImage(publicId: string) {
+  return (
+    await apiDelete<{ publicId: string }>(
+      `/admin/customization/images?publicId=${encodeURIComponent(publicId)}`,
+    )
+  ).data;
 }
 
 export async function removeCustomizationItem(ingredientId: string) {

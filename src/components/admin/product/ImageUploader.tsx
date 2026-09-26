@@ -1,11 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import {
   MAX_FILES_PER_UPLOAD,
+  deleteCustomizationImage,
   deleteProductImage,
+  uploadCustomizationImage,
   uploadProductImages,
   type UploadedProductImage,
 } from "@/src/lib/api/admin.api";
@@ -109,6 +111,42 @@ export function usePendingUploads(): PendingUploads {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Which endpoints a slot talks to
+// ---------------------------------------------------------------------------
+
+/**
+ * The two calls an image slot makes.
+ *
+ * Injected rather than hardcoded because product photos and customization item
+ * photos are the same interaction against different endpoints and different
+ * Cloudinary folders. Duplicating the component for the second caller would mean
+ * the size limit, the error handling and the unsaved-upload cleanup all existing
+ * twice, one edit away from differing.
+ */
+export type ImageSlotApi = {
+  upload: (file: File) => Promise<{ src: string; publicId: string }>;
+  discard: (publicId: string) => Promise<unknown>;
+};
+
+/** Product photos, filed under the product's slug. */
+export function productImageApi(slug?: string): ImageSlotApi {
+  return {
+    upload: async (file) => {
+      const [uploaded] = await uploadProductImages([file], slug);
+      if (!uploaded) throw new Error("no asset returned");
+      return uploaded;
+    },
+    discard: (publicId) => deleteProductImage(publicId),
+  };
+}
+
+/** Customize Order item photos. Not filed per item — see the service for why. */
+export const customizationImageApi: ImageSlotApi = {
+  upload: (file) => uploadCustomizationImage(file),
+  discard: (publicId) => deleteCustomizationImage(publicId),
+};
+
 /**
  * Drops an asset nothing will ever reference.
  *
@@ -116,11 +154,11 @@ export function usePendingUploads(): PendingUploads {
  * which has already happened locally. A failed cleanup leaves a file in
  * Cloudinary and is logged; blocking the edit on it would be a worse trade.
  */
-async function discardUnsaved(publicId: string, pending: PendingUploads) {
+async function discardUnsaved(publicId: string, pending: PendingUploads, api: ImageSlotApi) {
   if (!pending.isPending(publicId)) return;
   pending.forget(publicId);
   try {
-    await deleteProductImage(publicId);
+    await api.discard(publicId);
   } catch (error) {
     console.warn("Could not delete an unsaved upload from Cloudinary", publicId, error);
   }
@@ -204,7 +242,8 @@ function UploadButton({
 export type SingleImageValue = { src: string; publicId?: string };
 
 /**
- * One image slot — the product's main photo, or the story or packaging image.
+ * One image slot — a product's main, story or packaging photo, or a
+ * customization item's photo.
  *
  * Replacing is upload-then-swap: the new asset is in place before the old
  * reference is dropped, so a failed upload leaves the existing photo exactly
@@ -216,17 +255,27 @@ export function ImageField({
   value,
   slug,
   pending,
+  api,
+  compact = false,
   onChange,
 }: {
   label: string;
   hint?: string;
   value: SingleImageValue;
+  /** Products only: which folder the upload is filed under. */
   slug?: string;
   pending: PendingUploads;
+  /** Which endpoints this slot talks to. Defaults to product images. */
+  api?: ImageSlotApi;
+  /** Drops the label and tightens the layout, for use inside a table row. */
+  compact?: boolean;
   onChange: (next: SingleImageValue) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // Rebuilt when the slug changes so a product renamed mid-edit files its next
+  // upload under the new folder.
+  const slotApi = useMemo(() => api ?? productImageApi(slug), [api, slug]);
 
   async function upload(files: File[]) {
     const file = files[0];
@@ -242,15 +291,14 @@ export function ImageField({
     setBusy(true);
     const replaced = value.publicId;
     try {
-      const [uploaded] = await uploadProductImages([file], slug);
-      if (!uploaded) throw new Error("no asset returned");
+      const uploaded = await slotApi.upload(file);
 
       pending.track(uploaded.publicId);
       onChange({ src: uploaded.src, publicId: uploaded.publicId });
 
       // Only once the replacement is in the form. If the one being replaced was
       // itself never saved, it is now unreachable and goes.
-      if (replaced) void discardUnsaved(replaced, pending);
+      if (replaced) void discardUnsaved(replaced, pending, slotApi);
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
@@ -262,14 +310,20 @@ export function ImageField({
     const removed = value.publicId;
     onChange({ src: "", publicId: undefined });
     setError("");
-    if (removed) void discardUnsaved(removed, pending);
+    if (removed) void discardUnsaved(removed, pending, slotApi);
   }
 
   return (
     <div>
-      <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">{label}</span>
-      <div className="mt-1.5 flex items-start gap-3">
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-bhor-sm border border-bhor-border bg-bhor-cream">
+      {compact ? null : (
+        <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">{label}</span>
+      )}
+      <div className={`flex items-start gap-3 ${compact ? "" : "mt-1.5"}`}>
+        <div
+          className={`relative shrink-0 overflow-hidden rounded-bhor-sm border border-bhor-border bg-bhor-cream ${
+            compact ? "h-14 w-14" : "h-20 w-20"
+          }`}
+        >
           {value.src ? (
             <Preview src={value.src} alt="" />
           ) : (
@@ -332,6 +386,10 @@ export function ImageGalleryField({
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
 
+  // The gallery is product-only — customization items carry a single photo — so
+  // this slot always talks to the product endpoints.
+  const galleryApi = useMemo(() => productImageApi(slug), [slug]);
+
   const remaining = Math.max(0, max - value.length);
 
   const upload = useCallback(
@@ -381,7 +439,7 @@ export function ImageGalleryField({
     const removed = value[index]?.publicId;
     onChange(value.filter((_, i) => i !== index));
     setError("");
-    if (removed) void discardUnsaved(removed, pending);
+    if (removed) void discardUnsaved(removed, pending, galleryApi);
   }
 
   function setAlt(index: number, alt: string) {
