@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AddonGrid } from "@/src/components/addons/AddonCard";
 import { getAddons } from "@/src/lib/api/addon.api";
+import {  Sparkle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -26,16 +27,17 @@ export default async function PujaAddonsPage() {
   const addons = await getAddons("shop");
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
+    <main className="mx-auto w-full px-4 py-8 sm:px-6 sm:py-10 lg:px-8">
       <header className="mb-6 sm:mb-8">
-        <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-          Puja Add-ons
+        <p className="text-bhor-caption font-bhor-bold tracking-wide text-bhor-gold">
+          PUJA ADD-ONs
         </p>
-        <h1 className="mt-1 font-bhor-display text-bhor-h3-mobile font-bhor-semibold text-bhor-text md:text-bhor-h2">
-          Complete Your Puja
-        </h1>
-        <p className="mt-2 max-w-2xl text-bhor-small leading-bhor-body text-bhor-text-muted">
-          Small extras that finish a puja thali. Add them to any BHORKIT kit order — they are delivered
+        <h2 className="font-bhor-display text-bhor-h3-mobile font-bhor-semibold leading-bhor-heading text-bhor-text md:text-bhor-h3">
+              Complete your puja with small extras
+              <Sparkle className="ml-2 inline h-4 w-4 text-bhor-gold md:h-5 md:w-5" aria-hidden />
+            </h2>
+        <p className="mt-2 max-w-3xl text-bhor-small leading-bhor-body text-bhor-text-muted">
+          Small extras that finish a puja thali. Add them to any BHORKIT kit order they are delivered
           alongside your kit.
         </p>
       </header>

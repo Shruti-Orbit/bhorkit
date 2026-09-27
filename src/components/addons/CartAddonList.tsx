@@ -20,7 +20,7 @@ export function CartAddonList({ compact = false }: { compact?: boolean }) {
   if (cartAddons.length === 0) return null;
 
   return (
-    <section aria-labelledby="cart-addons" className={compact ? "" : "mt-6"}>
+    <section aria-labelledby="cart-addons" className={compact ? "mt-10" : "mt-6"}>
       <h2
         id="cart-addons"
         className={`font-bhor-bold text-bhor-text ${compact ? "text-bhor-caption uppercase tracking-wide" : "text-bhor-product"}`}
@@ -66,10 +66,12 @@ export function CartAddonList({ compact = false }: { compact?: boolean }) {
 
             <div className="min-w-0 flex-1">
               <p className="truncate text-bhor-small font-bhor-semibold capitalize text-bhor-text">
-                {line.addon.name}
+                {line.addon.name} <span className="text-bhor-caption text-bhor-text-muted">
+                  ({line.addon.description})
+                </span>
               </p>
               <p className="text-bhor-caption text-bhor-text-muted">
-                {formatPaise(line.addon.pricePaise)} / {line.addon.unit}
+                {formatPaise(line.addon.pricePaise)} 
               </p>
             </div>
 

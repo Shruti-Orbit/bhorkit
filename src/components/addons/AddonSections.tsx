@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { AddonCard, AddonGrid } from "@/src/components/addons/AddonCard";
-import { getAddons, type Addon, type AddonPlacement } from "@/src/lib/api/addon.api";
+import {
+  getAddons,
+  type Addon,
+  type AddonPlacement,
+} from "@/src/lib/api/addon.api";
+import { Sparkle } from "lucide-react";
 
 /**
  * Add-ons offered inside another page.
@@ -50,22 +55,21 @@ export function CompleteYourPuja() {
   return (
     <section
       aria-labelledby="complete-your-puja"
-      className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-8"
+      className="mx-auto w-full px-4 py-8 sm:px-6 sm:py-10 lg:px-8"
     >
-      <div className="mb-4 sm:mb-6">
-        <p className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-primary">
-          Puja Add-ons
+      <header className="mb-6 sm:mb-8">
+        <p className="text-bhor-caption font-bhor-bold tracking-wide text-bhor-primary">
+          PUJA ADD-ONs
         </p>
-        <h2
-          id="complete-your-puja"
-          className="mt-1 font-bhor-display text-bhor-h4-mobile font-bhor-semibold text-bhor-text md:text-bhor-h4"
-        >
-          Complete Your Puja
+        <h2 className="font-bhor-display text-bhor-h3-mobile font-bhor-semibold leading-bhor-heading text-bhor-text md:text-bhor-h3">
+          Complete your puja with small extras
+          <Sparkle
+            className="ml-2 inline h-4 w-4 text-bhor-gold md:h-5 md:w-5"
+            aria-hidden
+          />
         </h2>
-        <p className="mt-1 text-bhor-caption text-bhor-text-muted sm:text-bhor-small">
-          Add these to your order — they arrive with your kit.
-        </p>
-      </div>
+      </header>
+
       <AddonGrid addons={addons} />
     </section>
   );
@@ -86,17 +90,23 @@ export function DontForget() {
   if (addons.length === 0) return null;
 
   return (
-    <section aria-labelledby="dont-forget" className="rounded-xl border border-bhor-border bg-bhor-surface p-4">
-      <h2 id="dont-forget" className="text-bhor-small font-bhor-bold text-bhor-text">
+    <section
+      aria-labelledby="dont-forget"
+      className="rounded-xl border border-bhor-border bg-bhor-surface p-4"
+    >
+      <h2
+        id="dont-forget"
+        className="text-bhor-small font-bhor-bold text-bhor-text"
+      >
         Don&apos;t forget
       </h2>
       <p className="mt-0.5 text-bhor-caption text-bhor-text-muted">
         Commonly added with orders like yours.
       </p>
 
-      <ul className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
+      <ul className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
         {addons.map((addon) => (
-          <li key={addon.id} className="w-40 shrink-0 snap-start sm:w-auto">
+          <li key={addon.id} className="w-auto shrink-0 snap-start">
             <AddonCard addon={addon} sizes="(min-width: 640px) 220px, 160px" />
           </li>
         ))}

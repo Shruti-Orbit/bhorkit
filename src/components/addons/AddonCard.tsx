@@ -52,7 +52,7 @@ export function AddonCard({ addon, sizes }: { addon: Addon; sizes: string }) {
         <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-3">
           <span className="text-bhor-small font-bhor-bold tabular-nums text-bhor-text">
             {formatPaise(addon.pricePaise)}
-            <span className="ml-1 text-bhor-caption font-bhor-regular text-bhor-text-muted">/ {addon.unit}</span>
+            {/* <span className="ml-1 text-bhor-caption font-bhor-regular text-bhor-text-muted">/ {addon.unit}</span> */}
           </span>
 
           {inCart ? (
