@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
 import { CartAddonList } from "@/src/components/addons/CartAddonList";
+import { DontForget } from "@/src/components/addons/AddonSections";
 import { useShop } from "@/src/context/ShopContext";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, parsePrice } from "@/src/utils/discount";
@@ -107,6 +108,9 @@ export default function CartPage() {
           {/* Below the kits, since an add-on accompanies them. Renders nothing
               when the cart holds none. */}
           <CartAddonList />
+
+          {/* Only alongside a kit: add-ons cannot be ordered on their own. */}
+          {cartItems.length > 0 ? <DontForget className="mt-6" /> : null}
         </section>
 
         <div className="space-y-4">

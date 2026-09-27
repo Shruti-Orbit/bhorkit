@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { AddonCard, AddonGrid } from "@/src/components/addons/AddonCard";
 import {
   getAddons,
@@ -85,17 +85,26 @@ export function CompleteYourPuja() {
  * Laid out as a horizontal scroller on a phone and a grid from tablet up, so it
  * never pushes the payment button below the fold on a small screen.
  */
-export function DontForget() {
+export function DontForget({
+  compact = false,
+  className = "",
+}: {
+  /** For narrow hosts such as the cart drawer: always a horizontal scroller. */
+  compact?: boolean;
+  className?: string;
+}) {
   const addons = useAddons("checkout");
+  // The cart page and the cart drawer can both be mounted at once.
+  const headingId = useId();
   if (addons.length === 0) return null;
 
   return (
     <section
-      aria-labelledby="dont-forget"
-      className="rounded-xl border border-bhor-border bg-bhor-surface p-4"
+      aria-labelledby={headingId}
+      className={`rounded-xl border border-bhor-border bg-bhor-surface p-4 ${className}`}
     >
       <h2
-        id="dont-forget"
+        id={headingId}
         className="text-bhor-small font-bhor-bold text-bhor-text"
       >
         Don&apos;t forget
@@ -104,13 +113,23 @@ export function DontForget() {
         Commonly added with orders like yours.
       </p>
 
-      <ul className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
-        {addons.map((addon) => (
-          <li key={addon.id} className="w-auto shrink-0 snap-start">
-            <AddonCard addon={addon} sizes="(min-width: 640px) 220px, 160px" />
-          </li>
-        ))}
-      </ul>
+      {compact ? (
+        <ul className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {addons.map((addon) => (
+            <li key={addon.id} className="w-36 shrink-0 snap-start">
+              <AddonCard addon={addon} sizes="144px" />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <ul className="mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] sm:grid sm:grid-cols-2 sm:overflow-visible lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
+          {addons.map((addon) => (
+            <li key={addon.id} className="w-auto shrink-0 snap-start">
+              <AddonCard addon={addon} sizes="(min-width: 640px) 220px, 160px" />
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

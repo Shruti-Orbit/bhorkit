@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Clock, Minus, Plus, ReceiptText, ShieldCheck, Trash2, X } from "lucide-react";
 import { CartAddonList } from "@/src/components/addons/CartAddonList";
+import { DontForget } from "@/src/components/addons/AddonSections";
 import { useShop } from "@/src/context/ShopContext";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, freeHandlingThreshold, parsePrice } from "@/src/utils/discount";
@@ -163,6 +164,9 @@ export function CartDrawer() {
                     when the cart holds no add-ons. */}
                 <CartAddonList compact />
               </section>
+
+              {/* Only alongside a kit: add-ons cannot be ordered on their own. */}
+              {cartItems.length > 0 ? <DontForget compact /> : null}
 
               <section className="rounded-bhor-lg bg-bhor-surface p-4 shadow-bhor-soft">
                 <h3 className="flex items-center gap-2 text-bhor-body font-bhor-bold text-bhor-text">
