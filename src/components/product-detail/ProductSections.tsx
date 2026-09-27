@@ -1,4 +1,5 @@
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
+import { CompleteYourPuja } from "@/src/components/addons/AddonSections";
 import type { CollectionProduct } from "@/src/data/products";
 import { RecentlyViewedProducts } from "./RecentlyViewedProducts";
 
@@ -35,6 +36,12 @@ export function ProductSections({
           ))}
         </div>
       </section>
+
+      {/* Directly after the highlights, while the customer is still deciding on
+          this kit — an add-on is bought alongside a kit, so it belongs next to
+          the kit rather than below the "you may also like" rail. Renders nothing
+          when no priority add-ons are active. */}
+      <CompleteYourPuja />
 
       {relatedProducts.length > 0 ? (
         <ProductCollection title="You May Also Like" href="/shop" products={relatedProducts} />

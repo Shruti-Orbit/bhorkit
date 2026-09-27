@@ -597,3 +597,83 @@ export async function removeCustomizationItem(ingredientId: string) {
     `/admin/customization/items/${encodeURIComponent(ingredientId)}`,
   )).data.customization;
 }
+
+// --- puja add-ons ---
+//
+// A module of its own: its own collection, its own images, no link to the
+// inventory. Prices are paise, like every other amount on the order path.
+
+export type AdminAddonImage = { src: string; publicId: string };
+
+export type AdminAddon = {
+  id: string;
+  name: string;
+  description: string;
+  /** Paise. */
+  pricePaise: number;
+  unit: string;
+  priority: "normal" | "priority" | "high";
+  image: AdminAddonImage | null;
+  active: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AddonInput = {
+  name: string;
+  description: string;
+  pricePaise: number;
+  unit: string;
+  priority: "normal" | "priority" | "high";
+  /**
+   * On an update this field has three meanings: an object sets the photo, `null`
+   * clears it, and leaving it out entirely leaves the stored one alone — which
+   * is what an edit changing only the price must send.
+   */
+  image?: AdminAddonImage | null;
+  active: boolean;
+  sortOrder: number;
+};
+
+export async function getAddons() {
+  return (
+    await apiGet<{ addons: AdminAddon[]; units: string[]; priorities: string[] }>("/admin/addons")
+  ).data;
+}
+
+export async function createAddon(input: AddonInput) {
+  return (await apiPost<{ addon: AdminAddon }, AddonInput>("/admin/addons", input)).data.addon;
+}
+
+export async function updateAddon(addonId: string, input: Partial<AddonInput>) {
+  return (
+    await apiPatch<{ addon: AdminAddon }, Partial<AddonInput>>(
+      `/admin/addons/${encodeURIComponent(addonId)}`,
+      input,
+    )
+  ).data.addon;
+}
+
+export async function deleteAddon(addonId: string) {
+  return (await apiDelete<{ id: string }>(`/admin/addons/${encodeURIComponent(addonId)}`)).data;
+}
+
+/**
+ * Uploads an add-on photo through the API.
+ *
+ * The browser never talks to Cloudinary: the file goes to our own server, which
+ * holds the secret and signs the upload. Same validation, ceiling and content
+ * sniffing as product and customization images — one image service serves all.
+ */
+export async function uploadAddonImage(file: File) {
+  const form = new FormData();
+  form.append("files", file);
+  return (await apiUpload<AdminAddonImage>("/admin/addons/images", form)).data;
+}
+
+export async function deleteAddonImage(publicId: string) {
+  return (
+    await apiDelete<{ publicId: string }>(`/admin/addons/images?publicId=${encodeURIComponent(publicId)}`)
+  ).data;
+}

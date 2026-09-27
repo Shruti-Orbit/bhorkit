@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Lock, PackageOpen, ShieldCheck } from "lucide-react";
 import { OrderSummary, type SummaryItem } from "@/src/components/cart/OrderSummary";
+import { DontForget } from "@/src/components/addons/AddonSections";
+import { paiseToRupees } from "@/src/utils/money";
 import { CheckoutAuth } from "@/src/components/checkout/CheckoutAuth";
 import { DeliveryAddressSection } from "@/src/components/checkout/DeliveryAddressSection";
 import { DeliveryScheduleSection } from "@/src/components/checkout/DeliveryScheduleSection";
@@ -32,6 +34,7 @@ export default function CheckoutPage() {
   const {
     addresses,
     cartItems,
+    cartAddons,
     cartSubtotal,
     cartTotal,
     checkoutMode,
@@ -116,7 +119,14 @@ export default function CheckoutPage() {
 
   // Asked of the server whenever what is being bought changes: whether every
   // item allows pay on delivery, and what it would cost, are decided there.
-  const cartSignature = cartItems.map((line) => `${line.product.id}:${line.quantity}`).join(",");
+  // Add-ons are part of what is being paid for, so a change to them must
+  // invalidate an open checkout exactly as a changed kit does — otherwise a
+  // customer could add an add-on and still be charged the older, smaller amount
+  // that the open Razorpay order was created for.
+  const cartSignature = [
+    ...cartItems.map((line) => `${line.product.id}:${line.quantity}`),
+    ...cartAddons.map((line) => `addon:${line.addon.id}:${line.quantity}`),
+  ].join(",");
   const directProductId = isDirect ? directCheckoutItem?.productId : undefined;
   const directQuantity = isDirect ? directCheckoutItem?.quantity : undefined;
   const couponCode = coupon?.code;
@@ -205,16 +215,32 @@ export default function CheckoutPage() {
           ...(isPreOrderProduct(direct.product) ? { badge: "Pre-order" } : {}),
         }]
       : []
-    : cartItems.map((line) => ({
-        id: line.product.id,
-        name: line.product.name,
-        image: line.product.image,
-        imageAlt: line.product.imageAlt,
-        quantity: line.quantity,
-        unitPrice: parsePrice(line.product.price),
-        lineTotal: parsePrice(line.product.price) * line.quantity,
-        ...(isPreOrderProduct(line.product) ? { badge: "Pre-order" } : {}),
-      }));
+    : [
+        ...cartItems.map((line) => ({
+          id: line.product.id,
+          name: line.product.name,
+          image: line.product.image,
+          imageAlt: line.product.imageAlt,
+          quantity: line.quantity,
+          unitPrice: parsePrice(line.product.price),
+          lineTotal: parsePrice(line.product.price) * line.quantity,
+          ...(isPreOrderProduct(line.product) ? { badge: "Pre-order" } : {}),
+        })),
+        // Add-ons are their own order lines and must appear here, or the summary
+        // would list less than the total charges for. Their prices are PAISE,
+        // while every other line here is RUPEES, so they are converted — the
+        // server's own pricing does the identical conversion.
+        ...cartAddons.map((line) => ({
+          id: `addon-${line.addon.id}`,
+          name: line.addon.name,
+          image: line.addon.image ?? "",
+          imageAlt: line.addon.name,
+          quantity: line.quantity,
+          unitPrice: paiseToRupees(line.addon.pricePaise),
+          lineTotal: paiseToRupees(line.addon.pricePaise * line.quantity),
+          badge: "Add-on",
+        })),
+      ];
 
   const isPreOrder = deliveryMode === "scheduled";
   // A preview only. The order is priced again server-side from catalogue
@@ -474,6 +500,12 @@ export default function CheckoutPage() {
                   loading={paymentOptionsLoading}
                 />
               ) : null}
+
+              {/* High-priority add-ons only, and only on a cart checkout. Buy Now
+                  and a custom box never enter the cart, so an add-on added here
+                  would not be part of what is about to be paid for — offering one
+                  would take an instruction we could not honour. */}
+              {!isDirect && !isCustom ? <DontForget /> : null}
 
             </>
           )}

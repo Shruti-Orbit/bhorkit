@@ -4,13 +4,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { OrderSummary } from "@/src/components/cart/OrderSummary";
+import { CartAddonList } from "@/src/components/addons/CartAddonList";
 import { useShop } from "@/src/context/ShopContext";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, parsePrice } from "@/src/utils/discount";
 import { isPreOrderProduct } from "@/src/utils/productState";
 
 export default function CartPage() {
-  const { cartItems, clearDirectCheckout, removeFromCart, setCheckoutMode, updateCartItem } = useShop();
+  const {
+    cartItems,
+    cartAddons,
+    cartNeedsProduct,
+    clearDirectCheckout,
+    removeFromCart,
+    setCheckoutMode,
+    updateCartItem,
+  } = useShop();
   const hasPreOrderItems = cartItems.some((item) => isPreOrderProduct(item.product));
   const ordering = useOrderingStatus();
   // Only the store switch leaves closed items in a cart: a closed range's
@@ -25,7 +34,10 @@ export default function CartPage() {
           <h1 className="font-bhor-display text-bhor-h2-mobile font-bhor-semibold text-bhor-text md:text-bhor-h2">
             Your Cart
           </h1>
-          {cartItems.length === 0 ? (
+          {/* Only truly empty when there are no add-ons either — otherwise a
+              cart holding add-ons would say "empty" while the badge showed a
+              count and the summary showed a total. */}
+          {cartItems.length === 0 && cartAddons.length === 0 ? (
             <div className="mt-6 rounded-bhor-lg border border-bhor-border bg-bhor-surface p-8 text-center">
               <p className="text-bhor-body font-bhor-semibold text-bhor-text">Your cart is empty.</p>
               <Link
@@ -91,11 +103,25 @@ export default function CartPage() {
               ))}
             </div>
           )}
+
+          {/* Below the kits, since an add-on accompanies them. Renders nothing
+              when the cart holds none. */}
+          <CartAddonList />
         </section>
 
         <div className="space-y-4">
           <OrderSummary />
-          {cartItems.length > 0 && storeClosed ? (
+          {/* An add-ons-only cart cannot check out — the server refuses it. The
+              button says so rather than leading the customer to that refusal. */}
+          {cartNeedsProduct ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-5 text-center text-bhor-button font-bhor-bold uppercase text-bhor-text-muted"
+            >
+              Add a Kit to Continue
+            </button>
+          ) : cartItems.length > 0 && storeClosed ? (
             <>
               <p
                 role="status"

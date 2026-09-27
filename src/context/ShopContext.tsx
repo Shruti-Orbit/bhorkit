@@ -25,13 +25,18 @@ import {
   removeFromWishlist as removeFromWishlistApi,
 } from "@/src/lib/api/wishlist.api";
 import {
+  addCartAddon as addCartAddonApi,
   addCartItem as addCartItemApi,
   getCart as getCartApi,
   mergeCart as mergeCartApi,
+  removeCartAddon as removeCartAddonApi,
   removeCartItem as removeCartItemApi,
+  setCartAddonQuantity as setCartAddonQuantityApi,
   setCartItemQuantity as setCartItemQuantityApi,
   type BackendCart,
 } from "@/src/lib/api/cart.api";
+import type { Addon } from "@/src/lib/api/addon.api";
+import { paiseToRupees } from "@/src/utils/money";
 import {
   createAddress as createAddressApi,
   deleteAddress as deleteAddressApi,
@@ -63,6 +68,23 @@ export type CurrentUser = {
 
 export type CartItem = {
   product: CollectionProduct;
+  quantity: number;
+};
+
+/**
+ * A Puja Add-on in the cart.
+ *
+ * Its own list rather than a variant of CartItem: an add-on has no slug, no
+ * detail page and no shop range, and every existing reader of `cartItems`
+ * destructures `item.product`. Keeping them apart meant none of those readers
+ * had to learn a union.
+ *
+ * Add-on prices are PAISE, while product prices are rupee strings parsed with
+ * parsePrice. The two are only ever combined through paiseToRupees — see
+ * cartSubtotal, where getting it wrong would be a 100x error.
+ */
+export type CartAddonItem = {
+  addon: Addon;
   quantity: number;
 };
 
@@ -122,8 +144,12 @@ type ShopContextValue = {
   errorMessage: string;
   cartDrawerOpen: boolean;
   cartItems: CartItem[];
+  /** Puja Add-ons in the cart, a separate list from `cartItems`. */
+  cartAddons: CartAddonItem[];
   cartCount: number;
   cartSubtotal: number;
+  /** True when the cart holds add-ons but no kit — checkout would refuse it. */
+  cartNeedsProduct: boolean;
   memberDiscount: number;
   handlingCharge: number;
   cartTotal: number;
@@ -151,6 +177,11 @@ type ShopContextValue = {
   setCheckoutMode: (mode: CheckoutMode) => void;
   updateCartItem: (productId: string, quantity: number) => void;
   removeFromCart: (productId: string) => void;
+  addAddonToCart: (addon: Addon, quantity?: number) => void;
+  updateCartAddon: (addonId: string, quantity: number) => void;
+  removeAddonFromCart: (addonId: string) => void;
+  /** How many of one add-on are in the cart; 0 when it isn't. */
+  addonQuantity: (addonId: string) => number;
   toggleSavedItem: (product: CollectionProduct) => void;
   isSavedItem: (productId: string) => boolean;
   addAddress: (address: Omit<CustomerAddress, "id">) => Promise<boolean>;
@@ -174,6 +205,10 @@ type ShopContextValue = {
 
 const ShopContext = createContext<ShopContextValue | null>(null);
 const cartStorageKey = "bhorkit_guest_cart";
+// A key of its own, so a guest cart stored before add-ons existed still parses.
+// Folding them into the same blob would have made every saved cart unreadable
+// on the next deploy.
+const addonStorageKey = "bhorkit_guest_addons";
 // Shown whenever the server reports it removed cart items that can no longer be
 // bought, so an item never just disappears without explanation.
 const UNAVAILABLE_REMOVED_MESSAGE =
@@ -217,6 +252,51 @@ function toCartItems(cart: BackendCart): CartItem[] {
   return cart.items.map((item) => ({ product: item.product, quantity: item.quantity }));
 }
 
+/**
+ * The cart's add-on lines, in the shape the storefront renders.
+ *
+ * The server sends a flattened line — name, unit, price, image — rather than a
+ * whole add-on, so everything the cart needs to draw is already present and
+ * nothing has to be re-fetched to show a cart. `priority` is absent from the
+ * line because nothing in the cart renders it.
+ */
+function toCartAddons(cart: BackendCart): CartAddonItem[] {
+  return cart.addons.map((line) => ({
+    addon: {
+      id: line.addonId,
+      name: line.name,
+      description: line.description,
+      pricePaise: line.unitPrice,
+      unit: line.unit,
+      priority: "normal" as const,
+      image: line.image,
+      maxQuantity: MAX_ADDON_CART_QUANTITY,
+    },
+    quantity: line.quantity,
+  }));
+}
+
+/** Mirrors MAX_CART_ITEM_QUANTITY on the server. */
+const MAX_ADDON_CART_QUANTITY = 20;
+
+function applyAddonAdd(items: CartAddonItem[], addon: Addon, quantity: number): CartAddonItem[] {
+  const existing = items.find((item) => item.addon.id === addon.id);
+  if (existing) {
+    return items.map((item) =>
+      item.addon.id === addon.id
+        ? { ...item, quantity: Math.min(item.quantity + quantity, MAX_ADDON_CART_QUANTITY) }
+        : item,
+    );
+  }
+  return [...items, { addon, quantity: Math.min(quantity, MAX_ADDON_CART_QUANTITY) }];
+}
+
+function applyAddonSet(items: CartAddonItem[], addonId: string, quantity: number): CartAddonItem[] {
+  return items
+    .map((item) => (item.addon.id === addonId ? { ...item, quantity } : item))
+    .filter((item) => item.quantity > 0);
+}
+
 function applyCartAdd(items: CartItem[], product: CollectionProduct, quantity: number): CartItem[] {
   const existingItem = items.find((item) => item.product.id === product.id);
   if (existingItem) {
@@ -255,6 +335,22 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   // dev-only warning — React discards and re-renders the whole mismatched
   // subtree.
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  // Puja Add-ons, kept beside the product cart rather than inside it — see the
+  // note on CartAddonItem.
+  const [cartAddons, setCartAddons] = useState<CartAddonItem[]>([]);
+
+  /**
+   * Applies a server cart response to local state.
+   *
+   * Every path that hydrates the cart goes through here, so add-ons can never be
+   * updated at some of them and forgotten at others — which would leave the
+   * badge and the cart disagreeing after whichever path was missed.
+   */
+  const applyBackendCart = useCallback((cart: BackendCart) => {
+    setCartItems(toCartItems(cart));
+    setCartAddons(toCartAddons(cart));
+  }, []);
+
   const [checkoutMode, setCheckoutModeState] = useState<CheckoutMode>("buy-now");
   // Guards the persistence effects below. Without it they would fire on the
   // first commit — before the restore effect has run — and write the empty
@@ -311,9 +407,11 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   // (react-hooks/set-state-in-effect).
   useEffect(() => {
     const storedCart = getInitialCart();
+    const storedAddons = getInitialAddons();
     const storedMode = getInitialCheckoutMode();
     queueMicrotask(() => {
       if (storedCart.length > 0) setCartItems(storedCart);
+      if (storedAddons.length > 0) setCartAddons(storedAddons);
       setCheckoutModeState(storedMode);
       setStorageRestored(true);
     });
@@ -328,6 +426,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (isLoggedIn) return;
     window.localStorage.setItem(cartStorageKey, JSON.stringify(cartItems));
   }, [cartItems, isLoggedIn, storageRestored]);
+
+  // Add-ons persist on the same terms as the product cart: guest only, and only
+  // once the restore above has run.
+  useEffect(() => {
+    if (!storageRestored) return;
+    if (isLoggedIn) return;
+    window.localStorage.setItem(addonStorageKey, JSON.stringify(cartAddons));
+  }, [cartAddons, isLoggedIn, storageRestored]);
 
   useEffect(() => {
     if (!storageRestored) return;
@@ -512,12 +618,19 @@ export function ShopProvider({ children }: { children: ReactNode }) {
 
     let isActive = true;
     const guestCartItems = getInitialCart();
+    const guestAddons = getInitialAddons();
 
     (async () => {
       try {
         const [cart, wishlist, addressBook, userOrders] = await Promise.all([
-          guestCartItems.length > 0
-            ? mergeCartApi(guestCartItems.map((item) => ({ productId: item.product.id, quantity: item.quantity })))
+          // Add-ons are merged in the same call, by their own ids. The server
+          // builds the internal cart reference from them, so anything a guest
+          // collected before signing in survives the transition.
+          guestCartItems.length > 0 || guestAddons.length > 0
+            ? mergeCartApi(
+                guestCartItems.map((item) => ({ productId: item.product.id, quantity: item.quantity })),
+                guestAddons.map((item) => ({ addonId: item.addon.id, quantity: item.quantity })),
+              )
             : getCartApi(),
           getWishlistApi(),
           getAddressesApi(),
@@ -527,7 +640,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
         if (!isActive) return;
 
         window.localStorage.removeItem(cartStorageKey);
-        setCartItems(toCartItems(cart));
+        window.localStorage.removeItem(addonStorageKey);
+        applyBackendCart(cart);
         if (cart.removedUnavailableProductIds.length > 0) {
           setErrorMessage(UNAVAILABLE_REMOVED_MESSAGE);
         }
@@ -555,7 +669,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     return () => {
       isActive = false;
     };
-  }, [applyAddressBook, currentUser]);
+  }, [applyAddressBook, applyBackendCart, currentUser]);
 
   // Signing in normally dismisses the modal. The exception is an account that
   // still owes an acceptance — for them the modal is not a login prompt any
@@ -618,7 +732,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     // Start the next session with a clean guest cart rather than resurrecting
     // one that was already merged into the account we're signing out of.
     setCartItems([]);
+    setCartAddons([]);
     window.localStorage.removeItem(cartStorageKey);
+    window.localStorage.removeItem(addonStorageKey);
     // A custom box built on this device is cleared for the same reason.
     customBoxActions.clear();
     clearCustomCheckout();
@@ -652,12 +768,72 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
 
     addCartItemApi(product.id, quantity)
-      .then((cart) => setCartItems(toCartItems(cart)))
+      .then((cart) => applyBackendCart(cart))
       .catch((error) => {
         setErrorMessage(errorMessageFrom(error, "Couldn't add this item to your cart. Please try again."));
-        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
       });
-  }, [userId]);
+  }, [userId, applyBackendCart]);
+
+  /**
+   * Puja Add-ons in the cart.
+   *
+   * Optimistic then reconciled, exactly like the product cart above: the tile
+   * responds immediately, and the server's answer replaces local state when it
+   * arrives. A guest's add-ons live in localStorage and are merged at sign-in.
+   *
+   * No availability pre-check here, unlike products: an add-on has no stock and
+   * no per-range switch of its own, so the only reason the server refuses one is
+   * that it has been deleted or switched off — in which case the error path below
+   * reloads the cart and says so.
+   */
+  const addAddonToCart = useCallback((addon: Addon, quantity = 1) => {
+    setCartAddons((items) => applyAddonAdd(items, addon, quantity));
+    setSuccessMessage("Added to your cart");
+    setCartDrawerOpen(true);
+
+    if (!userId) return;
+
+    addCartAddonApi(addon.id, quantity)
+      .then((cart) => applyBackendCart(cart))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't add this add-on to your cart. Please try again."));
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
+      });
+  }, [userId, applyBackendCart]);
+
+  const updateCartAddon = useCallback((addonId: string, quantity: number) => {
+    setCartAddons((items) => applyAddonSet(items, addonId, quantity));
+
+    if (!userId) return;
+
+    const request = quantity < 1 ? removeCartAddonApi(addonId) : setCartAddonQuantityApi(addonId, quantity);
+    request
+      .then((cart) => applyBackendCart(cart))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't update your cart. Please try again."));
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
+      });
+  }, [userId, applyBackendCart]);
+
+  const removeAddonFromCart = useCallback((addonId: string) => {
+    setCartAddons((items) => items.filter((item) => item.addon.id !== addonId));
+
+    if (!userId) return;
+
+    removeCartAddonApi(addonId)
+      .then((cart) => applyBackendCart(cart))
+      .catch((error) => {
+        setErrorMessage(errorMessageFrom(error, "Couldn't remove that add-on. Please try again."));
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
+      });
+  }, [userId, applyBackendCart]);
+
+  /** How many of one add-on are in the cart; 0 when it isn't. */
+  const addonQuantity = useCallback(
+    (addonId: string) => cartAddons.find((item) => item.addon.id === addonId)?.quantity ?? 0,
+    [cartAddons],
+  );
 
   const setCheckoutMode = useCallback((mode: CheckoutMode) => {
     setCheckoutModeState(mode);
@@ -700,7 +876,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     try {
       const cart = await getCartApi();
-      setCartItems(toCartItems(cart));
+      applyBackendCart(cart);
       if (cart.removedUnavailableProductIds.length > 0) {
         setErrorMessage(UNAVAILABLE_REMOVED_MESSAGE);
       }
@@ -708,7 +884,7 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       // The checkout error already on screen explains the failure; a second
       // message about the refresh would only add noise.
     }
-  }, [userId]);
+  }, [userId, applyBackendCart]);
 
   const updateCartItem = useCallback((productId: string, quantity: number) => {
     setCartItems((items) => applyCartSet(items, productId, quantity));
@@ -716,12 +892,12 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
 
     setCartItemQuantityApi(productId, quantity)
-      .then((cart) => setCartItems(toCartItems(cart)))
+      .then((cart) => applyBackendCart(cart))
       .catch((error) => {
         setErrorMessage(errorMessageFrom(error, "Couldn't update your cart. Please try again."));
-        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
       });
-  }, [userId]);
+  }, [userId, applyBackendCart]);
 
   const removeFromCart = useCallback((productId: string) => {
     setCartItems((items) => items.filter((item) => item.product.id !== productId));
@@ -729,20 +905,27 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
 
     removeCartItemApi(productId)
-      .then((cart) => setCartItems(toCartItems(cart)))
+      .then((cart) => applyBackendCart(cart))
       .catch((error) => {
         setErrorMessage(errorMessageFrom(error, "Couldn't remove this item from your cart. Please try again."));
-        void getCartApi().then((cart) => setCartItems(toCartItems(cart))).catch(() => undefined);
+        void getCartApi().then((cart) => applyBackendCart(cart)).catch(() => undefined);
       });
-  }, [userId]);
+  }, [userId, applyBackendCart]);
 
   const cartSubtotal = useMemo(
     () =>
       cartItems.reduce(
         (subtotal, item) => subtotal + parsePrice(item.product.price) * item.quantity,
         0,
+      ) +
+      // UNITS: product prices are rupee strings; add-on prices are PAISE. Adding
+      // them raw would be a 100x error, so the add-on side is converted. The
+      // server's cart subtotal does the identical conversion, so the figure the
+      // page shows and the figure the order is priced at agree.
+      paiseToRupees(
+        cartAddons.reduce((subtotal, item) => subtotal + item.addon.pricePaise * item.quantity, 0),
       ),
-    [cartItems],
+    [cartItems, cartAddons],
   );
   // Every order is paid online through Razorpay — there is no payment-method
   // choice any more — so the online-payment discount always applies. The
@@ -751,7 +934,19 @@ export function ShopProvider({ children }: { children: ReactNode }) {
   const memberDiscount = calculateMemberDiscount(cartSubtotal);
   const handlingCharge = calculateHandlingCharge(cartSubtotal);
   const cartTotal = cartSubtotal - memberDiscount + handlingCharge;
-  const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
+  // Both kinds count: an add-on is a line the customer pays for, so the badge
+  // would be lying if it showed only kits.
+  const cartCount =
+    cartItems.reduce((count, item) => count + item.quantity, 0) +
+    cartAddons.reduce((count, item) => count + item.quantity, 0);
+  /**
+   * Whether this cart can actually be checked out.
+   *
+   * Add-ons accompany an order rather than being one. The server refuses an
+   * add-ons-only checkout (ADDONS_REQUIRE_PRODUCT); this lets the cart say so
+   * before the customer gets that far.
+   */
+  const cartNeedsProduct = cartItems.length === 0 && cartAddons.length > 0;
 
   const toggleSavedItem = useCallback((product: CollectionProduct) => {
     if (!userId) {
@@ -882,14 +1077,14 @@ export function ShopProvider({ children }: { children: ReactNode }) {
     try {
       const [userOrders, cart] = await Promise.all([getOrdersApi(), getCartApi()]);
       setOrders(userOrders);
-      setCartItems(toCartItems(cart));
+      applyBackendCart(cart);
       setCheckoutModeState("buy-now");
     } catch (error) {
       setErrorMessage(errorMessageFrom(error, "Couldn't load your orders. Please refresh."));
     } finally {
       setIsRefreshingOrders(false);
     }
-  }, [userId]);
+  }, [userId, applyBackendCart]);
 
   const getOrderById = useCallback(
     (orderId: string) =>
@@ -934,7 +1129,9 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       errorMessage,
       cartDrawerOpen,
       cartItems,
+      cartAddons,
       cartCount,
+      cartNeedsProduct,
       cartSubtotal,
       memberDiscount,
       handlingCharge,
@@ -963,6 +1160,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       setCheckoutMode,
       updateCartItem,
       removeFromCart,
+      addAddonToCart,
+      updateCartAddon,
+      removeAddonFromCart,
+      addonQuantity,
       toggleSavedItem,
       isSavedItem,
       addAddress,
@@ -995,6 +1196,8 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       cartCount,
       cartDrawerOpen,
       cartItems,
+      cartAddons,
+      cartNeedsProduct,
       cartSubtotal,
       cartTotal,
       checkoutMode,
@@ -1033,6 +1236,10 @@ export function ShopProvider({ children }: { children: ReactNode }) {
       toggleSavedItem,
       updateAddress,
       updateCartItem,
+      addAddonToCart,
+      updateCartAddon,
+      removeAddonFromCart,
+      addonQuantity,
     ],
   );
 
@@ -1064,6 +1271,37 @@ function getInitialCart() {
 
   const storedCart = window.localStorage.getItem(cartStorageKey);
   return storedCart ? safelyParseCart(storedCart) : [];
+}
+
+/**
+ * The guest add-on cart.
+ *
+ * Each entry is checked for the two fields the UI actually dereferences, not
+ * merely for being an array: this data is attacker-writable (it is localStorage)
+ * and a malformed entry would otherwise throw while rendering the cart, which
+ * takes the page down rather than degrading.
+ */
+function getInitialAddons(): CartAddonItem[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  const stored = window.localStorage.getItem(addonStorageKey);
+  if (!stored) return [];
+
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (entry): entry is CartAddonItem =>
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof (entry as CartAddonItem).addon?.id === "string" &&
+        Number.isFinite((entry as CartAddonItem).quantity),
+    );
+  } catch {
+    return [];
+  }
 }
 
 function getInitialCheckoutMode(): CheckoutMode {

@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { BadgePercent, Banknote, Boxes, FileText, Gift, LayoutDashboard, LogOut, MapPin, Menu, Package, PackagePlus, ShoppingBag, Store, Tags, Users, X } from "lucide-react";
+import { BadgePercent, Banknote, Boxes, FileText, Gift, LayoutDashboard, LogOut, MapPin, Menu, Package, PackagePlus, PlusCircle, ShoppingBag, Store, Tags, Users, X } from "lucide-react";
 import { getCurrentUser, logout as logoutRequest } from "@/src/lib/api/auth.api";
 
 const NAV = [
@@ -15,6 +15,8 @@ const NAV = [
   { href: "/admin/delivery", label: "Delivery areas", icon: MapPin },
   { href: "/admin/inventory", label: "Inventory", icon: Boxes },
   { href: "/admin/customization", label: "Customization", icon: PackagePlus },
+  // Puja Add-ons: their own module, unconnected to Inventory.
+  { href: "/admin/addons", label: "Puja Add-ons", icon: PlusCircle },
   { href: "/admin/gifts", label: "Gifts", icon: Gift },
   { href: "/admin/coupon", label: "Coupon", icon: BadgePercent },
   { href: "/admin/cod", label: "Cash on Delivery", icon: Banknote },

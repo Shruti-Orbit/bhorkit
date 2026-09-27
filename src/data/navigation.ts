@@ -24,11 +24,23 @@ export const navigation: NavigationItem[] = [
     // /shop (Shop All) is still reachable directly and from the footer.
     label: "Shop",
     href: "/shop",
-    children: shopCategories.map((category) => ({
-      label: category.label,
-      href: `/shop/${category.slug}`,
-      blurb: category.blurb,
-    })),
+    children: [
+      ...shopCategories.map((category) => ({
+        label: category.label,
+        href: `/shop/${category.slug}`,
+        blurb: category.blurb,
+      })),
+      // Puja Add-ons sit in this menu but are NOT a product range. They carry no
+      // shopCategory, have no detail pages and no delivery window of their own.
+      // The page behind this link is a STATIC route, which Next matches ahead of
+      // /shop/[category], so the range list stays the closed set of three and
+      // nothing can be mis-filed into a fourth.
+      {
+        label: "Puja Add-ons",
+        href: "/shop/puja-addons",
+        blurb: "Small extras to complete your puja.",
+      },
+    ],
   },
   {
     // The Regular Pooja Kits listing. A top-level path, not /shop/..., because

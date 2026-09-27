@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Clock, Minus, Plus, ReceiptText, ShieldCheck, Trash2, X } from "lucide-react";
+import { CartAddonList } from "@/src/components/addons/CartAddonList";
 import { useShop } from "@/src/context/ShopContext";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 import { formatCurrency, freeHandlingThreshold, parsePrice } from "@/src/utils/discount";
@@ -12,6 +13,8 @@ export function CartDrawer() {
   const {
     cartDrawerOpen,
     cartItems,
+    cartAddons,
+    cartNeedsProduct,
     cartSubtotal,
     cartTotal,
     clearDirectCheckout,
@@ -59,7 +62,7 @@ export function CartDrawer() {
           </button>
         </div>
 
-        {cartItems.length === 0 ? (
+        {cartItems.length === 0 && cartAddons.length === 0 ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             <h3 className="text-bhor-product font-bhor-bold text-bhor-text">Your cart is empty</h3>
             <p className="mt-2 text-bhor-small text-bhor-text-muted">
@@ -155,6 +158,10 @@ export function CartDrawer() {
                     </article>
                   ))}
                 </div>
+
+                {/* Below the kits, in the same scroll region. Renders nothing
+                    when the cart holds no add-ons. */}
+                <CartAddonList compact />
               </section>
 
               <section className="rounded-bhor-lg bg-bhor-surface p-4 shadow-bhor-soft">
@@ -209,6 +216,16 @@ export function CartDrawer() {
                     Orders Closed
                   </button>
                 </>
+              ) : cartNeedsProduct ? (
+                // An add-ons-only cart cannot check out; the server refuses it.
+                // Saying so here beats leading the customer to that refusal.
+                <button
+                  type="button"
+                  disabled
+                  className="inline-flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-bhor-sm bg-bhor-border px-5 text-bhor-button font-bhor-bold uppercase text-bhor-text-muted"
+                >
+                  Add a Kit to Continue
+                </button>
               ) : (
                 <Link
                   href="/checkout"

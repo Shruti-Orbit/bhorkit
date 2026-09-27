@@ -5,8 +5,10 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { ImagePlus, Loader2, Trash2, Upload } from "lucide-react";
 import {
   MAX_FILES_PER_UPLOAD,
+  deleteAddonImage,
   deleteCustomizationImage,
   deleteProductImage,
+  uploadAddonImage,
   uploadCustomizationImage,
   uploadProductImages,
   type UploadedProductImage,
@@ -145,6 +147,12 @@ export function productImageApi(slug?: string): ImageSlotApi {
 export const customizationImageApi: ImageSlotApi = {
   upload: (file) => uploadCustomizationImage(file),
   discard: (publicId) => deleteCustomizationImage(publicId),
+};
+
+/** Puja Add-on photos. Their own Cloudinary folder, and their own delete guard. */
+export const addonImageApi: ImageSlotApi = {
+  upload: (file) => uploadAddonImage(file),
+  discard: (publicId) => deleteAddonImage(publicId),
 };
 
 /**
