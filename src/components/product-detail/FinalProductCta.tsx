@@ -24,9 +24,11 @@ export function FinalProductCta({ product }: FinalProductCtaProps) {
       : `Order ${product.name} and keep your puja simple, beautiful and thoughtfully prepared.`
     : block.kind === "out-of-stock"
       ? `${product.name} is out of stock right now. Explore our other ${rangeLabel} kits.`
-      : storeClosed
-        ? block.message
-        : `${block.message} Explore our other kits.`;
+      : block.kind === "coming-soon"
+        ? `${product.name} is coming soon. Explore our other ${rangeLabel} kits.`
+        : storeClosed
+          ? block.message
+          : `${block.message} Explore our other kits.`;
 
   const href = block?.kind === "orders-closed" ? "/shop" : `/shop/${product.shopCategory}`;
 

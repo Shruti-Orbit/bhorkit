@@ -35,7 +35,7 @@ export function isOrderingClosed(product: Pick<CollectionProduct, "ordering">) {
 }
 
 export type PurchaseBlock = {
-  kind: "out-of-stock" | "orders-closed" | "no-price";
+  kind: "out-of-stock" | "coming-soon" | "orders-closed" | "no-price";
   label: string;
   message: string;
 };
@@ -45,17 +45,25 @@ export type PurchaseBlock = {
  *
  * The single thing every buy button asks. Out of stock wins over orders
  * closed: it is specific to this product and stays true after ordering
- * reopens. Coming Soon is not a block — Notify Me is not an order — so cards
- * that show it handle that state before asking this.
+ * reopens. Coming Soon is a block whatever the availability says — the server
+ * refuses it at the cart and at checkout. Cards that offer Notify Me for it
+ * handle that state before asking this.
  */
 export function purchaseBlock(
-  product: Pick<CollectionProduct, "availability" | "ordering" | "price">,
+  product: Pick<CollectionProduct, "availability" | "ordering" | "price" | "purchaseState">,
 ): PurchaseBlock | null {
   if (isOutOfStockProduct(product)) {
     return {
       kind: "out-of-stock",
       label: "Out of Stock",
       message: "This kit isn't available to order right now. Please check back soon.",
+    };
+  }
+  if (product.purchaseState === "COMING_SOON") {
+    return {
+      kind: "coming-soon",
+      label: "Coming Soon",
+      message: "This kit isn't open for orders yet. Please check back soon.",
     };
   }
   // A kit whose price has not been set yet — a range carries a placeholder there

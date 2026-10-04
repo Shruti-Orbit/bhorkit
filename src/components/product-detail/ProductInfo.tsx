@@ -30,7 +30,9 @@ export function ProductInfo({ product }: ProductInfoProps) {
             {block ? rangeLabel : `${rangeLabel} · Order Now`}
           </p>
           {block ? (
-            <p className="text-bhor-small font-bhor-bold text-bhor-error">{block.label}</p>
+            <p className={`text-bhor-small font-bhor-bold ${block.kind === "coming-soon" ? "text-bhor-gold" : "text-bhor-error"}`}>
+              {block.label}
+            </p>
           ) : product.badge ? (
             <p className="text-bhor-small font-bhor-bold text-bhor-gold">
               {product.badge.label === "Pre-Order" ? "Order Now" : product.badge.label}

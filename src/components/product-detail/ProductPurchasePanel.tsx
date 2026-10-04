@@ -34,7 +34,9 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
           or Orders Closed notice it would contradict it. */}
       {block ? (
         <div role="status" className="mt-5 rounded-bhor-md border border-bhor-border bg-bhor-cream p-4">
-          <p className="text-bhor-button font-bhor-bold uppercase text-bhor-error">{block.label}</p>
+          <p className={`text-bhor-button font-bhor-bold uppercase ${block.kind === "coming-soon" ? "text-bhor-primary" : "text-bhor-error"}`}>
+            {block.label}
+          </p>
           <p className="mt-1 text-bhor-small leading-bhor-body text-bhor-text-muted">{block.message}</p>
         </div>
       ) : (
