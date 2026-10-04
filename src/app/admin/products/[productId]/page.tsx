@@ -7,8 +7,8 @@ import {
   Card, ErrorState, Field, LoadingState, PageHeader, Toast, inputClass,
 } from "@/src/components/admin/ui";
 import {
-  createProduct, getProduct, listIngredients, updateProduct,
-  type AdminIngredient, type AdminProduct,
+  createProduct, getProduct, listCategories, listIngredients, updateProduct,
+  type AdminCategory, type AdminIngredient, type AdminProduct,
 } from "@/src/lib/api/admin.api";
 import {
   AdvancedContentForm, EMPTY_ADVANCED, type AdvancedContent,
@@ -16,7 +16,6 @@ import {
 import {
   ImageField, ImageGalleryField, usePendingUploads,
 } from "@/src/components/admin/product/ImageUploader";
-import { shopCategories } from "@/src/data/shopCategories";
 import type { ProductImage, ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError } from "@/src/lib/api/client";
 
@@ -89,6 +88,7 @@ export default function AdminProductFormPage() {
   const pendingUploads = usePendingUploads();
   const [advanced, setAdvanced] = useState<AdvancedContent>(EMPTY_ADVANCED);
   const [ingredients, setIngredients] = useState<AdminIngredient[]>([]);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const load = useCallback(() => {
@@ -122,6 +122,25 @@ export default function AdminProductFormPage() {
       .catch(() => undefined);
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    listCategories()
+      .then((loaded) => {
+        if (!active) return;
+        setCategories(loaded);
+        // A new product starts in the first category that actually exists.
+        if (isNew && loaded.length > 0) {
+          setCore((current) =>
+            loaded.some((category) => category.slug === current.shopCategory)
+              ? current
+              : { ...current, shopCategory: loaded[0].slug },
+          );
+        }
+      })
+      .catch(() => undefined);
+    return () => { active = false; };
+  }, [isNew]);
 
   function hydrate(product: AdminProduct) {
     setCore({
@@ -261,18 +280,22 @@ export default function AdminProductFormPage() {
                   <input value={core.id} readOnly className={`${inputClass} opacity-60`} />
                 </Field>
               )}
-              {/* A closed list, not free text. Typing a category by hand is how
-                  every Navratri kit ended up filed under "Ganesh Puja"; a
-                  product can now only be placed in a range the Shop has a
-                  route for. */}
+              {/* A list of the real categories, not free text. Typing a
+                  category by hand is how every Navratri kit once ended up
+                  filed under "Ganesh Puja". */}
               <Field label="Shop category">
                 <select
                   value={core.shopCategory}
                   onChange={(e) => field("shopCategory", e.target.value as ShopCategorySlug)}
                   className={inputClass}
                 >
-                  {shopCategories.map((category) => (
-                    <option key={category.slug} value={category.slug}>{category.label}</option>
+                  {core.shopCategory && !categories.some((category) => category.slug === core.shopCategory) ? (
+                    <option value={core.shopCategory}>{core.shopCategory} (no such category)</option>
+                  ) : null}
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.slug}>
+                      {category.name}{category.isActive ? "" : " (hidden)"}
+                    </option>
                   ))}
                 </select>
               </Field>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, Flame, MapPin, ShoppingCart } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
+import { isInRange } from "@/src/data/shopCategories";
 import { useShop } from "@/src/context/ShopContext";
 import { purchaseBlock } from "@/src/utils/productState";
 
@@ -17,7 +18,7 @@ export function ProductPurchasePanel({ product }: ProductPurchasePanelProps) {
   // appear on every product page, Regular Pooja included, which would have kept
   // advertising Ganesh orders on exactly the pages that stay open when that
   // range closes.
-  const ganesh = product.shopCategory === "ganesh-chaturthi";
+  const ganesh = isInRange(product, "ganesh-chaturthi");
 
   return (
     <section className="rounded-bhor-md border border-bhor-border bg-bhor-surface p-4">

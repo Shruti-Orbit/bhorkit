@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { findShopCategory, type ShopCategory } from "@/src/data/shopCategories";
+import { isInRange, productCategoryLabel } from "@/src/data/shopCategories";
 import type { CollectionProduct, ShopCategorySlug } from "@/src/data/products";
 import { getCatalog } from "@/src/lib/search/searchIndex";
 
@@ -31,18 +31,7 @@ export function useSearchSuggestions() {
       .then((products) => {
         if (!isActive) return;
 
-        setCategories(
-          popularCategoryOrder
-            .filter((slug) =>
-              products.some((product) => product.shopCategory === slug),
-            )
-            .map((slug) => findShopCategory(slug))
-            .filter((category): category is ShopCategory => Boolean(category))
-            .map((category) => ({
-              label: category.label,
-              href: `/shop/${category.slug}`,
-            })),
-        );
+        setCategories(categoriesFrom(products));
 
         const stored = window.localStorage.getItem(recentlyViewedStorageKey);
         const slugs = stored ? safelyParseSlugs(stored) : [];
@@ -64,6 +53,27 @@ export function useSearchSuggestions() {
   }, []);
 
   return { categories, recentlyViewed };
+}
+
+/**
+ * The categories that have products in the catalogue, the popular ones first.
+ * Read off the products themselves, which only include visible categories.
+ */
+function categoriesFrom(products: CollectionProduct[]): SearchSuggestionCategory[] {
+  const bySlug = new Map<string, CollectionProduct>();
+  for (const product of products) {
+    if (!bySlug.has(product.shopCategory)) bySlug.set(product.shopCategory, product);
+  }
+  const rank = (product: CollectionProduct) => {
+    const index = popularCategoryOrder.findIndex((slug) => isInRange(product, slug));
+    return index === -1 ? popularCategoryOrder.length : index;
+  };
+  return [...bySlug.values()]
+    .sort((a, b) => rank(a) - rank(b))
+    .map((product) => ({
+      label: productCategoryLabel(product),
+      href: `/shop/${product.shopCategory}`,
+    }));
 }
 
 function safelyParseSlugs(value: string): string[] {

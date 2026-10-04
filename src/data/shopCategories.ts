@@ -1,4 +1,5 @@
-import type { ShopCategorySlug } from "@/src/data/products";
+import type { CollectionProduct, ShopCategorySlug } from "@/src/data/products";
+import type { PublicShopCategory } from "@/src/lib/api/category.api";
 
 export type ShopCategory = {
   /**
@@ -7,6 +8,8 @@ export type ShopCategory = {
    * and a filter can never disagree about which products belong to it.
    */
   slug: ShopCategorySlug;
+  /** Slugs this category used to have, which still resolve to it. */
+  previousSlugs: string[];
   /** Nav label. */
   label: string;
   /** One-liner shown under the label in the desktop dropdown. */
@@ -20,49 +23,48 @@ export type ShopCategory = {
 };
 
 /**
- * Storefront presentation for the three Shop ranges.
+ * Storefront presentation for a category.
  *
- * This file holds copy only — labels and headings. The classification itself
- * lives on the product as `shopCategory`, defined by SHOP_CATEGORIES in the
- * API; the `slug` here is typed as ShopCategorySlug so a range that the backend
- * does not recognise cannot be added without a type error.
- *
- * One definition drives the desktop dropdown, the mobile submenu, the dynamic
- * /shop/[category] route and its static params, so a range cannot appear in the
- * nav without a page behind it, or vice versa.
+ * Categories are managed in the admin panel and read from the API; this turns
+ * one into the copy the nav and the /shop/<category> pages show. The same list
+ * drives the desktop dropdown, the mobile submenu and the dynamic route, so a
+ * category cannot appear in the nav without a page behind it, or vice versa.
  */
-export const shopCategories: ShopCategory[] = [
-  {
-    slug: "ganesh-chaturthi",
-    label: "Ganesh Chaturthi",
-    blurb: "Everything you need to welcome Bappa.",
-    eyebrow: "Ganesh Chaturthi",
-    title: "Ganesh Chaturthi Collection",
-    listingTitle: "Ganesh Chaturthi Products",
-  },
-  {
-    slug: "navratri-upcoming",
-    label: "Navratri 2026",
-    blurb: "Nine nights of devotion, packed with care.",
-    eyebrow: "Navratri 2026",
-    title: "Navratri 2026 Collection",
-    listingTitle: "Navratri Products",
-  },
-  {
-    slug: "regular-pooja",
-    label: "Regular Pooja",
-    blurb: "Everyday essentials for your home mandir.",
-    eyebrow: "Regular Pooja",
-    title: "Regular Pooja Collection",
-    listingTitle: "Regular Pooja Products",
-  },
-];
-
-export function findShopCategory(slug: string) {
-  return shopCategories.find((category) => category.slug === slug);
+export function toShopCategory(category: PublicShopCategory): ShopCategory {
+  return {
+    slug: category.slug,
+    previousSlugs: category.previousSlugs,
+    label: category.name,
+    blurb: category.description,
+    eyebrow: category.name,
+    title: `${category.name} Collection`,
+    listingTitle: `${category.name} Products`,
+  };
 }
 
-/** Human label for a range, for anywhere a raw slug would be shown to a shopper. */
-export function shopCategoryLabel(slug: string) {
-  return findShopCategory(slug)?.label ?? slug;
+/** The category answering to a slug, by its current slug or one it used to have. */
+export function findShopCategory(categories: readonly PublicShopCategory[], slug: string) {
+  return (
+    categories.find((category) => category.slug === slug) ??
+    categories.find((category) => category.previousSlugs.includes(slug))
+  );
+}
+
+/**
+ * Whether a product belongs to the category that was known as `slug`.
+ *
+ * Code that targets one category by name (the Ganesh touches on the product
+ * page, the pre-order links) keeps working after an admin renames that
+ * category's slug, because the API lists the old slugs on each product.
+ */
+export function isInRange(
+  product: Pick<CollectionProduct, "shopCategory" | "shopCategoryAliases">,
+  slug: string,
+) {
+  return product.shopCategory === slug || (product.shopCategoryAliases ?? []).includes(slug);
+}
+
+/** Human label for a product's category, for anywhere a raw slug would be shown to a shopper. */
+export function productCategoryLabel(product: Pick<CollectionProduct, "shopCategory" | "shopCategoryName">) {
+  return product.shopCategoryName ?? product.shopCategory;
 }

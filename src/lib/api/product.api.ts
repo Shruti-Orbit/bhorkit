@@ -7,7 +7,17 @@ type ProductListMeta = {
   count: number;
 };
 
+/** One visible category on the home page, with its products. */
+export type HomeSection = {
+  slug: string;
+  name: string;
+  description: string;
+  products: CollectionProduct[];
+};
+
 type HomeCatalog = {
+  /** Every visible category, in the priority order set in Admin > Categories. */
+  sections: HomeSection[];
   ganeshChaturthiProducts: CollectionProduct[];
   navratriUpcomingProducts: CollectionProduct[];
   regularPoojaKits: CollectionProduct[];

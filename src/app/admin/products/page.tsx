@@ -1,13 +1,13 @@
 "use client";
 
-import { shopCategories, shopCategoryLabel } from "@/src/data/shopCategories";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import {
   Card, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, PageHeader, Pagination, Toast, inputClass,
 } from "@/src/components/admin/ui";
 import {
-  deleteProduct, listProducts, setProductActive, setProductCod, type AdminPageMeta, type AdminProduct,
+  deleteProduct, listCategories, listProducts, setProductActive, setProductCod,
+  type AdminCategory, type AdminPageMeta, type AdminProduct,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
 
@@ -27,6 +27,18 @@ export default function AdminProductsPage() {
 
   const [busy, setBusy] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<AdminProduct | null>(null);
+  const [categories, setCategories] = useState<AdminCategory[]>([]);
+
+  useEffect(() => {
+    // "View products" on the Categories page links here with ?shopCategory=<slug>.
+    const preset = new URLSearchParams(window.location.search).get("shopCategory");
+    queueMicrotask(() => {
+      if (preset) setShopCategory(preset);
+      listCategories().then(setCategories).catch(() => setCategories([]));
+    });
+  }, []);
+
+  const categoryName = (slug: string) => categories.find((category) => category.slug === slug)?.name ?? slug;
 
   const load = useCallback(() => {
     setState("loading");
@@ -123,8 +135,10 @@ export default function AdminProductsPage() {
           <Field label="Shop category">
             <select value={shopCategory} onChange={(event) => { setShopCategory(event.target.value); setPage(1); }} className={inputClass}>
               <option value="">All categories</option>
-              {shopCategories.map((category) => (
-                <option key={category.slug} value={category.slug}>{category.label}</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.slug}>
+                  {category.name}{category.isActive ? "" : " (hidden)"}
+                </option>
               ))}
             </select>
           </Field>
@@ -169,7 +183,7 @@ export default function AdminProductsPage() {
                         <p className="truncate text-bhor-caption text-bhor-text-muted">{product.sku}</p>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-bhor-text-muted">{product.sku}</td>
-                      <td className="px-4 py-3 text-bhor-text-muted">{shopCategoryLabel(product.shopCategory)}</td>
+                      <td className="px-4 py-3 text-bhor-text-muted">{categoryName(product.shopCategory)}</td>
                       <td className="whitespace-nowrap px-4 py-3 text-bhor-text">{product.price}</td>
                       <td className="px-4 py-3">
                         <span

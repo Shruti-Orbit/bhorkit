@@ -4,9 +4,10 @@ import { AccountButton } from "../header/AccountButton";
 import { CartButton } from "../header/CartButton";
 import { SearchBox } from "../header/SearchBox";
 import { WishlistButton } from "../header/WishlistButton";
+import type { NavigationItem } from "@/src/data/navigation";
 import { Navbar } from "./Navbar";
 
-export function MainHeader() {
+export function MainHeader({ navigation }: { navigation: NavigationItem[] }) {
   return (
     <div className="hidden border-b border-bhor-border bg-bhor-surface lg:block">
       <div className="mx-auto grid h-[90px] max-w-[1512px] grid-cols-[190px_1fr_220px] items-center px-6 xl:grid-cols-[220px_1fr_250px] xl:px-8 2xl:grid-cols-[240px_1fr_280px]">
@@ -24,7 +25,7 @@ export function MainHeader() {
           />
         </Link>
 
-        <Navbar />
+        <Navbar navigation={navigation} />
 
         <div className="flex items-center justify-end gap-5">
           <SearchBox />

@@ -6,7 +6,7 @@ import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
 import { navratriPromotion } from "@/src/data/promotions";
-import { getHomeCatalog } from "@/src/lib/api/product.api";
+import { getHomeCatalog, type HomeSection } from "@/src/lib/api/product.api";
 import { absoluteUrl, createHomeJsonLd, seoConfig } from "@/src/lib/seo/config";
 
 export const dynamic = "force-dynamic";
@@ -54,21 +54,28 @@ export const metadata: Metadata = {
   },
 };
 
+function withImageAlt(section: HomeSection, alt: (name: string) => string): HomeSection {
+  return {
+    ...section,
+    products: section.products.map((product) => ({ ...product, imageAlt: alt(product.name) })),
+  };
+}
+
 export default async function Home() {
-  const { ganeshChaturthiProducts, navratriUpcomingProducts, regularPoojaKits } =
-    await getHomeCatalog();
-  const ganeshProductsWithSeoAlt = ganeshChaturthiProducts.map((product) => ({
-    ...product,
-    imageAlt: `${product.name} with puja samagri by BHORKIT`,
-  }));
-  const regularPoojaKitsWithSeoAlt = regularPoojaKits.map((product) => ({
-    ...product,
-    imageAlt: `${product.name} for puja essentials in Patna`,
-  }));
+  const { sections } = await getHomeCatalog();
+
+  // Categories arrive in the priority order set in Admin > Categories. The
+  // layout slots below stay fixed; only which category fills each one changes.
+  // A category with no products yet (an upcoming festival) is left out rather
+  // than shown as an empty block.
+  const [first, second, ...rest] = sections.filter((section) => section.products.length > 0);
+  const firstSection = first && withImageAlt(first, (name) => `${name} with puja samagri by BHORKIT`);
+  const secondSection = second && withImageAlt(second, (name) => `${name} for puja essentials in Patna`);
+
   const homeJsonLd = createHomeJsonLd([
-    ...ganeshProductsWithSeoAlt,
-    ...regularPoojaKitsWithSeoAlt,
-    ...navratriUpcomingProducts,
+    ...(firstSection?.products ?? []),
+    ...(secondSection?.products ?? []),
+    ...rest.flatMap((section) => section.products),
   ]);
 
   return (
@@ -85,37 +92,41 @@ export default async function Home() {
         </div>
       </section>
       {/* <CategoryStrip /> */}
-      <ProductCollection
-        title="Ganesh Chaturthi Collection"
-        description="Ganesh puja essentials and puja samagri delivered across Patna."
-        href="/shop/ganesh-chaturthi"
-        products={ganeshProductsWithSeoAlt}
-        variant="primary"
-        productActionMode="add-to-cart"
-      />
+      {firstSection ? (
+        <ProductCollection
+          title={firstSection.name}
+          description={firstSection.description}
+          href={`/shop/${firstSection.slug}`}
+          products={firstSection.products}
+          variant="primary"
+          productActionMode="add-to-cart"
+        />
+      ) : null}
       <RitualSeparator />
 
-
-
-
-      <ProductCollection
-        title="Regular Pooja Kits"
-        description="Daily puja essentials and puja items online in Patna."
-        href="/puja-kits"
-        products={regularPoojaKitsWithSeoAlt}
-        variant="regular"
-      />
+      {secondSection ? (
+        <ProductCollection
+          title={secondSection.name}
+          description={secondSection.description}
+          href={`/shop/${secondSection.slug}`}
+          products={secondSection.products}
+          variant="regular"
+        />
+      ) : null}
 
       <CustomizeBanner />
 
       <PreOrderBanner {...navratriPromotion} />
-      <ProductCollection
-        title="Navratri 2026"
-        description="Pre-order your Navratri puja kits for delivery across Patna."
-        href="/pre-order"
-        products={navratriUpcomingProducts}
-        tone="muted"
-      />
+      {rest.map((section) => (
+        <ProductCollection
+          key={section.slug}
+          title={section.name}
+          description={section.description}
+          href={`/shop/${section.slug}`}
+          products={section.products}
+          tone="muted"
+        />
+      ))}
 
       <HomeBannerStrip />
 

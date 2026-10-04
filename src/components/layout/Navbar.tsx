@@ -4,12 +4,12 @@ import Link from "next/link";
 import { ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { navigation, type NavigationItem } from "@/src/data/navigation";
+import type { NavigationItem } from "@/src/data/navigation";
 
 const itemClass =
   "group relative inline-flex h-[90px] items-center gap-1.5 whitespace-nowrap text-bhor-body font-bhor-medium text-bhor-text transition-colors hover:text-bhor-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-8px] focus-visible:outline-bhor-primary";
 
-export function Navbar() {
+export function Navbar({ navigation }: { navigation: NavigationItem[] }) {
   const pathname = usePathname();
   const navRef = useRef<HTMLElement>(null);
 

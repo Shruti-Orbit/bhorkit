@@ -9,8 +9,9 @@ import { CartButton } from "../header/CartButton";
 import { SearchBox } from "../header/SearchBox";
 import { MobileMenu } from "./MobileMenu";
 import { useShop } from "@/src/context/ShopContext";
+import type { NavigationItem } from "@/src/data/navigation";
 
-export function MobileHeader() {
+export function MobileHeader({ navigation }: { navigation: NavigationItem[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthReady, isLoggedIn } = useShop();
 
@@ -71,7 +72,7 @@ export function MobileHeader() {
         </div>
       </div>
 
-      <MobileMenu isOpen={isOpen} onClose={() => setIsOpen(false)} />
+      <MobileMenu navigation={navigation} isOpen={isOpen} onClose={() => setIsOpen(false)} />
     </div>
   );
 }

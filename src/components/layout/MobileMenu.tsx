@@ -6,16 +6,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, ChevronRight, Gift, Heart, UserRound, X } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { navigation } from "@/src/data/navigation";
+import type { NavigationItem } from "@/src/data/navigation";
 import { useShop } from "@/src/context/ShopContext";
 import { SocialLinks } from "./SocialLinks";
 
 type MobileMenuProps = {
+  navigation: NavigationItem[];
   isOpen: boolean;
   onClose: () => void;
 };
 
-export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+export function MobileMenu({ navigation, isOpen, onClose }: MobileMenuProps) {
   const pathname = usePathname();
   const { currentUser, isLoggedIn, openAuthModal } = useShop();
   // Which collapsible section is expanded.

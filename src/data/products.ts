@@ -1,4 +1,5 @@
-export type ShopCategorySlug = "ganesh-chaturthi" | "navratri-upcoming" | "regular-pooja";
+/** A category slug. Categories are managed in the admin panel, so this is any string the API returns. */
+export type ShopCategorySlug = string;
 
 export type ProductBadgeTone = "gold" | "success" | "primary" | "soft";
 export type ProductPurchaseState = "PRE_ORDER" | "READY_STOCK" | "COMING_SOON";
@@ -68,11 +69,14 @@ export type CollectionProduct = {
   sku: string;
   slug: string;
   /**
-   * The Shop range this product belongs to — one stable slug, matching the
-   * backend's `shopCategory`. Mirrors SHOP_CATEGORIES in the API; see
+   * The Shop category this product belongs to, by its current slug. See
    * src/data/shopCategories.ts for the storefront labels and page copy.
    */
   shopCategory: ShopCategorySlug;
+  /** The category's display name, added by the API to storefront products. */
+  shopCategoryName?: string;
+  /** Slugs the category used to have; see isInRange in src/data/shopCategories.ts. */
+  shopCategoryAliases?: string[];
   name: string;
   subtitle: string;
   description: string;

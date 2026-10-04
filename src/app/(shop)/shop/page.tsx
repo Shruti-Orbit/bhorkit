@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import { ShopListing } from "@/src/components/shop/ShopListing";
 import type { ShopListingSection } from "@/src/components/shop/ShopListing";
-import { shopSections } from "@/src/data/shopSections";
+import { sectionLook } from "@/src/data/shopSections";
+import { getShopCategories } from "@/src/lib/api/category.api";
 import { getAllProducts } from "@/src/lib/api/product.api";
 import { seoConfig } from "@/src/lib/seo/config";
 
@@ -28,22 +29,21 @@ export const metadata: Metadata = {
  * behaviour the dropdown replaced; showing every product makes the page match
  * its own heading, and each individual range has its own /shop/<category> URL.
  *
- * Those twelve products then arrived as one undifferentiated grid, so they are
- * grouped into the three ranges the headings name — the same split, and the
- * same copy, a shopper meets on the home page.
+ * The products are grouped by category rather than shown as one
+ * undifferentiated grid. Hidden categories, and their products, are not
+ * returned by the API at all.
  */
 export default async function ShopPage() {
-  const products = await getAllProducts();
+  const [products, categories] = await Promise.all([getAllProducts(), getShopCategories()]);
 
-  // Driven by shopSections so the order and copy live in one place, and a range
-  // the API starts returning cannot silently vanish from the page.
-  const sections: ShopListingSection[] = shopSections.map((section) => ({
-    key: section.slug,
-    title: section.title,
-    description: section.description,
-    tone: section.tone,
-    variant: section.variant,
-    products: products.filter((product) => product.shopCategory === section.slug),
+  // One section per visible category, in the admin's display order, so a new
+  // category can never be missing from a page titled "Shop All".
+  const sections: ShopListingSection[] = categories.map((category) => ({
+    key: category.slug,
+    title: category.name,
+    description: category.description,
+    ...sectionLook(category),
+    products: products.filter((product) => product.shopCategory === category.slug),
   }));
 
   return (

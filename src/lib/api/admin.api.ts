@@ -69,8 +69,29 @@ export type AdminOrderDetail = {
   allowedTransitions: OrderStatus[];
 };
 
-/** One Shop range with its live product count. The set is fixed server-side. */
-export type AdminCategory = { slug: string; label: string; products: number };
+/** One Shop category with its live product count. */
+export type AdminCategory = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  /** Shown on the storefront. Hidden categories keep their products, which simply stop being listed. */
+  isActive: boolean;
+  sortOrder: number;
+  /** Slugs this category used to have; old links redirect to the current one. */
+  previousSlugs: string[];
+  products: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CategoryInput = {
+  name: string;
+  slug: string;
+  description: string;
+  isActive: boolean;
+  sortOrder: number;
+};
 
 export type AdminProduct = CollectionProduct & {
   sortOrder: number;
@@ -185,16 +206,34 @@ export async function deleteProductImage(publicId: string) {
 
 // --- categories ---
 
-/**
- * The Shop ranges and their product counts.
- *
- * Read-only by design. The ranges are a closed set that the storefront routes
- * on (/shop/<slug>), so there is nothing to create, rename or delete —
- * renaming one would silently break three public URLs. Moving a product
- * between ranges is an edit on the product.
- */
+/** Every category, visible or hidden, with live product counts. */
 export async function listCategories() {
-  return (await apiGet<AdminCategory[]>("/admin/categories")).data;
+  return (await getCategoriesOverview()).categories;
+}
+
+/** The categories plus how many products belong to none of them. */
+export async function getCategoriesOverview() {
+  const response = await apiGet<AdminCategory[], { count: number; unclassified: number }>("/admin/categories");
+  return { categories: response.data, unclassified: response.meta?.unclassified ?? 0 };
+}
+
+export async function createCategory(input: CategoryInput) {
+  return (await apiPost<{ category: AdminCategory }, CategoryInput>("/admin/categories", input)).data.category;
+}
+
+/** A changed slug moves the category's products with it; the old slug keeps redirecting. */
+export async function updateCategory(categoryId: string, input: Partial<CategoryInput>) {
+  return (
+    await apiPatch<{ category: AdminCategory }, Partial<CategoryInput>>(
+      `/admin/categories/${encodeURIComponent(categoryId)}`,
+      input,
+    )
+  ).data.category;
+}
+
+/** Refused by the server while any product still belongs to the category. */
+export async function deleteCategory(categoryId: string) {
+  return (await apiDelete<{ id: string }>(`/admin/categories/${encodeURIComponent(categoryId)}`)).data;
 }
 
 // --- delivery coverage ---

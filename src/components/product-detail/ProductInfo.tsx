@@ -1,6 +1,6 @@
 import { PackageCheck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
-import { shopCategoryLabel } from "@/src/data/shopCategories";
+import { isInRange, productCategoryLabel } from "@/src/data/shopCategories";
 import { purchaseBlock } from "@/src/utils/productState";
 import { AboutProductAccordion } from "./AboutProductAccordion";
 import { ProductPurchasePanel } from "./ProductPurchasePanel";
@@ -19,8 +19,8 @@ export function ProductInfo({ product }: ProductInfoProps) {
   // The chip names the product's own range, and the Ganesh-only line appears
   // only on Ganesh products — so a Regular Pooja page never advertises a
   // festival whose orders may be closed.
-  const ganesh = product.shopCategory === "ganesh-chaturthi";
-  const rangeLabel = shopCategoryLabel(product.shopCategory);
+  const ganesh = isInRange(product, "ganesh-chaturthi");
+  const rangeLabel = productCategoryLabel(product);
 
   return (
     <div className="flex flex-col gap-5 md:pb-4">

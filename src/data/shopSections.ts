@@ -1,12 +1,6 @@
-import type { ShopCategorySlug } from "@/src/data/products";
+import type { PublicShopCategory } from "@/src/lib/api/category.api";
 
-export type ShopSection = {
-  /** The product's `shopCategory` value. */
-  slug: ShopCategorySlug;
-  /** Heading of the section. */
-  title: string;
-  /** One-liner under the heading, telling the shopper what to expect. */
-  description: string;
+type SectionLook = {
   /** Section background, matching how the home page tones its ranges. */
   tone: "default" | "muted";
   /** Card treatment, matching the home page's collections. */
@@ -14,52 +8,25 @@ export type ShopSection = {
 };
 
 /**
- * Storefront presentation for the three Shop ranges, as Shop All groups them.
+ * How Shop All dresses each category's section. Keyed by the launch slugs and
+ * matched through a category's previous slugs as well, so a renamed category
+ * keeps its look. Any other category gets the default.
  *
- * Grouped by RANGE, not by `purchaseState`. Grouping by state worked only while
- * each state happened to hold exactly one range; the moment Navratri started
- * taking pre-orders, its kits would have appeared under the Ganesh heading —
- * the risk the previous version of this file called out in its own comment.
- * The headings name ranges, so the range is what the page groups by.
- *
- * This file holds copy only. The classification lives on the product as
- * `shopCategory`, set by the API. The headings and descriptions are the home
- * page's, verbatim — keep the two in step.
- *
- * See src/data/shopCategories.ts for the range copy that drives the nav and the
- * /shop/<category> pages.
+ * Shop All renders one section per visible category, straight from the API, so
+ * a new category can never be missing from a page titled "Shop All".
  */
-export const shopSections = [
-  {
-    slug: "ganesh-chaturthi",
-    title: "Ganesh Chaturthi Collection",
-    description: "Ganesh puja essentials and puja samagri delivered across Patna.",
-    tone: "default",
-    variant: "primary",
-  },
-  {
-    slug: "regular-pooja",
-    title: "Regular Pooja Kits",
-    description: "Daily puja essentials and puja items online in Patna.",
-    tone: "default",
-    variant: "regular",
-  },
-  {
-    slug: "navratri-upcoming",
-    title: "Navratri 2026",
-    description: "Pre-order your Navratri puja kits for delivery across Patna.",
-    tone: "muted",
-    variant: "primary",
-  },
-] as const satisfies readonly ShopSection[];
+const LOOKS: Record<string, SectionLook> = {
+  "ganesh-chaturthi": { tone: "default", variant: "primary" },
+  "regular-pooja": { tone: "default", variant: "regular" },
+  "navratri-upcoming": { tone: "muted", variant: "primary" },
+};
 
-/**
- * Shop All renders these sections and nothing else, so a range without one
- * would drop its products off a page titled "Shop All" — silently, and only for
- * whichever kits happened to be in it. Leaving one out is therefore a type
- * error rather than a missing block someone notices later.
- */
-type UncoveredRange = Exclude<ShopCategorySlug, (typeof shopSections)[number]["slug"]>;
+const DEFAULT_LOOK: SectionLook = { tone: "default", variant: "primary" };
 
-const _everyRangeHasASection: UncoveredRange extends never ? true : never = true;
-void _everyRangeHasASection;
+export function sectionLook(category: PublicShopCategory): SectionLook {
+  for (const slug of [category.slug, ...category.previousSlugs]) {
+    const look = LOOKS[slug];
+    if (look) return look;
+  }
+  return DEFAULT_LOOK;
+}

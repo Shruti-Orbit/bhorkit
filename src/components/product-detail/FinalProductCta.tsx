@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, PackageCheck } from "lucide-react";
 import type { CollectionProduct } from "@/src/data/products";
-import { shopCategoryLabel } from "@/src/data/shopCategories";
+import { isInRange, productCategoryLabel } from "@/src/data/shopCategories";
 import { purchaseBlock } from "@/src/utils/productState";
 
 type FinalProductCtaProps = {
@@ -10,8 +10,8 @@ type FinalProductCtaProps = {
 
 export function FinalProductCta({ product }: FinalProductCtaProps) {
   const block = purchaseBlock(product);
-  const ganesh = product.shopCategory === "ganesh-chaturthi";
-  const rangeLabel = shopCategoryLabel(product.shopCategory);
+  const ganesh = isInRange(product, "ganesh-chaturthi");
+  const rangeLabel = productCategoryLabel(product);
   const storeClosed = product.ordering?.reason === "store";
 
   // What the closing banner says depends on why the kit cannot be bought. When

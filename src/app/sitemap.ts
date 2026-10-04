@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { shopCategories } from "@/src/data/shopCategories";
+import { getShopCategories } from "@/src/lib/api/category.api";
 import { getAllProducts } from "@/src/lib/api/product.api";
 import { absoluteUrl } from "@/src/lib/seo/config";
 
@@ -16,8 +16,8 @@ const publicStaticRoutes = [
 ] as const;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await getAllProducts();
-  const shopCategoryRoutes = shopCategories.map(
+  const [products, categories] = await Promise.all([getAllProducts(), getShopCategories()]);
+  const shopCategoryRoutes = categories.map(
     (category) => `/shop/${category.slug}`,
   );
   const productRoutes = products
