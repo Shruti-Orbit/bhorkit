@@ -238,7 +238,7 @@ export async function deleteCategory(categoryId: string) {
 
 // --- delivery coverage ---
 
-export type AdminDeliveryPincode = { pincode: string; label: string; createdAt: string };
+export type AdminDeliveryPincode = { pincode: string; label: string; isActive: boolean; createdAt: string };
 
 export async function listDeliveryPincodes() {
   return (await apiGet<AdminDeliveryPincode[]>("/admin/delivery/pincodes")).data;
@@ -248,6 +248,14 @@ export async function addDeliveryPincode(pincode: string, label: string) {
   return (await apiPost<AdminDeliveryPincode, { pincode: string; label: string }>(
     "/admin/delivery/pincodes",
     { pincode, label },
+  )).data;
+}
+
+/** Switches a pincode off (no new deliveries) or back on, without removing it. */
+export async function setDeliveryPincodeActive(pincode: string, isActive: boolean) {
+  return (await apiPatch<AdminDeliveryPincode, { isActive: boolean }>(
+    `/admin/delivery/pincodes/${encodeURIComponent(pincode)}`,
+    { isActive },
   )).data;
 }
 

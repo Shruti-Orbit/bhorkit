@@ -6,7 +6,8 @@ import {
   Card, ConfirmDialog, EmptyState, ErrorState, Field, LoadingState, PageHeader, Toast, inputClass,
 } from "@/src/components/admin/ui";
 import {
-  addDeliveryPincode, listDeliveryPincodes, removeDeliveryPincode, type AdminDeliveryPincode,
+  addDeliveryPincode, listDeliveryPincodes, removeDeliveryPincode, setDeliveryPincodeActive,
+  type AdminDeliveryPincode,
 } from "@/src/lib/api/admin.api";
 import { ApiClientError } from "@/src/lib/api/client";
 import { DeliveryAvailability } from "@/src/components/admin/DeliveryAvailability";
@@ -31,6 +32,7 @@ export default function AdminDeliveryPage() {
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<AdminDeliveryPincode | null>(null);
   const [busy, setBusy] = useState(false);
+  const [toggling, setToggling] = useState<string | null>(null);
 
   const load = useCallback(() => {
     setState("loading");
@@ -73,6 +75,25 @@ export default function AdminDeliveryPage() {
     }
   }
 
+  async function toggleActive(entry: AdminDeliveryPincode) {
+    setToggling(entry.pincode);
+    try {
+      const updated = await setDeliveryPincodeActive(entry.pincode, !entry.isActive);
+      setPincodes((current) => current.map((row) => (row.pincode === updated.pincode ? updated : row)));
+      setToast({
+        message: updated.isActive ? `${updated.pincode} is serviceable again.` : `${updated.pincode} is now off for delivery.`,
+        tone: "success",
+      });
+    } catch (error) {
+      setToast({
+        message: error instanceof ApiClientError ? error.message : "Couldn't update that pincode.",
+        tone: "error",
+      });
+    } finally {
+      setToggling(null);
+    }
+  }
+
   async function confirmRemove() {
     if (!removing) return;
     setBusy(true);
@@ -102,7 +123,7 @@ export default function AdminDeliveryPage() {
 
       <h2 className="mt-8 mb-3 text-base font-semibold text-slate-900">Delivery areas</h2>
       <p className="mb-3 text-sm text-slate-600">
-        Customers can only save addresses and place orders on a pincode listed here.
+        Customers can only save addresses and place orders on a pincode listed here and switched on.
       </p>
 
       <Card className="p-4">
@@ -163,6 +184,7 @@ export default function AdminDeliveryPage() {
                     <th className="px-4 py-2 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">Pincode</th>
                     <th className="px-4 py-2 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">Area</th>
                     <th className="px-4 py-2 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">Added</th>
+                    <th className="px-4 py-2 text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">Status</th>
                     <th />
                   </tr>
                 </thead>
@@ -173,6 +195,24 @@ export default function AdminDeliveryPage() {
                       <td className="px-4 py-3 text-bhor-text-muted">{entry.label || "—"}</td>
                       <td className="px-4 py-3 text-bhor-caption text-bhor-text-muted">
                         {new Date(entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={entry.isActive}
+                            aria-label={`Deliver to ${entry.pincode}`}
+                            disabled={toggling === entry.pincode}
+                            onClick={() => void toggleActive(entry)}
+                            className={`relative h-6 w-11 shrink-0 rounded-full transition-colors disabled:opacity-60 ${entry.isActive ? "bg-bhor-primary" : "bg-bhor-border"}`}
+                          >
+                            <span
+                              className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${entry.isActive ? "left-[22px]" : "left-0.5"}`}
+                            />
+                          </button>
+                          <span className="text-bhor-caption text-bhor-text-muted">{entry.isActive ? "On" : "Off"}</span>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end">
