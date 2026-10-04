@@ -18,7 +18,7 @@ export function ProductSections({
 }: ProductSectionsProps) {
   return (
     <>
-      <section className="mx-auto max-w-[1512px] px-4 py-10 sm:px-6 lg:px-8">
+      <section className="mx-auto w-full max-w-[1512px] px-4 py-10 sm:px-6 lg:px-8">
         <h2 className="font-bhor-display text-bhor-h2-mobile font-bhor-semibold text-bhor-text md:text-bhor-h2">
           Why You&apos;ll Love It
         </h2>
