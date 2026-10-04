@@ -4,22 +4,14 @@ import { Mail, MapPin, Phone } from "lucide-react";
 import { FooterTrending } from "@/src/components/layout/FooterTrending";
 import { FooterNewsletter } from "@/src/components/layout/FooterNewsletter";
 import { SocialLinks } from "@/src/components/layout/SocialLinks";
+import { getShopCategories } from "@/src/lib/api/category.api";
+import { getProductsByShopCategory } from "@/src/lib/api/product.api";
+import type { CollectionProduct } from "@/src/data/products";
 
 const SUPPORT_PHONE = "9296914463";
 
-// Every href here points at a route that exists. The Shop links use the same
-// range slugs the Shop navigation and the API filter use, so a column heading
-// and the page it opens can never disagree about which products belong to it.
-const footerGroups = [
-  {
-    title: "Shop",
-    links: [
-      { label: "Ganesh Chaturthi Kits", href: "/shop/ganesh-chaturthi" },
-      { label: "Navratri Pre-Orders", href: "/shop/navratri-upcoming" },
-      { label: "Daily Puja Kits", href: "/shop/regular-pooja" },
-      { label: "All Products", href: "/shop" },
-    ],
-  },
+// Every href here points at a route that exists.
+const staticGroups = [
   {
     title: "Help & Support",
     links: [
@@ -41,7 +33,32 @@ const footerGroups = [
   },
 ];
 
-export function Footer() {
+/** The priority-1 category's products. The footer is navigation, so a failed fetch just leaves the column out. */
+async function loadTrendingProducts(slug: string | undefined): Promise<CollectionProduct[]> {
+  if (!slug) return [];
+  try {
+    return await getProductsByShopCategory(slug);
+  } catch {
+    return [];
+  }
+}
+
+export async function Footer() {
+  // The same visible categories, in the same order, as the header Shop menu, so
+  // a hidden or newly added category changes both without a code change.
+  const categories = await getShopCategories();
+  const trendingProducts = await loadTrendingProducts(categories[0]?.slug);
+  const footerGroups = [
+    {
+      title: "Shop",
+      links: [
+        ...categories.map((category) => ({ label: category.name, href: `/shop/${category.slug}` })),
+        { label: "All Products", href: "/shop" },
+      ],
+    },
+    ...staticGroups,
+  ];
+
   return (
     <footer className="bg-bhor-primary text-white">
       <div className="mx-auto grid max-w-[1512px] gap-8 px-4 py-10 sm:px-6 md:grid-cols-[30%_1fr] lg:px-8">
@@ -97,9 +114,7 @@ export function Footer() {
             </nav>
           ))}
 
-          {/* The fourth column is the catalogue rather than a fixed list, so it
-              is fetched instead of being written out above. */}
-          <FooterTrending />
+          <FooterTrending products={trendingProducts} />
         </div>
       </div>
 

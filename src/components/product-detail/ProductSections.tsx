@@ -57,9 +57,13 @@ export function ProductSections({
 
       <RecentlyViewedProducts
         currentProduct={product}
-        products={ganeshChaturthiProducts}
+        products={uniqueBySlug([...relatedProducts, ...navratriUpcomingProducts, ...ganeshChaturthiProducts])}
         fallbackProducts={relatedProducts}
       />
     </>
   );
+}
+
+function uniqueBySlug(products: CollectionProduct[]) {
+  return [...new Map(products.map((product) => [product.slug, product])).values()];
 }

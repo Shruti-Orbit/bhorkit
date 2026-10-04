@@ -1,43 +1,13 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getProductsByShopCategory } from "@/src/lib/api/product.api";
 import type { CollectionProduct } from "@/src/data/products";
 
 /**
- * The Trending column: the Ganesh Chaturthi range, straight from the catalogue.
- *
- * Fetched rather than listed here so the footer follows the shop. A product
- * renamed, added or retired in the admin panel shows up without anyone editing
- * this file, which is the whole reason it is not a static array of links like
- * the columns beside it.
- *
- * A client component on purpose: the footer sits in the storefront layout, so
- * fetching it on the server would make every page under that layout dynamic to
- * populate one column. Failing quietly is deliberate too — the column simply
- * does not render, and the rest of the footer is unaffected.
+ * The Trending column: the products of the top-priority category in
+ * Admin > Categories, so it follows whichever festival is leading the shop.
+ * Renders nothing when there is nothing to list, leaving the rest of the
+ * footer unaffected.
  */
-export function FooterTrending() {
-  const [products, setProducts] = useState<CollectionProduct[]>([]);
-
-  useEffect(() => {
-    let active = true;
-
-    getProductsByShopCategory("ganesh-chaturthi")
-      .then((loaded) => {
-        if (active) setProducts(loaded);
-      })
-      .catch(() => {
-        // The footer is navigation, not content — if the catalogue cannot be
-        // reached the column stays empty rather than showing an error in it.
-      });
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
+export function FooterTrending({ products }: { products: CollectionProduct[] }) {
   if (products.length === 0) return null;
 
   return (
