@@ -19,7 +19,7 @@ type ProductCardProps = {
   compact?: boolean;
 };
 
-const badgeToneClass: Record<ProductBadgeTone, string> = {
+export const badgeToneClass: Record<ProductBadgeTone, string> = {
   gold: "bg-bhor-gold-light text-bhor-primary-dark",
   success: "bg-bhor-success text-white",
   primary: "bg-bhor-primary text-white",

@@ -16,11 +16,27 @@ import {
 import {
   ImageField, ImageGalleryField, usePendingUploads,
 } from "@/src/components/admin/product/ImageUploader";
-import type { ProductImage, ShopCategorySlug } from "@/src/data/products";
+import { badgeToneClass } from "@/src/components/home/product-collection/ProductCard";
+import type { ProductBadgeTone, ProductImage, ShopCategorySlug } from "@/src/data/products";
 import { ApiClientError } from "@/src/lib/api/client";
 
 const AVAILABILITY = ["available", "preorder", "unavailable"];
 const PURCHASE_STATES = ["READY_STOCK", "PRE_ORDER", "COMING_SOON"];
+const BADGE_TONES: { value: ProductBadgeTone; label: string }[] = [
+  { value: "gold", label: "Gold" },
+  { value: "success", label: "Green" },
+  { value: "primary", label: "Maroon" },
+  { value: "soft", label: "Pink" },
+];
+
+/** Prices are stored as display text ("₹1,999"); the form edits only the digits. */
+function priceDigits(price: string) {
+  return price.split(".")[0].replace(/\D/g, "");
+}
+
+function formatPrice(digits: string) {
+  return `₹${Number(digits).toLocaleString("en-IN")}`;
+}
 
 /** Mirrors MAX_PRODUCT_IMAGES in the backend product model. */
 const MAX_GALLERY_IMAGES = 24;
@@ -81,6 +97,7 @@ export default function AdminProductFormPage() {
     price: "", image: "", imageAlt: "", imagePublicId: "" as string | undefined, href: "",
     availability: "available", purchaseState: "READY_STOCK",
     shopCategory: "regular-pooja" as ShopCategorySlug, sortOrder: 0, readyStock: true,
+    badgeLabel: "", badgeTone: "gold" as ProductBadgeTone,
   });
   const [images, setImages] = useState<ProductImage[]>([]);
   // Assets uploaded in this sitting that no product references yet. Shared by
@@ -145,11 +162,12 @@ export default function AdminProductFormPage() {
   function hydrate(product: AdminProduct) {
     setCore({
       id: product.id, sku: product.sku, slug: product.slug, name: product.name,
-      subtitle: product.subtitle, description: product.description, price: product.price,
+      subtitle: product.subtitle, description: product.description, price: priceDigits(product.price),
       image: product.image, imageAlt: product.imageAlt, imagePublicId: product.imagePublicId, href: product.href,
       availability: product.availability, purchaseState: product.purchaseState,
       shopCategory: product.shopCategory, sortOrder: product.sortOrder,
       readyStock: product.stock?.readyStock ?? true,
+      badgeLabel: product.badge?.label ?? "", badgeTone: product.badge?.tone ?? "gold",
     });
     setImages(product.images ?? []);
     setAdvanced(toAdvanced(product));
@@ -187,7 +205,7 @@ export default function AdminProductFormPage() {
       name: core.name.trim(),
       subtitle: core.subtitle.trim(),
       description: core.description.trim(),
-      price: core.price.trim(),
+      price: formatPrice(core.price),
       image: core.image.trim(),
       imageAlt: core.imageAlt.trim(),
       // Travels with the URL: it is the only handle the API can use to free the
@@ -208,6 +226,9 @@ export default function AdminProductFormPage() {
           ...(image.publicId ? { publicId: image.publicId } : {}),
         })),
     };
+    const badgeLabel = core.badgeLabel.trim();
+    if (badgeLabel) body.badge = { label: badgeLabel, tone: core.badgeTone };
+    else if (!isNew) body.badge = null;
     // The id is immutable: orders reference it, so it's set once at creation.
     if (isNew) body.id = core.id.trim() || core.slug.trim();
 
@@ -299,7 +320,18 @@ export default function AdminProductFormPage() {
                   ))}
                 </select>
               </Field>
-              <Field label="Price (e.g. ₹699)"><input value={core.price} onChange={(e) => field("price", e.target.value)} className={inputClass} /></Field>
+              <Field label="Price">
+                <div className="relative">
+                  <span className="pointer-events-none absolute bottom-0 left-3 top-1 flex items-center text-bhor-small text-bhor-text-muted" aria-hidden>₹</span>
+                  <input
+                    value={core.price}
+                    onChange={(e) => field("price", e.target.value.replace(/\D/g, ""))}
+                    inputMode="numeric"
+                    placeholder="699"
+                    className={`${inputClass} pl-7`}
+                  />
+                </div>
+              </Field>
               <Field label="Subtitle"><input value={core.subtitle} onChange={(e) => field("subtitle", e.target.value)} className={inputClass} /></Field>
               <Field label="Storefront link"><input value={core.href} onChange={(e) => field("href", e.target.value)} placeholder={`/products/${core.slug}`} className={inputClass} /></Field>
             </div>
@@ -383,6 +415,27 @@ export default function AdminProductFormPage() {
                   {PURCHASE_STATES.map((value) => <option key={value} value={value}>{value}</option>)}
                 </select>
               </Field>
+              <Field label="Card label (leave empty for none)">
+                <input
+                  value={core.badgeLabel}
+                  onChange={(e) => field("badgeLabel", e.target.value)}
+                  maxLength={30}
+                  placeholder="e.g. Coming Soon, Popular"
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Label colour">
+                <select value={core.badgeTone} onChange={(e) => field("badgeTone", e.target.value as ProductBadgeTone)} className={inputClass}>
+                  {BADGE_TONES.map((tone) => <option key={tone.value} value={tone.value}>{tone.label}</option>)}
+                </select>
+              </Field>
+              {core.badgeLabel.trim() ? (
+                <span
+                  className={`inline-flex w-fit rounded-bhor-sm px-2.5 py-1 text-bhor-badge font-bhor-bold uppercase tracking-wide ${badgeToneClass[core.badgeTone]}`}
+                >
+                  {core.badgeLabel.trim()}
+                </span>
+              ) : null}
               <Field label="Sort order">
                 <input type="number" value={core.sortOrder} onChange={(e) => field("sortOrder", Number(e.target.value))} className={inputClass} />
               </Field>
