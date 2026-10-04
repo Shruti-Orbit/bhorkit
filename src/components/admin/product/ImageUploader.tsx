@@ -204,11 +204,14 @@ function Preview({ src, alt }: { src: string; alt: string }) {
 function UploadButton({
   label,
   busy,
+  disabled = false,
   multiple,
   onFiles,
 }: {
   label: string;
   busy: boolean;
+  /** Unavailable without being the one uploading. */
+  disabled?: boolean;
   multiple?: boolean;
   onFiles: (files: File[]) => void;
 }) {
@@ -219,7 +222,7 @@ function UploadButton({
       <button
         type="button"
         onClick={() => inputRef.current?.click()}
-        disabled={busy}
+        disabled={busy || disabled}
         className="inline-flex min-h-9 items-center gap-1.5 rounded-bhor-sm border border-bhor-primary px-3 text-bhor-caption font-bhor-bold uppercase text-bhor-primary disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Upload className="h-3.5 w-3.5" aria-hidden />}
@@ -393,6 +396,7 @@ export function ImageGalleryField({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [replacingIndex, setReplacingIndex] = useState<number | null>(null);
 
   // The gallery is product-only — customization items carry a single photo — so
   // this slot always talks to the product endpoints.
@@ -402,7 +406,7 @@ export function ImageGalleryField({
 
   const upload = useCallback(
     async (files: File[]) => {
-      if (files.length === 0) return;
+      if (files.length === 0 || replacingIndex !== null) return;
 
       if (remaining === 0) {
         setError(`This product already has the maximum of ${max} gallery images.`);
@@ -440,7 +444,7 @@ export function ImageGalleryField({
         setBusy(false);
       }
     },
-    [max, onChange, pending, remaining, slug, value],
+    [max, onChange, pending, remaining, replacingIndex, slug, value],
   );
 
   function removeAt(index: number) {
@@ -454,13 +458,42 @@ export function ImageGalleryField({
     onChange(value.map((row, i) => (i === index ? { ...row, alt } : row)));
   }
 
+  /** Upload-then-swap, like ImageField: a failed upload leaves the row's photo where it was. */
+  async function replaceAt(index: number, files: File[]) {
+    const file = files[0];
+    if (!file) return;
+
+    const rejection = localRejection(file);
+    if (rejection) {
+      setError(rejection);
+      return;
+    }
+
+    setError("");
+    setReplacingIndex(index);
+    const replaced = value[index]?.publicId;
+    try {
+      const uploaded = await galleryApi.upload(file);
+      pending.track(uploaded.publicId);
+      onChange(value.map((row, i) => (i === index ? { ...row, src: uploaded.src, publicId: uploaded.publicId } : row)));
+
+      // One asset can fill two rows; it only goes once no other row shows it.
+      const stillUsed = value.some((row, i) => i !== index && row.publicId === replaced);
+      if (replaced && !stillUsed) void discardUnsaved(replaced, pending, galleryApi);
+    } catch (caught) {
+      setError(errorMessage(caught));
+    } finally {
+      setReplacingIndex(null);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-bhor-caption font-bhor-bold uppercase tracking-wide text-bhor-text-muted">
           Gallery ({value.length}/{max})
         </span>
-        <UploadButton label="Add images" busy={busy} multiple onFiles={upload} />
+        <UploadButton label="Add images" busy={busy} disabled={replacingIndex !== null} multiple onFiles={upload} />
       </div>
 
       {/* A drop target as well as a button: dragging a folder of product shots
@@ -525,14 +558,24 @@ export function ImageGalleryField({
                   }
                 />
               </div>
-              <button
-                type="button"
-                onClick={() => removeAt(index)}
-                aria-label={`Remove image ${index + 1}`}
-                className="mt-4 rounded-bhor-sm p-2 text-bhor-error"
-              >
-                <Trash2 className="h-4 w-4" aria-hidden />
-              </button>
+              <div className="mt-5 flex shrink-0 items-center gap-1">
+                <UploadButton
+                  label="Replace"
+                  busy={replacingIndex === index}
+                  // One upload at a time, so each swap applies to the gallery as it currently is.
+                  disabled={busy || replacingIndex !== null}
+                  onFiles={(files) => void replaceAt(index, files)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeAt(index)}
+                  disabled={replacingIndex !== null}
+                  aria-label={`Remove image ${index + 1}`}
+                  className="rounded-bhor-sm p-2 text-bhor-error disabled:opacity-50"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
             </li>
           ))}
         </ul>
