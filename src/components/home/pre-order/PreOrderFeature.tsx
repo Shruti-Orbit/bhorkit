@@ -1,11 +1,12 @@
-import { Gift, PackageOpen, Truck } from "lucide-react";
+import { Gift, PackageOpen, Sparkles, Truck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type PromotionIconName = "PackageOpen" | "Gift" | "Truck";
+export type PromotionIconName = "PackageOpen" | "Gift" | "Sparkles" | "Truck";
 
 const iconMap: Record<PromotionIconName, LucideIcon> = {
   PackageOpen,
   Gift,
+  Sparkles,
   Truck,
 };
 

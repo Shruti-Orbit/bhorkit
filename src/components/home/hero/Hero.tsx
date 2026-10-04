@@ -118,7 +118,7 @@ export function Hero() {
         touchStartX.current = null;
       }}
     >
-      <div className="relative grid aspect-[3/4] w-full overflow-hidden bg-bhor-peach md:aspect-auto md:h-[calc(100svh-132px)] md:min-h-[560px]">
+      <div className="relative grid aspect-[940/1672] w-full overflow-hidden bg-bhor-peach md:aspect-[1958/803]">
         <AnimatePresence initial={false} mode="sync">
           <HeroSlide
             key={heroSlides[currentSlide].id}

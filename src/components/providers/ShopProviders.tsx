@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { ShopProvider } from "@/src/context/ShopContext";
 import { LoginModal } from "@/src/components/header/LoginModal";
+import { CustomizeLaunchPopup } from "@/src/components/promotional/CustomizeLaunchPopup";
 import { SignupOfferPopup } from "@/src/components/promotional/SignupOfferPopup";
 import { ShopToast } from "@/src/components/providers/ShopToast";
 import { CartDrawer } from "@/src/components/cart/CartDrawer";
@@ -18,6 +19,7 @@ export function ShopProviders({
       <LoginModal />
       <CartDrawer />
       <SignupOfferPopup />
+      <CustomizeLaunchPopup />
       <ShopToast />
     </ShopProvider>
   );

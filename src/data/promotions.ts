@@ -12,24 +12,31 @@ export type Promotion = {
   description: string;
   ctaLabel: string;
   ctaHref: string;
+  /**
+   * Not open yet: shown as a "coming soon" announcement, with the button
+   * pointing at what can be ordered now instead.
+   */
+  comingSoon?: boolean;
   image: string;
   imageAlt: string;
   features: PromotionFeature[];
 };
 
-export const navratriPromotion: Promotion = {
-  eyebrow: "NAVRATRI 2026",
-  title: "Pre-Order Now",
-  description: "Reserve your Navratri kits and get them in time for the first day.",
-  ctaLabel: "PRE-ORDER NOW",
+export const diwaliPromotion: Promotion = {
+  eyebrow: "DIWALI 2026",
+  title: "Diwali kits are almost here",
+  description:
+    "We're putting together puja kits for Lakshmi–Ganesh puja, diyas and everything your Diwali needs.",
+  ctaLabel: "Shop Navratri kits",
   ctaHref: "/pre-order",
-  image: "/images/durga-maa.png",
-  imageAlt: "Durga Maa celebration artwork for Navratri",
+  comingSoon: true,
+  image: "/images/festivals/diwali-diyas.svg",
+  imageAlt: "Glowing diyas, rangoli and hanging lanterns for Diwali",
   features: [
     {
-      icon: "PackageOpen",
-      title: "Reserved For You",
-      description: "Kits Held Till Delivery",
+      icon: "Sparkles",
+      title: "Lakshmi–Ganesh Puja",
+      description: "Kits Being Curated",
     },
     {
       icon: "Gift",
@@ -39,7 +46,7 @@ export const navratriPromotion: Promotion = {
     {
       icon: "Truck",
       title: "Timely Delivery",
-      description: "Before Navratri",
+      description: "Before Diwali",
     },
   ],
 };

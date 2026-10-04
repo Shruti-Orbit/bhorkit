@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Box, HandHeart, Truck } from "lucide-react";
-import type { HeroSlide } from "@/src/data/heroSlides";
+import type { HeroTextSlide as HeroSlide } from "@/src/data/heroSlides";
 import { isRangeOpen } from "@/src/lib/api/ordering.api";
 import { useOrderingStatus } from "@/src/lib/ordering/useOrderingStatus";
 

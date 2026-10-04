@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400" fill="none">
+  <style>
+    .flame { transform-box: fill-box; transform-origin: 50% 100%; animation: flicker 2.4s ease-in-out infinite; }
+    .flame.b { animation-duration: 1.9s; animation-delay: -0.6s; }
+    .flame.c { animation-duration: 2.8s; animation-delay: -1.2s; }
+    .glow { animation: breathe 3s ease-in-out infinite; }
+    .tw { transform-box: fill-box; transform-origin: center; animation: twinkle 2.6s ease-in-out infinite; }
+    .tw.b { animation-delay: -0.9s; } .tw.c { animation-delay: -1.7s; }
+    @keyframes flicker { 0%,100% { transform: scale(1,1) rotate(0deg); } 25% { transform: scale(0.94,1.06) rotate(-2deg); } 50% { transform: scale(1.04,0.96) rotate(1.5deg); } 75% { transform: scale(0.97,1.03) rotate(-1deg); } }
+    @keyframes breathe { 0%,100% { opacity: 0.85; } 50% { opacity: 1; } }
+    @keyframes twinkle { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.35; transform: scale(0.6); } }
+    @media (prefers-reduced-motion: reduce) { .flame, .glow, .tw { animation: none; } }
+  </style>
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFD978" stop-opacity="0.75"/>
+      <stop offset="0.45" stop-color="#F6A93B" stop-opacity="0.25"/>
+      <stop offset="1" stop-color="#F6A93B" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="flame" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF6D6"/>
+      <stop offset="0.45" stop-color="#FFC94A"/>
+      <stop offset="1" stop-color="#F0711E"/>
+    </linearGradient>
+    <linearGradient id="clay" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E9A25B"/>
+      <stop offset="0.55" stop-color="#C46A2B"/>
+      <stop offset="1" stop-color="#8E3E17"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F7DB8F"/>
+      <stop offset="1" stop-color="#C8922E"/>
+    </linearGradient>
+    <g id="spark">
+      <path d="M0 -10 C1.5 -2 2 -1.5 10 0 C2 1.5 1.5 2 0 10 C-1.5 2 -2 1.5 -10 0 C-2 -1.5 -1.5 -2 0 -10 Z" fill="#F7DB8F"/>
+    </g>
+  </defs>
+
+  <!-- Rangoli behind the diyas -->
+  <g transform="translate(455 300)" stroke="#E8C878" stroke-opacity="0.45" stroke-width="2">
+    <circle r="150"/>
+    <circle r="128" stroke-dasharray="3 9" stroke-linecap="round"/>
+    <circle r="96"/>
+    <g fill="#E8C878" fill-opacity="0.12">
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(30)"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(60)"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(-30)"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(-60)"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(-90)"/>
+      <path d="M0 -150 C24 -128 24 -112 0 -96 C-24 -112 -24 -128 0 -150 Z" transform="rotate(90)"/>
+    </g>
+  </g>
+
+  <!-- Hanging kandils -->
+  <g stroke="#E8C878" stroke-width="2">
+    <line x1="540" y1="0" x2="540" y2="58"/>
+    <line x1="372" y1="0" x2="372" y2="34"/>
+  </g>
+  <g transform="translate(540 58)">
+    <path d="M0 0 L26 34 L0 78 L-26 34 Z" fill="url(#gold)"/>
+    <path d="M0 6 L18 34 L0 70 L-18 34 Z" fill="#A9164A"/>
+    <path d="M-26 34 L26 34" stroke="#F7DB8F" stroke-width="2"/>
+    <circle cy="34" r="6" fill="#FFD978"/>
+    <g stroke="#F7DB8F" stroke-width="1.6" stroke-linecap="round">
+      <line x1="-8" y1="80" x2="-8" y2="100"/><line x1="0" y1="80" x2="0" y2="106"/><line x1="8" y1="80" x2="8" y2="100"/>
+    </g>
+  </g>
+  <g transform="translate(372 34) scale(0.72)">
+    <path d="M0 0 L26 34 L0 78 L-26 34 Z" fill="url(#gold)"/>
+    <path d="M0 6 L18 34 L0 70 L-18 34 Z" fill="#7F1238"/>
+    <circle cy="34" r="6" fill="#FFD978"/>
+    <g stroke="#F7DB8F" stroke-width="2" stroke-linecap="round">
+      <line x1="-8" y1="80" x2="-8" y2="98"/><line x1="0" y1="80" x2="0" y2="104"/><line x1="8" y1="80" x2="8" y2="98"/>
+    </g>
+  </g>
+
+  <!-- Big diya -->
+  <circle class="glow" cx="452" cy="236" r="78" fill="url(#glow)"/>
+  <g transform="translate(452 0)">
+    <path d="M-82 300 C-70 352 70 352 82 300 Z" fill="url(#clay)"/>
+    <path d="M-82 300 C-40 312 40 312 82 300 C70 292 -70 292 -82 300 Z" fill="#F1B472"/>
+    <path d="M82 300 C94 296 104 288 108 280 C98 296 90 302 80 306 Z" fill="#C46A2B"/>
+    <path d="M-60 326 C-30 338 30 338 60 326" stroke="#F7DB8F" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 10"/>
+    <path d="M-6 296 L-2 270 L2 270 L6 296 Z" fill="#5A2A10"/>
+    <g class="flame">
+      <path d="M0 196 C20 228 22 254 0 274 C-22 254 -20 228 0 196 Z" fill="url(#flame)"/>
+      <path d="M0 232 C8 246 8 258 0 268 C-8 258 -8 246 0 232 Z" fill="#FFFBEA"/>
+    </g>
+  </g>
+
+  <!-- Small diyas -->
+  <g transform="translate(330 334) scale(0.55)">
+    <circle cy="-40" r="66" fill="url(#glow)"/>
+    <path d="M-82 30 C-70 82 70 82 82 30 Z" fill="url(#clay)"/>
+    <path d="M-82 30 C-40 42 40 42 82 30 C70 22 -70 22 -82 30 Z" fill="#F1B472"/>
+    <path class="flame b" d="M0 -52 C20 -20 22 6 0 26 C-22 6 -20 -20 0 -52 Z" fill="url(#flame)"/>
+  </g>
+  <g transform="translate(572 340) scale(0.5)">
+    <circle cy="-40" r="66" fill="url(#glow)"/>
+    <path d="M-82 30 C-70 82 70 82 82 30 Z" fill="url(#clay)"/>
+    <path d="M-82 30 C-40 42 40 42 82 30 C70 22 -70 22 -82 30 Z" fill="#F1B472"/>
+    <path class="flame c" d="M0 -52 C20 -20 22 6 0 26 C-22 6 -20 -20 0 -52 Z" fill="url(#flame)"/>
+  </g>
+
+  <!-- Sparkles -->
+  <use class="tw" href="#spark" transform="translate(330 150) scale(1.1)"/>
+  <use class="tw b" href="#spark" transform="translate(588 196) scale(0.8)"/>
+  <use class="tw c" href="#spark" transform="translate(412 96) scale(0.7)"/>
+  <use class="tw b" href="#spark" transform="translate(500 160) scale(0.55)"/>
+  <use class="tw c" href="#spark" transform="translate(300 260) scale(0.6)"/>
+  <circle cx="352" cy="214" r="2.5" fill="#F7DB8F"/>
+  <circle cx="568" cy="128" r="2" fill="#F7DB8F"/>
+  <circle cx="470" cy="118" r="2" fill="#F7DB8F"/>
+</svg>
