@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Hero } from "@/src/components/home/hero/Hero";
 import { HomeBannerStrip } from "@/src/components/home/banner-strip/HomeBannerStrip";
 import { CustomizeBanner } from "@/src/components/home/customize/CustomizeBanner";
-import { PreOrderBanner } from "@/src/components/home/pre-order/PreOrderBanner";
 import { ProductCollection } from "@/src/components/home/product-collection/ProductCollection";
 import { RitualSeparator } from "@/src/components/home/ritual-separator/RitualSeparator";
-import { navratriPromotion } from "@/src/data/promotions";
+import { diwaliPromotion } from "@/src/data/promotions";
+import { FestivalComingSoonBanner } from "@/src/components/home/festival/FestivalComingSoonBanner";
 import { getHomeCatalog } from "@/src/lib/api/product.api";
 import { absoluteUrl, createHomeJsonLd, seoConfig } from "@/src/lib/seo/config";
 
@@ -108,7 +108,7 @@ export default async function Home() {
 
       <CustomizeBanner />
 
-      <PreOrderBanner {...navratriPromotion} />
+      <FestivalComingSoonBanner {...diwaliPromotion} />
       <ProductCollection
         title="Navratri 2026"
         description="Pre-order your Navratri puja kits for delivery across Patna."

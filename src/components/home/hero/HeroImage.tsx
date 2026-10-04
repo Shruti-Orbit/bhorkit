@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { getImageProps } from "next/image";
-import type { HeroSlide } from "@/src/data/heroSlides";
+import type { HeroTextSlide as HeroSlide } from "@/src/data/heroSlides";
 
 type HeroImageProps = {
   slide: HeroSlide;

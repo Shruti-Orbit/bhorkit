@@ -1,6 +1,10 @@
 import type { ShopCategorySlug } from "@/src/data/products";
 
-export type HeroSlide = {
+export type HeroSlide = HeroTextSlide | HeroBannerSlide;
+
+/** Photography with the copy laid over it as text. */
+export type HeroTextSlide = {
+  kind?: "text";
   id: number;
   image: string;
   /** Portrait artwork used below the `md` breakpoint. Falls back to `image`. */
@@ -24,39 +28,51 @@ export type HeroSlide = {
   secondaryHref: string;
 };
 
+/**
+ * Finished banner artwork with its copy and button already painted in. It is
+ * shown whole (never cropped) and the entire banner is the link.
+ */
+export type HeroBannerSlide = {
+  kind: "banner";
+  id: number;
+  image: string;
+  /** Portrait (940×1672) version for phones. Falls back to `image`. */
+  imageMobile?: string;
+  imageAlt: string;
+  /** The banner's headline, for screen readers and search — the art carries the visible copy. */
+  title: string;
+  href: string;
+};
+
 export const heroSlides: HeroSlide[] = [
   {
+    kind: "banner",
     id: 1,
-    image: "/images/banner/first-hero.png",
-    imageMobile: "/images/banner/first-hero-mobile.png",
+    image: "/images/slider/Complete-Navratri-Puja-Kit-Celebration.png",
+    imageMobile: "/images/slider/Premium Navratri Kalash Sthapana Kit.png",
     imageAlt:
-      "BHORKIT puja kit in Patna with Ganesh idol, haldi, kumkum and devotional essentials",
-    tint: "#FAEEDF",
-    eyebrow: "PUJA ESSENTIALS IN PATNA",
-    title: "Puja Kit",
-    highlightedTitle: "in Patna",
-    description:
-      "Buy complete puja kit online in Patna with essential puja samagri packed for doorstep delivery.",
-    primaryCta: "SHOP PUJA KITS →",
-    primaryHref: "/shop/ganesh-chaturthi",
-    secondaryCta: "EXPLORE COLLECTION",
-    secondaryHref: "/shop",
+      "BHORKIT Complete Navratri Puja Kit — everything for 9 days of devotion in one box, with kalash, diya and flowers",
+    title: "Complete Navratri Puja Kit",
+    href: "/pre-order",
   },
   {
+    kind: "banner",
     id: 2,
-    image: "/images/banner/second-hero.png",
+    image: "/images/slider/9-Day-Navratri-Puja-Kit-Subscription.png",
+    imageMobile: "/images/slider/Navratri 9-Day Puja Kit Poster.png",
     imageAlt:
-      "BHORKIT botanical Ganesh puja kit with brass bowls of puja samagri and a lit diya",
-    tint: "#EDEAC6",
-    eyebrow: "GANESH CHATURTHI 2026",
-    title: "Make Your",
-    highlightedTitle: "Puja More Divine",
-    description:
-      "Thoughtfully curated puja essentials, made for meaningful celebrations.",
-    primaryCta: "PRE-ORDER GANESH KITS →",
-    primaryHref: "/shop/ganesh-chaturthi",
-    primaryCtaRange: "ganesh-chaturthi",
-    secondaryCta: "EXPLORE COLLECTION",
-    secondaryHref: "/shop",
+      "BHORKIT Navratri 9-Day Subscription — nine day-wise curated puja kits, from Kalash Sthapana to Havan",
+    title: "Navratri 9-Day Puja Kit Subscription",
+    href: "/pre-order",
+  },
+  {
+    kind: "banner",
+    id: 3,
+    image: "/images/slider/Navratri-Kalash-Sthapana-Kit.png",
+    imageMobile: "/images/slider/Navratri Kalash Sthapana Kit (1).png",
+    imageAlt:
+      "BHORKIT Navratri Kalash Sthapana Kit — a complete set to begin Navratri, with copper kalash and coconut",
+    title: "Navratri Kalash Sthapana Kit",
+    href: "/pre-order",
   },
 ];
